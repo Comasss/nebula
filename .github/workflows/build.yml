@@ -1,7 +1,8 @@
 # Compila Nebula para Windows en cada push / PR.
 # - Artefactos: instalador NSIS y ejecutable portable (pestaña Actions → ejecución → Artifacts).
-# - Al subir una etiqueta vX.Y.Z (igual que la versión de src-tauri/tauri.conf.json) se publica una Release
-#   con los dos .exe adjuntos.
+# - Cada push a main publica la Release vX.Y.Z de la versión de src-tauri/tauri.conf.json con los dos .exe
+#   y SHA256SUMS.txt. Si esa Release ya la creó este workflow, se actualiza con la nueva compilación; si se
+#   publicó a mano, no se toca (sube la versión para publicar otra). También funciona subiendo una etiqueta vX.Y.Z.
 name: Build
 
 on:
@@ -104,18 +105,55 @@ jobs:
 
   release:
     name: Publicar release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [test, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+
       - uses: actions/download-artifact@v4
         with:
           path: release
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: release/*.exe
-          generate_release_notes: true
+      - name: Publicar o actualizar la release de esta versión
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          v=$(jq -r .version src-tauri/tauri.conf.json)
+          tag="v$v"
+          short="${GITHUB_SHA::7}"
+          (cd release && sha256sum *.exe > SHA256SUMS.txt)
+          cat > notes.md <<EOF
+          <!-- nebula-autobuild -->
+          Compilación automática de **Nebula $v** desde el commit [\`$short\`](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA).
+
+          | Archivo | Para qué |
+          |---|---|
+          | \`Nebula_${v}_x64-setup.exe\` | Instalador: acceso directo, desinstalador y asociación de archivos \`.nzb\`. |
+          | \`Nebula_${v}_x64_portable.exe\` | Un solo ejecutable, sin instalación. Guarda los datos en \`%APPDATA%\\Nebula\`. |
+          | \`SHA256SUMS.txt\` | Sumas SHA-256 para comprobar los archivos. |
+
+          Requisitos: Windows 10/11 x64 con WebView2 (incluido en Windows 11; el instalador lo descarga si falta).
+          EOF
+          if gh release view "$tag" --json body -q .body > current.md 2>/dev/null; then
+            if ! grep -q "nebula-autobuild" current.md; then
+              echo "::notice::La release $tag ya existe y se publicó a mano, así que no se modifica. Sube la versión (src-tauri/tauri.conf.json, src-tauri/Cargo.toml y package.json) para publicar otra."
+              exit 0
+            fi
+            # Misma versión: la etiqueta pasa a este commit y se sustituyen los archivos.
+            if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+              git tag -f "$tag" "$GITHUB_SHA"
+              git push -f origin "refs/tags/$tag"
+            fi
+            gh release upload "$tag" release/* --clobber
+            gh release edit "$tag" --notes-file notes.md
+            echo "::notice::Release $tag actualizada con el commit $short"
+          else
+            gh release create "$tag" release/* --target "$GITHUB_SHA" --title "Nebula $v" --notes-file notes.md --latest
+            echo "::notice::Release $tag publicada"
+          fi
