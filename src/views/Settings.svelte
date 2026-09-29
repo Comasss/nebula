@@ -5,12 +5,15 @@
   import Icon from '../components/Icon.svelte';
   import SettingRow from '../components/SettingRow.svelte';
   import { ui, saveSettings, toast, d } from '../lib/state.svelte.js';
+  import { usableDebrid, debridLabel, hasNntp } from '../lib/debrid.js';
 
   const s = $derived(ui.settings);
+  const debridList = $derived(usableDebrid(s));
   let newPattern = $state('');
 
   const SECTIONS = [
     { id: 'features', label: 'Funciones', icon: 'sparkles' },
+    { id: 'debrid', label: 'NNTP / Debrid', icon: 'cloud' },
     { id: 'search', label: 'Búsqueda', icon: 'search' },
     { id: 'folders', label: 'Carpetas', icon: 'folder' },
     { id: 'post', label: 'Post-procesado', icon: 'package' },
@@ -104,7 +107,35 @@
         <h2><Icon name="sparkles" size={18} /> Funciones</h2>
         <div class="card group">
           <SettingRow icon="search" label="Indexadores" description="Buscar en tus indexadores Newznab desde Nebula." checked={s.featureIndexers} onchange={(v) => setFeature('featureIndexers', v)} />
-          <SettingRow icon="server" label="Descargas Usenet (NNTP)" description="Descargar, reparar y extraer con tu proveedor Usenet. Si la desactivas, desde la búsqueda solo se guardan los .nzb en tu PC." checked={s.featureNntp} onchange={(v) => setFeature('featureNntp', v)} />
+          <SettingRow icon="server" label="Descargas (Usenet / debrid)" description="Descargar, reparar y extraer con tu proveedor Usenet o con un servicio debrid (TorBox, Premiumize). Si la desactivas, desde la búsqueda solo se guardan los .nzb en tu PC." checked={s.featureNntp} onchange={(v) => setFeature('featureNntp', v)} />
+        </div>
+      </section>
+
+      <section id="sec-debrid" class:dim={!s.featureNntp}>
+        <h2><Icon name="cloud" size={18} /> Método de descarga</h2>
+        <div class="card group">
+          <SettingRow
+            icon="download"
+            label="Descargar los NZB con"
+            description={debridList.length
+              ? `NNTP usa tus servidores Usenet. Debrid envía el NZB a ${debridLabel(debridList[0])}${debridList.length > 1 ? ' (o al siguiente si falla)' : ''} y baja los archivos desde sus servidores, normalmente mucho más rápido. Al añadir cada NZB puedes elegir otro método.`
+              : 'Añade un servicio debrid (TorBox Pro o Premiumize) para poder descargar a través de él.'}>
+            <div class="seg">
+              <button class:sel={s.downloadVia !== 'debrid'} onclick={() => saveSettings({ downloadVia: 'nntp' })}><Icon name="server" size={14} /> Usenet (NNTP)</button>
+              <button class:sel={s.downloadVia === 'debrid'} disabled={!debridList.length} onclick={() => saveSettings({ downloadVia: 'debrid' })}><Icon name="cloud" size={14} /> Debrid</button>
+            </div>
+          </SettingRow>
+          {#if debridList.length && !hasNntp(s) && s.downloadVia !== 'debrid'}
+            <div class="note"><Icon name="info" size={14} /> No tienes servidores NNTP activos: mientras sea así se usará {debridLabel(debridList[0])}.</div>
+          {/if}
+          <SettingRow label="Si el servicio debrid falla, descargar por NNTP" description="Antes se prueban los demás servicios debrid de la lista (si el método se eligió automáticamente)." checked={s.debridFallbackNntp} onchange={set('debridFallbackNntp')} />
+          <SettingRow label="Conexiones al bajar de debrid" description="Descargas simultáneas por HTTPS, por rangos de 32 MB. Más conexiones suelen dar más velocidad.">
+            <input class="input small" type="number" min="1" max="32" value={s.debridConnections} onchange={num('debridConnections', 1, 32)} />
+          </SettingRow>
+          <SettingRow label="Borrar del servicio al terminar" description="Quita la descarga de tu cuenta debrid cuando ya está en tu PC (libera espacio y huecos de descarga)." checked={s.debridDeleteAfter} onchange={set('debridDeleteAfter')} />
+          <SettingRow icon="cloud" label="Servicios debrid" description={debridList.length ? `En orden de preferencia: ${debridList.map(debridLabel).join(', ')}.` : 'TorBox (plan Pro) o Premiumize, con su API key.'}>
+            <button class="btn sm" onclick={() => (ui.view = 'debrid')}>Gestionar <Icon name="chevron-right" size={14} /></button>
+          </SettingRow>
         </div>
       </section>
 
@@ -302,6 +333,17 @@
   .pchip button { display: grid; place-items: center; width: 20px; height: 20px; border: none; border-radius: 5px; background: none; color: var(--muted); cursor: pointer; }
   .pchip button:hover { background: rgba(248, 113, 113, 0.18); color: var(--err); }
   .p-add .input { height: 28px; width: 160px; font-size: 12.5px; }
+  .seg { display: flex; padding: 3px; gap: 3px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); }
+  .seg button {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 28px; padding: 0 12px; border: none; border-radius: 7px;
+    background: transparent; color: var(--text-2); font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .seg button:hover:not(:disabled) { color: var(--text); }
+  .seg button.sel { background: rgba(var(--accent-rgb), 0.2); color: var(--text); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.45); }
+  .seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .note { display: flex; align-items: center; gap: 8px; padding: 0 18px 12px 64px; margin-top: -4px; font-size: 12.5px; color: var(--muted); }
   .swatches { display: flex; gap: 10px; }
   .swatch {
     width: 30px; height: 30px; border-radius: 50%;

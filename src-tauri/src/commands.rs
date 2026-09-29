@@ -1,7 +1,7 @@
-use crate::config::{IndexerConfig, ServerConfig, Settings};
+use crate::config::{DebridConfig, IndexerConfig, ServerConfig, Settings};
 use crate::engine::{AddRequest, Engine, FileView, HistoryEntry, NzbPreview, Snapshot, TestResult};
 use crate::logger::LogEntry;
-use crate::{fetch, indexer, logger, nzb, winint};
+use crate::{debrid, fetch, indexer, logger, nzb, winint};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -279,4 +279,29 @@ pub fn open_url(url: String) -> Result<(), String> {
         return Err("Enlace no válido".into());
     }
     std::process::Command::new("explorer").arg(url).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
+// ---- Servicios debrid ----
+
+#[tauri::command]
+pub async fn test_debrid(provider: DebridConfig) -> debrid::DebridTest {
+    debrid::test(&provider).await
+}
+
+/// Servicios debrid que ya tienen en caché el NZB de una vista previa (descarga instantánea).
+#[tauri::command]
+pub async fn debrid_cached(e: Eng<'_>, token: String) -> Result<Vec<String>, String> {
+    let providers: Vec<DebridConfig> = e.settings.read().debrid.iter().filter(|d| d.usable()).cloned().collect();
+    if !providers.iter().any(|p| p.kind == "torbox") {
+        return Ok(Vec::new());
+    }
+    let (raw, _) = e.pending_nzb(&token).ok_or("La vista previa ha caducado.")?;
+    let hash = debrid::nzb_hash(&nzb::maybe_gunzip(&raw)?);
+    let mut out = Vec::new();
+    for p in providers {
+        if let Ok(true) = debrid::cached(&p, &hash).await {
+            out.push(p.id);
+        }
+    }
+    Ok(out)
 }

@@ -9,6 +9,7 @@
   import SpeedGraph from '../components/SpeedGraph.svelte';
   import { ui, queueAdd, toast, d } from '../lib/state.svelte.js';
   import * as f from '../lib/format.js';
+  import { usableDebrid } from '../lib/debrid.js';
 
   let url = $state('');
   let limitOpen = $state(false);
@@ -18,7 +19,7 @@
   const activeJobs = $derived(jobs.filter((j) => j.status === 'downloading').length);
   const totalConns = $derived(ui.queue.servers.reduce((a, s) => a + s.maxConns, 0));
   const peak = $derived(Math.max(...ui.speedHistory));
-  const noServerConfigured = $derived(!ui.settings?.servers?.length);
+  const noServerConfigured = $derived(!ui.settings?.servers?.length && !usableDebrid(ui.settings).length);
   const serverErrors = $derived(ui.queue.servers.filter((s) => ['auth', 'down', 'warn'].includes(s.state) && s.lastError));
 
   const LIMITS = [
@@ -121,8 +122,9 @@
   {#if noServerConfigured}
     <div class="alert warn banner" transition:fly={{ y: -8, duration: d(250) }}>
       <Icon name="server" size={18} />
-      <div class="spacer">No has configurado ningún servidor Usenet. Las descargas no empezarán hasta que añadas uno.</div>
-      <button class="btn sm" onclick={() => (ui.setupOpen = true)}>Configurar ahora</button>
+      <div class="spacer">No has configurado ningún servidor Usenet ni servicio debrid. Las descargas no empezarán hasta que añadas uno.</div>
+      <button class="btn sm" onclick={() => (ui.view = 'debrid')}><Icon name="cloud" size={14} /> Debrid</button>
+      <button class="btn sm" onclick={() => (ui.setupOpen = true)}>Configurar servidor</button>
     </div>
   {:else if serverErrors.length && jobs.length}
     <div class="alert err banner" transition:fly={{ y: -8, duration: d(250) }}>

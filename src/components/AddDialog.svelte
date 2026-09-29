@@ -7,6 +7,7 @@
   import Switch from './Switch.svelte';
   import { ui, toast, d } from '../lib/state.svelte.js';
   import * as f from '../lib/format.js';
+  import { usableDebrid, debridLabel, defaultVia, hasNntp, kindInfo } from '../lib/debrid.js';
 
   const current = $derived(ui.addItems[0]);
   let phase = $state('idle'); // loading | preview | error
@@ -16,7 +17,8 @@
   let showPw = $state(false);
   let showFiles = $state(false);
   let free = $state(null);
-  let form = $state({ name: '', dest: '', password: '', paused: false, top: false, options: {} });
+  let form = $state({ name: '', dest: '', password: '', paused: false, top: false, via: 'nntp', options: {} });
+  let cached = $state([]);
   let loadedKey = null;
 
   $effect(() => {
@@ -33,6 +35,7 @@
     error = '';
     preview = null;
     showFiles = false;
+    cached = [];
     try {
       // Si el aviso del portapapeles ya analizó el enlace, se reutiliza (no se vuelve a pedir al indexador).
       const p = it.preview
@@ -48,6 +51,7 @@
         password: p.password ?? '',
         paused: s.addPaused,
         top: false,
+        via: defaultVia(s),
         options: {
           par2: s.par2Enabled,
           extract: s.extractEnabled,
@@ -57,6 +61,7 @@
         },
       };
       phase = 'preview';
+      checkCache(p.token);
       if (!s.askDestination && s.featureNntp !== false) {
         await confirm();
         return;
@@ -66,6 +71,15 @@
       error = String(e);
       phase = 'error';
     }
+  }
+
+  // ¿Algún servicio debrid lo tiene ya en caché? (descarga instantánea)
+  async function checkCache(token) {
+    if (!usableDebrid(ui.settings).some((p) => kindInfo(p.kind).cache)) return;
+    try {
+      const ids = await invoke('debrid_cached', { token });
+      if (preview?.token === token) cached = ids;
+    } catch {}
   }
 
   async function updateFree() {
@@ -96,10 +110,12 @@
           password: form.password.trim() || null,
           paused: form.paused,
           top: form.top,
+          via: form.via,
           options: $state.snapshot(form.options),
         },
       });
-      toast('success', `Añadido a la cola: ${form.name}`, 3500);
+      const viaName = debridOptions.find((p) => p.id === form.via);
+      toast('success', `Añadido a la cola${viaName ? ` (vía ${debridLabel(viaName)})` : ''}: ${form.name}`, 3500);
       if (ui.view !== 'downloads') ui.view = 'downloads';
       next();
     } catch (e) {
@@ -115,6 +131,8 @@
   }
 
   const nntp = $derived(ui.settings?.featureNntp !== false);
+  const debridOptions = $derived(usableDebrid(ui.settings));
+  const noServers = $derived(!hasNntp(ui.settings));
 
   async function saveNzb() {
     if (!preview || adding) return;
@@ -214,6 +232,28 @@
             <span>Las descargas Usenet están desactivadas: puedes guardar el .nzb en tu PC ({ui.settings.nzbAskSaveDir ? 'te preguntaré la carpeta' : ui.settings.nzbSaveDir}).</span>
           </div>
         {:else}
+        {#if debridOptions.length}
+          <div class="field">
+            <span class="label">Descargar con</span>
+            <div class="via">
+              <button type="button" class="via-btn" class:sel={form.via === 'nntp'} onclick={() => (form.via = 'nntp')}>
+                <Icon name="server" size={15} />
+                <span class="via-text"><strong>Usenet (NNTP)</strong><small>{noServers ? 'Sin servidores configurados' : 'Tus servidores'}</small></span>
+              </button>
+              {#each debridOptions as p (p.id)}
+                <button type="button" class="via-btn" class:sel={form.via === p.id} onclick={() => (form.via = p.id)}>
+                  <Icon name="cloud" size={15} />
+                  <span class="via-text">
+                    <strong>{debridLabel(p)}</strong>
+                    <small>{cached.includes(p.id) ? 'En caché: instantáneo' : 'Descarga en su servidor'}</small>
+                  </span>
+                  {#if cached.includes(p.id)}<span class="bolt" title="Ya lo tiene en caché"><Icon name="zap" size={13} /></span>{/if}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
         <div class="field">
           <label for="add-dest">¿Dónde quieres guardarlo?</label>
           <div class="dest">
@@ -312,6 +352,22 @@
   .dest-hint { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .dest-hint.bad { color: var(--warn); }
   .path { margin-left: auto; max-width: 60%; opacity: 0.8; }
+  .via { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .via-btn {
+    position: relative;
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 11px;
+    border: 1px solid var(--border-2); background: var(--panel-2);
+    color: var(--text-2); cursor: pointer; text-align: left;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .via-btn:hover { color: var(--text); background: var(--panel-3); }
+  .via-btn.sel { border-color: rgba(var(--accent-rgb), 0.65); background: rgba(var(--accent-rgb), 0.14); color: var(--text); }
+  .via-btn.sel > :global(svg) { color: var(--accent-2); }
+  .via-text { display: flex; flex-direction: column; min-width: 0; }
+  .via-text strong { font-size: 13px; font-weight: 620; }
+  .via-text small { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bolt { position: absolute; top: 6px; right: 8px; color: #fcd34d; }
   .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; padding: 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--border); }
   .opt { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); cursor: pointer; }
   .files-toggle { align-self: flex-start; display: flex; align-items: center; gap: 6px; border: none; background: none; color: var(--text-2); cursor: pointer; padding: 0; font-size: 13px; }

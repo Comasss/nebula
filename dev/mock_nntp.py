@@ -8,16 +8,28 @@ Uso:
   python dev/mock_nntp.py --src CARPETA --nzb salida.nzb [--port 1119] [--http 8119]
                           [--user test --password test] [--missing 3] [--kbps 800]
                           [--max-conns 20] [--nzb-password clave]
+                          [--debrid-key debridkey] [--debrid-secs 8] [--debrid-kbps 0] [--debrid-fail]
+
+También simula las API de TorBox (/torbox/v1/api) y Premiumize (/premiumize/api): reciben el NZB,
+«descargan» durante --debrid-secs segundos y sirven los archivos de --src con soporte de rangos.
+En Nebula: NEBULA_TORBOX_URL=http://127.0.0.1:8119/torbox/v1/api
+           NEBULA_PREMIUMIZE_URL=http://127.0.0.1:8119/premiumize/api  (API key: --debrid-key)
 """
 import argparse
 import asyncio
+import hashlib
+import itertools
+import json
 import os
 import random
 import re
 import threading
 import time
 import zlib
+from email.parser import BytesParser
+from email.policy import default as email_policy
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, quote, unquote, urlparse
 from xml.sax.saxutils import escape, quoteattr
 
 PART = 500 * 1024
@@ -88,6 +100,47 @@ def write_nzb(files, out, password=None, title=None):
         f.write("\n".join(parts))
 
 
+def multipart_fields(ctype, body):
+    """Campos de un formulario multipart: {nombre: (nombre_archivo, bytes)}."""
+    msg = BytesParser(policy=email_policy).parsebytes(b"Content-Type: " + ctype.encode() + b"\r\n\r\n" + body)
+    out = {}
+    for part in msg.iter_parts():
+        name = part.get_param("name", header="content-disposition")
+        out[name] = (part.get_filename(), part.get_payload(decode=True) or b"")
+    return out
+
+
+class MockDebrid:
+    """Estado compartido de las API debrid simuladas (TorBox y Premiumize)."""
+
+    def __init__(self, src, key, secs, kbps, fail):
+        self.src, self.key, self.secs, self.kbps, self.fail = src, key, secs, kbps, fail
+        self.items = {}
+        self.ids = itertools.count(1)
+        self.lock = threading.Lock()
+        self.files = []
+        for root, _, names in os.walk(src):
+            for n in sorted(names):
+                full = os.path.join(root, n)
+                self.files.append((os.path.relpath(full, src).replace(os.sep, "/"), full, os.path.getsize(full)))
+
+    def add(self, name, nzb):
+        with self.lock:
+            h = hashlib.md5(nzb).hexdigest()
+            for it in self.items.values():
+                if it["hash"] == h:
+                    return it, True
+            it = {"id": next(self.ids), "name": name, "hash": h, "start": time.time()}
+            self.items[it["id"]] = it
+            return it, False
+
+    def progress(self, it):
+        return 1.0 if self.secs <= 0 else min(1.0, (time.time() - it["start"]) / self.secs)
+
+    def file(self, index):
+        return self.files[index] if 0 <= index < len(self.files) else None
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", required=True)
@@ -104,6 +157,10 @@ async def main():
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--indexer-key", default="testkey", help="API key de la API Newznab simulada (/api)")
     ap.add_argument("--indexer-title", default=None, help="título del release en la API Newznab")
+    ap.add_argument("--debrid-key", default="debridkey", help="API key de TorBox/Premiumize simulados")
+    ap.add_argument("--debrid-secs", type=float, default=8, help="segundos que tarda la «descarga» remota")
+    ap.add_argument("--debrid-kbps", type=int, default=0, help="límite por conexión al bajar archivos (KB/s)")
+    ap.add_argument("--debrid-fail", action="store_true", help="la descarga remota termina con error")
     args = ap.parse_args()
     random.seed(args.seed)
 
@@ -116,21 +173,40 @@ async def main():
 
     # HTTP para probar el flujo "pegar enlace"
     nzb_dir = os.path.dirname(os.path.abspath(args.nzb))
+    debrid = MockDebrid(args.src, args.debrid_key, args.debrid_secs, args.debrid_kbps, args.debrid_fail)
+    http_base = f"http://127.0.0.1:{args.http}"
 
     class H(SimpleHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
         def __init__(self, *a, **k):
             super().__init__(*a, directory=nzb_dir, **k)
 
         def log_message(self, *a):
             pass
 
+        def do_POST(self):
+            u = urlparse(self.path)
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            if u.path.startswith("/torbox/"):
+                return self._torbox("POST", u.path, q, body)
+            if u.path.startswith("/premiumize/"):
+                return self._premiumize("POST", u.path, q, body)
+            return self._send("no encontrado", "text/plain", status=404)
+
         # API Newznab mínima: t=caps, t=search y t=get
         def do_GET(self):
-            from urllib.parse import urlparse, parse_qs
             u = urlparse(self.path)
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            if u.path.startswith("/torbox/dl/") or u.path.startswith("/premiumize/dl/"):
+                return self._serve_file(u.path)
+            if u.path.startswith("/torbox/"):
+                return self._torbox("GET", u.path, q, b"")
+            if u.path.startswith("/premiumize/"):
+                return self._premiumize("GET", u.path, q, b"")
             if not u.path.rstrip("/").endswith("/api"):
                 return super().do_GET()
-            q = {k: v[0] for k, v in parse_qs(u.query).items()}
             t = q.get("t", "")
             base = f"http://127.0.0.1:{args.http}/api"
             title = args.indexer_title or os.path.splitext(os.path.basename(args.nzb))[0]
@@ -164,9 +240,172 @@ async def main():
                 return self._send(body, "application/rss+xml")
             return self._send('<?xml version="1.0"?><error code="202" description="No such function"/>', "application/xml")
 
-        def _send(self, body, ctype, headers=None):
+        # ---- TorBox simulado: {"success", "error", "detail", "data"} ----
+        def _tb(self, data=None, error=None, detail="", status=200):
+            body = {"success": error is None, "error": error, "detail": detail, "data": data}
+            return self._send(json.dumps(body), "application/json", status=status)
+
+        def _tb_item(self, it):
+            p = debrid.progress(it)
+            done = p >= 1.0
+            state = ("failed" if debrid.fail else "completed") if done else "downloading"
+            files = [{"id": i, "name": f"{it['name']}/{rel}", "short_name": os.path.basename(rel), "size": size,
+                      "mimetype": "application/octet-stream"} for i, (rel, _, size) in enumerate(debrid.files)]
+            total = sum(f[2] for f in debrid.files)
+            return {"id": it["id"], "hash": it["hash"], "name": it["name"], "size": total, "download_state": state,
+                    "progress": p, "download_speed": 0 if done else int(total / max(debrid.secs, 1)),
+                    "eta": int(max(0, debrid.secs * (1 - p))), "download_finished": done and not debrid.fail,
+                    "download_present": done and not debrid.fail, "files": files if done else []}
+
+        def _torbox(self, method, path, q, body):
+            ep = path.split("/v1/api/", 1)[-1].strip("/")
+            if ep == "usenet/requestdl":
+                auth_ok = q.get("token") == debrid.key
+            else:
+                auth_ok = self.headers.get("Authorization", "") == f"Bearer {debrid.key}"
+            if not auth_ok:
+                return self._tb(error="BAD_TOKEN", detail="Invalid API token.", status=403)
+            if ep == "user/me":
+                return self._tb({"email": "mock@nebula.local", "plan": 2, "premium_expires_at": "2027-01-01T00:00:00Z"})
+            if ep == "usenet/createusenetdownload" and method == "POST":
+                fields = multipart_fields(self.headers.get("Content-Type", ""), body)
+                nzb = fields.get("file", (None, b""))[1]
+                if b"<nzb" not in nzb[:4096].lower():
+                    return self._tb(error="BOZO_NZB", detail="Invalid NZB.", status=400)
+                name = fields.get("name", (None, b"descarga"))[1].decode() or "descarga"
+                it, cached = debrid.add(name, nzb)
+                print(f"[TorBox] NZB recibido: {name} (id {it['id']}, post_processing={fields.get('post_processing', (None, b''))[1].decode()})")
+                return self._tb({"usenetdownload_id": it["id"], "hash": it["hash"], "auth_id": "mock"},
+                                detail="Found cached usenet download." if cached else "Usenet download added.")
+            if ep == "usenet/mylist":
+                if "id" in q:
+                    it = debrid.items.get(int(q["id"]))
+                    if not it:
+                        return self._tb(error="ITEM_NOT_FOUND", detail="Download not found.", status=404)
+                    return self._tb(self._tb_item(it))
+                return self._tb([self._tb_item(it) for it in debrid.items.values()])
+            if ep == "usenet/requestdl":
+                it = debrid.items.get(int(q.get("usenet_id", "0")))
+                f = debrid.file(int(q.get("file_id", "-1")))
+                if not it or not f:
+                    return self._tb(error="ITEM_NOT_FOUND", detail="File not found.", status=404)
+                return self._tb(f"{http_base}/torbox/dl/{it['id']}/{q['file_id']}/{quote(os.path.basename(f[0]))}")
+            if ep == "usenet/controlusenetdownload" and method == "POST":
+                req = json.loads(body or b"{}")
+                debrid.items.pop(int(req.get("usenet_id", 0)), None)
+                print(f"[TorBox] {req.get('operation')} {req.get('usenet_id')}")
+                return self._tb(None, detail="Deleted.")
+            if ep == "usenet/checkcached":
+                hashes = q.get("hash", "").split(",")
+                data = [{"name": it["name"], "hash": it["hash"], "size": 0} for it in debrid.items.values() if it["hash"] in hashes]
+                return self._tb(data)
+            return self._tb(error="ENDPOINT_NOT_FOUND", detail=ep, status=404)
+
+        # ---- Premiumize simulado: {"status": "success"|"error", ...} ----
+        def _pm(self, data=None, error=None):
+            body = {"status": "error", "message": error} if error else {"status": "success", **(data or {})}
+            return self._send(json.dumps(body), "application/json")
+
+        def _pm_content(self, tid, prefix):
+            out, subdirs = [], set()
+            for i, (rel, _, size) in enumerate(debrid.files):
+                if not rel.startswith(prefix):
+                    continue
+                rest = rel[len(prefix):]
+                if "/" in rest:
+                    subdirs.add(rest.split("/", 1)[0])
+                    continue
+                out.append({"id": f"i-{tid}-{i}", "name": rest, "type": "file", "size": size,
+                            "link": f"{http_base}/premiumize/dl/{tid}/{i}/{quote(rest)}"})
+            for d in sorted(subdirs):
+                out.append({"id": f"f-{tid}-{prefix}{d}/", "name": d, "type": "folder"})
+            return out
+
+        def _premiumize(self, method, path, q, body):
+            ep = path.split("/premiumize/api/", 1)[-1].strip("/")
+            if q.get("apikey") != debrid.key:
+                return self._pm(error="Not logged in.")
+            form = {k: v[0] for k, v in parse_qs(body.decode(errors="replace")).items()} if method == "POST" and not ep.endswith("create") else {}
+            if ep == "account/info":
+                return self._pm({"customer_id": 1, "premium_until": int(time.time()) + 30 * 86400, "limit_used": 0.1, "space_used": 0})
+            if ep == "transfer/create":
+                fields = multipart_fields(self.headers.get("Content-Type", ""), body)
+                fname, nzb = fields.get("src", (None, b""))
+                if b"<nzb" not in nzb[:4096].lower():
+                    return self._pm(error="Invalid file.")
+                it, _ = debrid.add((fname or "descarga.nzb").removesuffix(".nzb"), nzb)
+                print(f"[Premiumize] NZB recibido: {fname} (id {it['id']})")
+                return self._pm({"id": f"t{it['id']}", "name": fname, "type": "nzb"})
+            if ep == "transfer/list":
+                transfers = []
+                for it in debrid.items.values():
+                    p = debrid.progress(it)
+                    done = p >= 1.0
+                    status = ("error" if debrid.fail else "finished") if done else "running"
+                    msg = "Not enough repair blocks." if debrid.fail and done else ("" if done else f"Downloading at 42.0 MB/s. {int(p * 100)}% finished.")
+                    transfers.append({"id": f"t{it['id']}", "name": it["name"] + ".nzb", "status": status, "progress": p,
+                                      "message": msg, "folder_id": f"f-{it['id']}-" if done and not debrid.fail else None,
+                                      "file_id": None})
+                return self._pm({"transfers": transfers})
+            if ep == "folder/list":
+                fid = q.get("id", "")
+                tid, _, prefix = fid[2:].partition("-")
+                return self._pm({"content": self._pm_content(tid, prefix), "name": "carpeta"})
+            if ep == "item/details":
+                _, tid, idx = q.get("id", "i-0-0").split("-", 2)
+                f = debrid.file(int(idx))
+                if not f:
+                    return self._pm(error="Item not found.")
+                return self._pm({"id": q["id"], "name": os.path.basename(f[0]), "size": f[2],
+                                 "link": f"{http_base}/premiumize/dl/{tid}/{idx}/{quote(os.path.basename(f[0]))}"})
+            if ep in ("folder/delete", "item/delete", "transfer/delete"):
+                print(f"[Premiumize] {ep} {form.get('id')}")
+                if ep == "transfer/delete":
+                    debrid.items.pop(int(form.get("id", "t0")[1:] or 0), None)
+                return self._pm({})
+            return self._pm(error=f"Unknown endpoint {ep}")
+
+        def _serve_file(self, path):
+            parts = path.split("/")
+            f = debrid.file(int(parts[4])) if len(parts) > 4 and parts[4].isdigit() else None
+            if not f:
+                return self._send("no encontrado", "text/plain", status=404)
+            _, full, size = f
+            start, end, status = 0, size - 1, 200
+            rng = self.headers.get("Range", "")
+            m = re.match(r"bytes=(\d+)-(\d*)$", rng)
+            if m:
+                start = int(m.group(1))
+                end = min(int(m.group(2)) if m.group(2) else size - 1, size - 1)
+                if start >= size or start > end:
+                    return self._send("", "text/plain", status=416, headers={"Content-Range": f"bytes */{size}"})
+                status = 206
+            self.send_response(status)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Length", str(end - start + 1))
+            if status == 206:
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            self.end_headers()
+            step = 256 * 1024
+            with open(full, "rb") as fh:
+                fh.seek(start)
+                left = end - start + 1
+                try:
+                    while left > 0:
+                        chunk = fh.read(min(step, left))
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        left -= len(chunk)
+                        if debrid.kbps:
+                            time.sleep(len(chunk) / (debrid.kbps * 1024))
+                except (ConnectionResetError, BrokenPipeError):
+                    pass
+
+        def _send(self, body, ctype, headers=None, status=200):
             data = body.encode() if isinstance(body, str) else body
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
             for k, v in (headers or {}).items():
@@ -177,6 +416,7 @@ async def main():
     httpd = ThreadingHTTPServer(("127.0.0.1", args.http), H)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     print(f"HTTP: http://127.0.0.1:{args.http}/{os.path.basename(args.nzb)}")
+    print(f"TorBox simulado: {http_base}/torbox/v1/api · Premiumize simulado: {http_base}/premiumize/api (API key {args.debrid_key})")
 
     active = 0
 

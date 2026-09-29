@@ -4,6 +4,7 @@
   import SpeedGraph from './SpeedGraph.svelte';
   import { ui } from '../lib/state.svelte.js';
   import { speed, bytes } from '../lib/format.js';
+  import { usableDebrid, debridLabel } from '../lib/debrid.js';
 
   const ALL = [
     { id: 'search', label: 'Buscar', icon: 'search', feature: 'indexers' },
@@ -11,6 +12,7 @@
     { id: 'history', label: 'Historial', icon: 'history', feature: 'nntp' },
     { id: 'indexers', label: 'Indexadores', icon: 'layers', feature: 'indexers' },
     { id: 'servers', label: 'Servidores', icon: 'server', feature: 'nntp' },
+    { id: 'debrid', label: 'Debrid', icon: 'cloud', feature: 'nntp' },
     { id: 'settings', label: 'Configuración', icon: 'settings' },
     { id: 'logs', label: 'Registro', icon: 'logs' },
   ];
@@ -26,9 +28,12 @@
   const queueCount = $derived(ui.queue.jobs.length);
   const failedCount = $derived(ui.history.filter((h) => h.status === 'failed').length);
   const errorLogs = $derived(ui.logs.filter((l) => l.level === 'error').length);
+  const debridJob = $derived(ui.queue.jobs.find((j) => j.debrid && j.status === 'downloading'));
   const serverState = $derived.by(() => {
     const s = ui.queue.servers;
-    if (!ui.settings?.servers?.length) return { cls: 'err', text: 'Sin servidores' };
+    const debrid = usableDebrid(ui.settings);
+    if (debridJob && !ui.queue.activeConns) return { cls: 'active', text: `Descargando vía ${debridJob.debrid.provider}` };
+    if (!ui.settings?.servers?.length) return debrid.length ? { cls: 'ok', text: `Listo · ${debridLabel(debrid[0])}` } : { cls: 'err', text: 'Sin servidores' };
     if (!s.length) return { cls: '', text: 'Servidores desactivados' };
     if (s.some((x) => x.state === 'auth')) return { cls: 'err', text: 'Error de autenticación' };
     if (s.every((x) => x.state === 'down')) return { cls: 'err', text: 'Sin conexión' };
