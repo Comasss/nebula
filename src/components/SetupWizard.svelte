@@ -1,4 +1,5 @@
 <script>
+  import { t, th } from '../lib/i18n.svelte.js';
   import { open } from '@tauri-apps/plugin-dialog';
   import { fly, fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -42,8 +43,7 @@
     searchQuickAdd: s0.searchQuickAdd,
   });
 
-  const LABELS = { welcome: 'Bienvenida', features: 'Funciones', indexers: 'Indexadores', server: 'Servidor', prefs: 'Preferencias', done: 'Listo' };
-  const steps = $derived(
+    const steps = $derived(
     [firstTime && 'welcome', 'features', features.indexers && 'indexers', features.nntp && 'server', 'prefs', 'done'].filter(Boolean)
   );
   let current = $state(firstTime ? 'welcome' : 'features');
@@ -52,12 +52,6 @@
   const mode = $derived(
     features.nntp && features.indexers ? 'both' : features.indexers ? 'indexers' : features.nntp ? 'nntp' : 'none'
   );
-  const MODE_TEXT = {
-    both: 'Buscarás en tus indexadores y descargarás directamente con Nebula, con un clic.',
-    indexers: 'Buscarás en tus indexadores y guardarás los .nzb en tu PC para usarlos con otro programa.',
-    nntp: 'Añadirás .nzb desde archivos, enlaces o el portapapeles y Nebula los descargará de Usenet.',
-    none: 'Activa al menos una función para continuar.',
-  };
 
   let skipServer = $state(false);
   let skipIndexer = $state(false);
@@ -71,7 +65,7 @@
 
   function nextFromFeatures() {
     if (mode === 'none') {
-      toast('warn', 'Activa al menos una función.');
+      toast('warn', t('wizard.enableOne'));
       return;
     }
     next();
@@ -79,20 +73,20 @@
 
   function nextFromServer() {
     if (!server.host.trim()) {
-      toast('error', 'Indica la dirección del servidor NNTP (o pulsa «Omitir»).');
+      toast('error', t('wizard.serverRequired'));
       return;
     }
-    if (!server.username.trim()) toast('warn', 'No has puesto usuario: la mayoría de proveedores lo requieren.', 4000);
+    if (!server.username.trim()) toast('warn', t('wizard.noUsername'), 4000);
     skipServer = false;
     next();
   }
 
   function nextFromIndexer() {
     if (!/^https?:\/\//i.test(indexer.url.trim())) {
-      toast('error', 'Indica la URL del indexador (o pulsa «Omitir»).');
+      toast('error', t('wizard.indexerRequired'));
       return;
     }
-    if (!indexer.apiKey.trim()) toast('warn', 'Sin API key la mayoría de indexadores no devuelven resultados.', 4000);
+    if (!indexer.apiKey.trim()) toast('warn', t('wizard.noApiKey'), 4000);
     skipIndexer = false;
     next();
   }
@@ -145,7 +139,7 @@
       {#each steps as st, i (st)}
         <div class="stp" class:done={i < idx} class:cur={i === idx}>
           <span class="num">{#if i < idx}<Icon name="check" size={12} stroke={3} />{:else}{i + 1}{/if}</span>
-          <span class="lbl">{LABELS[st]}</span>
+          <span class="lbl">{t(`wizard.step.${st}`)}</span>
         </div>
         {#if i < steps.length - 1}<div class="line" class:done={i < idx}></div>{/if}
       {/each}
@@ -157,97 +151,97 @@
           {#if current === 'welcome'}
             <div class="welcome">
               <img class="hero" src={logo} alt="" />
-              <h1>Bienvenido a <span class="grad-text">Nebula</span></h1>
-              <p>Busca en tus indexadores y descarga desde Usenet con verificación, reparación y extracción automáticas. Lo dejamos listo en un minuto.</p>
+              <h1>{@html th('wizard.welcomeTitle')}</h1>
+              <p>{t('wizard.welcomeText')}</p>
               <div class="features-list">
-                <div><Icon name="search" size={16} /> Búsqueda en varios indexadores</div>
-                <div><Icon name="zap" size={16} /> Multiconexión y servidores de respaldo</div>
-                <div><Icon name="shield" size={16} /> Reparación PAR2 integrada</div>
-                <div><Icon name="archive" size={16} /> Extracción RAR/7z/ZIP incluida</div>
+                <div><Icon name="search" size={16} /> {t('wizard.featSearch')}</div>
+                <div><Icon name="zap" size={16} /> {t('wizard.featConns')}</div>
+                <div><Icon name="shield" size={16} /> {t('wizard.featPar2')}</div>
+                <div><Icon name="archive" size={16} /> {t('wizard.featExtract')}</div>
               </div>
             </div>
           {:else if current === 'features'}
-            <h2>{firstTime ? '¿Qué quieres usar?' : 'Novedad: búsqueda en indexadores'}</h2>
-            <p class="lead">Activa las funciones que necesites (al menos una). Puedes cambiarlo cuando quieras en Configuración.</p>
+            <h2>{firstTime ? t('wizard.featuresTitle') : t('wizard.featuresNew')}</h2>
+            <p class="lead">{t('wizard.featuresLead')}</p>
             <div class="fcards">
               <button type="button" class="fcard" class:on={features.indexers} onclick={() => (features.indexers = !features.indexers)}>
                 <div class="f-top">
                   <div class="f-icon"><Icon name="search" size={22} /></div>
                   <span class="f-check">{#if features.indexers}<span in:scale={{ duration: d(200) }}><Icon name="check" size={14} stroke={3} /></span>{/if}</span>
                 </div>
-                <div class="f-title">Indexadores</div>
-                <div class="f-desc">Busca en NZBGeek, NZBFinder, DrunkenSlug y otros indexadores Newznab a la vez, sin duplicados.</div>
+                <div class="f-title">{t('nav.indexers')}</div>
+                <div class="f-desc">{t('wizard.indexersDesc')}</div>
               </button>
               <button type="button" class="fcard" class:on={features.nntp} onclick={() => (features.nntp = !features.nntp)}>
                 <div class="f-top">
                   <div class="f-icon"><Icon name="server" size={22} /></div>
                   <span class="f-check">{#if features.nntp}<span in:scale={{ duration: d(200) }}><Icon name="check" size={14} stroke={3} /></span>{/if}</span>
                 </div>
-                <div class="f-title">Descargas Usenet (NNTP)</div>
-                <div class="f-desc">Descarga, repara y extrae los NZB con las credenciales de tu proveedor Usenet.</div>
+                <div class="f-title">{t('wizard.nntpTitle')}</div>
+                <div class="f-desc">{t('wizard.nntpDesc')}</div>
               </button>
             </div>
             <div class="mode alert {mode === 'none' ? 'warn' : 'info'}">
               <Icon name={mode === 'none' ? 'alert-triangle' : 'info'} size={16} />
-              {#key mode}<span in:fade={{ duration: d(200) }}>{MODE_TEXT[mode]}</span>{/key}
+              {#key mode}<span in:fade={{ duration: d(200) }}>{t(`wizard.mode.${mode}`)}</span>{/key}
             </div>
           {:else if current === 'indexers'}
-            <h2>Tu indexador</h2>
-            <p class="lead">Elige tu indexador y pega la API key de tu perfil. Podrás añadir más en la pestaña Indexadores.</p>
+            <h2>{t('wizard.indexerTitle')}</h2>
+            <p class="lead">{t('wizard.indexerLead')}</p>
             <IndexerForm bind:indexer compact />
           {:else if current === 'server'}
-            <h2>Tu servidor Usenet</h2>
-            <p class="lead">Introduce los datos NNTP que te dio tu proveedor. Podrás añadir servidores de respaldo más tarde.</p>
+            <h2>{t('wizard.serverTitle')}</h2>
+            <p class="lead">{t('wizard.serverLead')}</p>
             <ServerForm bind:server compact />
             <div class="alert info wz-debrid">
               <Icon name="cloud" size={15} />
-              <span>¿Usas <strong>TorBox</strong> (plan Pro) o <strong>Premiumize</strong>? Pulsa «Omitir» si no tienes proveedor Usenet y añade tu API key después en la pestaña <strong>Debrid</strong>.</span>
+              <span>{@html th('wizard.debridHint')}</span>
             </div>
           {:else if current === 'prefs'}
-            <h2>Preferencias</h2>
-            <p class="lead">Puedes cambiar todo esto cuando quieras en Configuración.</p>
+            <h2>{t('wizard.step.prefs')}</h2>
+            <p class="lead">{t('wizard.prefsLead')}</p>
             {#if features.nntp}
               <div class="field">
-                <label for="wz-dir">Carpeta de descargas</label>
+                <label for="wz-dir">{t('settings.downloadDir')}</label>
                 <div class="dirrow">
                   <input id="wz-dir" class="input" bind:value={prefs.downloadDir} />
-                  <button class="btn" onclick={() => browse('downloadDir')}>Examinar…</button>
+                  <button class="btn" onclick={() => browse('downloadDir')}>{t('common.browse')}…</button>
                 </div>
               </div>
             {:else}
               <div class="field">
-                <label for="wz-nzb">Carpeta donde guardar los .nzb</label>
+                <label for="wz-nzb">{t('wizard.nzbDir')}</label>
                 <div class="dirrow">
                   <input id="wz-nzb" class="input" bind:value={prefs.nzbSaveDir} />
-                  <button class="btn" onclick={() => browse('nzbSaveDir')}>Examinar…</button>
+                  <button class="btn" onclick={() => browse('nzbSaveDir')}>{t('common.browse')}…</button>
                 </div>
-                <span class="hint">Puedes usar la carpeta vigilada de otro programa para que los recoja automáticamente.</span>
+                <span class="hint">{t('wizard.nzbDirHint')}</span>
               </div>
             {/if}
             <div class="card prefs">
               {#if features.indexers}
-                <SettingRow label="Eliminar duplicados entre indexadores" description="El mismo release subido a varios indexadores aparece una sola vez." checked={prefs.searchDedup} onchange={(v) => (prefs.searchDedup = v)} />
+                <SettingRow label={t('wizard.dedup')} description={t('wizard.dedupDesc')} checked={prefs.searchDedup} onchange={(v) => (prefs.searchDedup = v)} />
               {/if}
               {#if features.indexers && features.nntp}
-                <SettingRow label="Descargar con un clic desde la búsqueda" description="Añade el resultado directamente a la cola, sin ventanas intermedias." checked={prefs.searchQuickAdd} onchange={(v) => (prefs.searchQuickAdd = v)} />
+                <SettingRow label={t('wizard.quickAdd')} description={t('wizard.quickAddDesc')} checked={prefs.searchQuickAdd} onchange={(v) => (prefs.searchQuickAdd = v)} />
               {/if}
               {#if features.nntp}
-                <SettingRow label="Preguntar dónde guardar cada NZB añadido a mano" checked={prefs.askDestination} onchange={(v) => (prefs.askDestination = v)} />
-                <SettingRow label="Verificar y reparar con PAR2" checked={prefs.par2Enabled} onchange={(v) => (prefs.par2Enabled = v)} />
-                <SettingRow label="Extraer archivos comprimidos" checked={prefs.extractEnabled} onchange={(v) => (prefs.extractEnabled = v)} />
-                <SettingRow label="Abrir archivos .nzb con Nebula" checked={prefs.associateNzb} onchange={(v) => (prefs.associateNzb = v)} />
+                <SettingRow label={t('wizard.askDestination')} checked={prefs.askDestination} onchange={(v) => (prefs.askDestination = v)} />
+                <SettingRow label={t('settings.par2')} checked={prefs.par2Enabled} onchange={(v) => (prefs.par2Enabled = v)} />
+                <SettingRow label={t('settings.extract')} checked={prefs.extractEnabled} onchange={(v) => (prefs.extractEnabled = v)} />
+                <SettingRow label={t('settings.associate')} checked={prefs.associateNzb} onchange={(v) => (prefs.associateNzb = v)} />
               {/if}
-              <SettingRow label="Detectar enlaces .nzb en el portapapeles" checked={prefs.clipboardMonitor} onchange={(v) => (prefs.clipboardMonitor = v)} />
-              <SettingRow label="Seguir en la bandeja al cerrar la ventana" checked={prefs.closeToTray} onchange={(v) => (prefs.closeToTray = v)} />
+              <SettingRow label={t('wizard.clipboard')} checked={prefs.clipboardMonitor} onchange={(v) => (prefs.clipboardMonitor = v)} />
+              <SettingRow label={t('wizard.closeToTray')} checked={prefs.closeToTray} onchange={(v) => (prefs.closeToTray = v)} />
             </div>
           {:else}
             <div class="welcome">
               <div class="done-badge"><Icon name="check" size={40} stroke={2.6} /></div>
-              <h1>¡Todo listo!</h1>
+              <h1>{t('wizard.doneTitle')}</h1>
               <p>
-                {#if features.indexers}Ve a <strong>Buscar</strong> para encontrar lo que quieras en {skipIndexer || !indexer.url.trim() ? 'tus indexadores' : indexer.name || 'tu indexador'}.{/if}
-                {#if features.nntp && server.host.trim() && !skipServer}Descargaremos desde <strong>{server.host}</strong> con {server.connections} conexiones.{/if}
-                {#if !features.indexers}Arrastra un .nzb a la ventana, pega un enlace o cópialo al portapapeles para empezar.{/if}
+                {#if features.indexers}{@html th('wizard.doneSearch', { target: skipIndexer || !indexer.url.trim() ? t('wizard.yourIndexers') : indexer.name || t('wizard.yourIndexer') })}{/if}
+                {#if features.nntp && server.host.trim() && !skipServer}{@html th('wizard.doneServer', { host: server.host, n: server.connections })}{/if}
+                {#if !features.indexers}{t('wizard.doneNntp')}{/if}
               </p>
             </div>
           {/if}
@@ -257,26 +251,26 @@
 
     <footer>
       {#if current === 'server'}
-        <button class="btn ghost" onclick={() => { skipServer = true; next(); }}>Omitir</button>
+        <button class="btn ghost" onclick={() => { skipServer = true; next(); }}>{t('wizard.skip')}</button>
       {:else if current === 'indexers'}
-        <button class="btn ghost" onclick={() => { skipIndexer = true; next(); }}>Omitir</button>
+        <button class="btn ghost" onclick={() => { skipIndexer = true; next(); }}>{t('wizard.skip')}</button>
       {/if}
       <div class="spacer"></div>
       {#if idx > 0}
-        <button class="btn" onclick={back}><Icon name="chevron-left" size={16} /> Atrás</button>
+        <button class="btn" onclick={back}><Icon name="chevron-left" size={16} /> {t('wizard.back')}</button>
       {/if}
       {#if current === 'welcome'}
-        <button class="btn primary lg" onclick={next}>Empezar <Icon name="chevron-right" size={16} /></button>
+        <button class="btn primary lg" onclick={next}>{t('wizard.start')} <Icon name="chevron-right" size={16} /></button>
       {:else if current === 'features'}
-        <button class="btn primary" onclick={nextFromFeatures} disabled={mode === 'none'}>Siguiente <Icon name="chevron-right" size={16} /></button>
+        <button class="btn primary" onclick={nextFromFeatures} disabled={mode === 'none'}>{t('wizard.next')} <Icon name="chevron-right" size={16} /></button>
       {:else if current === 'indexers'}
-        <button class="btn primary" onclick={nextFromIndexer}>Siguiente <Icon name="chevron-right" size={16} /></button>
+        <button class="btn primary" onclick={nextFromIndexer}>{t('wizard.next')} <Icon name="chevron-right" size={16} /></button>
       {:else if current === 'server'}
-        <button class="btn primary" onclick={nextFromServer}>Siguiente <Icon name="chevron-right" size={16} /></button>
+        <button class="btn primary" onclick={nextFromServer}>{t('wizard.next')} <Icon name="chevron-right" size={16} /></button>
       {:else if current === 'prefs'}
-        <button class="btn primary" onclick={next}>Siguiente <Icon name="chevron-right" size={16} /></button>
+        <button class="btn primary" onclick={next}>{t('wizard.next')} <Icon name="chevron-right" size={16} /></button>
       {:else}
-        <button class="btn primary lg" onclick={finish} disabled={saving}><Icon name="rocket" size={16} /> Empezar</button>
+        <button class="btn primary lg" onclick={finish} disabled={saving}><Icon name="rocket" size={16} /> {t('wizard.start')}</button>
       {/if}
     </footer>
   </div>

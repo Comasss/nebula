@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { fade, scale } from 'svelte/transition';
   import Icon from './Icon.svelte';
   import { ui, d } from '../lib/state.svelte.js';
@@ -8,8 +9,8 @@
   <div class="drop" transition:fade={{ duration: d(150) }}>
     <div class="zone" in:scale={{ start: 0.92, duration: d(260) }}>
       <div class="d-icon"><Icon name="upload" size={40} stroke={1.8} /></div>
-      <div class="d-title">Suelta los archivos .nzb</div>
-      <div class="d-sub">Se añadirán a la cola de descargas</div>
+      <div class="d-title">{t('drop.title')}</div>
+      <div class="d-sub">{t('drop.subtitle')}</div>
     </div>
   </div>
 {/if}

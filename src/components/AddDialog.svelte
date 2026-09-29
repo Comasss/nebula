@@ -1,4 +1,5 @@
 <script>
+  import { t, tn, th } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { open } from '@tauri-apps/plugin-dialog';
   import { slide, fade } from 'svelte/transition';
@@ -91,7 +92,7 @@
   }
 
   async function browse() {
-    const dir = await open({ directory: true, defaultPath: form.dest || undefined, title: '¿Dónde quieres guardar la descarga?' });
+    const dir = await open({ directory: true, defaultPath: form.dest || undefined, title: t('add.whereSaveDownload') });
     if (dir) {
       form.dest = dir;
       updateFree();
@@ -115,11 +116,11 @@
         },
       });
       const viaName = debridOptions.find((p) => p.id === form.via);
-      toast('success', `Añadido a la cola${viaName ? ` (vía ${debridLabel(viaName)})` : ''}: ${form.name}`, 3500);
+      toast('success', viaName ? t('add.queuedVia', { provider: debridLabel(viaName), name: form.name }) : t('add.queued', { name: form.name }), 3500);
       if (ui.view !== 'downloads') ui.view = 'downloads';
       next();
     } catch (e) {
-      if (String(e).includes('caducado') && current) {
+      if (String(e).startsWith('⌛') && current) {
         current.preview = null;
         retry();
       } else {
@@ -138,13 +139,13 @@
     if (!preview || adding) return;
     let dir = ui.settings.nzbSaveDir;
     if (ui.settings.nzbAskSaveDir || !dir) {
-      dir = await open({ directory: true, defaultPath: dir || undefined, title: '¿Dónde quieres guardar el .nzb?' });
+      dir = await open({ directory: true, defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
       if (!dir) return;
     }
     adding = true;
     try {
       const path = await invoke('save_pending_nzb', { token: preview.token, dir, name: form.name.trim() });
-      toast('success', `NZB guardado: ${path.split(/[\\/]/).pop()}`, 3500);
+      toast('success', t('common.nzbSaved', { name: path.split(/[\\/]/).pop() }), 3500);
       preview = null;
       next();
     } catch (e) {
@@ -188,8 +189,8 @@
 
 {#if current}
   <Modal
-    title={phase === 'error' ? 'No se pudo añadir el NZB' : phase === 'loading' ? 'Analizando NZB…' : 'Añadir descarga'}
-    subtitle={remainingItems > 0 ? `${sourceLabel(current)} · ${remainingItems} más pendiente${remainingItems > 1 ? 's' : ''}` : sourceLabel(current)}
+    title={phase === 'error' ? t('add.titleError') : phase === 'loading' ? t('add.titleLoading') : t('add.title')}
+    subtitle={remainingItems > 0 ? `${sourceLabel(current)} · ${tn('add.pending', remainingItems)}` : sourceLabel(current)}
     icon={phase === 'error' ? 'x-circle' : current.kind === 'file' ? 'file' : 'link'}
     iconKind={phase === 'error' ? 'err' : 'accent'}
     width={640}
@@ -197,7 +198,7 @@
     {#if phase === 'loading'}
       <div class="loading" in:fade={{ duration: d(200) }}>
         <div class="loader"><Icon name="loader" size={30} class="spin" /></div>
-        <div>{current.kind === 'file' ? 'Leyendo el archivo…' : 'Descargando y comprobando el enlace…'}</div>
+        <div>{current.kind === 'file' ? t('add.readingFile') : t('add.fetchingLink')}</div>
         {#if current.kind !== 'file'}<div class="muted small truncate">{current.value}</div>{/if}
       </div>
     {:else if phase === 'error'}
@@ -211,10 +212,10 @@
     {:else if phase === 'preview' && preview}
       <div class="pv" in:fade={{ duration: d(200) }}>
         <div class="summary">
-          <div class="sum"><span class="k">Tamaño</span><span class="v">{f.bytes(preview.dataBytes)}</span></div>
-          <div class="sum"><span class="k">Archivos</span><span class="v">{preview.fileCount}</span></div>
-          <div class="sum"><span class="k">Recuperación</span><span class="v">{preview.par2Bytes ? f.bytes(preview.par2Bytes) : 'Sin PAR2'}</span></div>
-          <div class="sum"><span class="k">Publicado</span><span class="v">{preview.oldestPost ? f.ago(preview.oldestPost) : '—'}</span></div>
+          <div class="sum"><span class="k">{t('common.size')}</span><span class="v">{f.bytes(preview.dataBytes)}</span></div>
+          <div class="sum"><span class="k">{t('add.files')}</span><span class="v">{preview.fileCount}</span></div>
+          <div class="sum"><span class="k">{t('add.recovery')}</span><span class="v">{preview.par2Bytes ? f.bytes(preview.par2Bytes) : t('add.noPar2')}</span></div>
+          <div class="sum"><span class="k">{t('add.posted')}</span><span class="v">{preview.oldestPost ? f.ago(preview.oldestPost) : '—'}</span></div>
         </div>
 
         {#if preview.retentionWarning}
@@ -222,32 +223,32 @@
         {/if}
 
         <div class="field">
-          <label for="add-name">Nombre</label>
+          <label for="add-name">{t('common.name')}</label>
           <input id="add-name" class="input" bind:value={form.name} />
         </div>
 
         {#if !nntp}
           <div class="alert info">
             <Icon name="info" size={16} />
-            <span>Las descargas Usenet están desactivadas: puedes guardar el .nzb en tu PC ({ui.settings.nzbAskSaveDir ? 'te preguntaré la carpeta' : ui.settings.nzbSaveDir}).</span>
+            <span>{t('add.nntpDisabled', { dir: ui.settings.nzbAskSaveDir ? t('add.askFolder') : ui.settings.nzbSaveDir })}</span>
           </div>
         {:else}
         {#if debridOptions.length}
           <div class="field">
-            <span class="label">Descargar con</span>
+            <span class="label">{t('add.downloadWith')}</span>
             <div class="via">
               <button type="button" class="via-btn" class:sel={form.via === 'nntp'} onclick={() => (form.via = 'nntp')}>
                 <Icon name="server" size={15} />
-                <span class="via-text"><strong>Usenet (NNTP)</strong><small>{noServers ? 'Sin servidores configurados' : 'Tus servidores'}</small></span>
+                <span class="via-text"><strong>Usenet (NNTP)</strong><small>{noServers ? t('add.noServersConfigured') : t('add.yourServers')}</small></span>
               </button>
               {#each debridOptions as p (p.id)}
                 <button type="button" class="via-btn" class:sel={form.via === p.id} onclick={() => (form.via = p.id)}>
                   <Icon name="cloud" size={15} />
                   <span class="via-text">
                     <strong>{debridLabel(p)}</strong>
-                    <small>{cached.includes(p.id) ? 'En caché: instantáneo' : 'Descarga en su servidor'}</small>
+                    <small>{cached.includes(p.id) ? t('add.cached') : t('add.remoteDownload')}</small>
                   </span>
-                  {#if cached.includes(p.id)}<span class="bolt" title="Ya lo tiene en caché"><Icon name="zap" size={13} /></span>{/if}
+                  {#if cached.includes(p.id)}<span class="bolt" title={t('add.cachedTitle')}><Icon name="zap" size={13} /></span>{/if}
                 </button>
               {/each}
             </div>
@@ -255,18 +256,18 @@
         {/if}
 
         <div class="field">
-          <label for="add-dest">¿Dónde quieres guardarlo?</label>
+          <label for="add-dest">{t('add.whereSave')}</label>
           <div class="dest">
             <div class="dest-input">
               <Icon name="folder" size={16} />
               <input id="add-dest" class="input" bind:value={form.dest} onchange={updateFree} />
             </div>
-            <button class="btn" onclick={browse}>Examinar…</button>
+            <button class="btn" onclick={browse}>{t('common.browse')}…</button>
           </div>
           <div class="hint dest-hint" class:bad={lowSpace}>
             {#if free !== null}
               <Icon name="hard-drive" size={12} />
-              {f.bytes(free)} libres{#if lowSpace} — puede que no haya espacio suficiente{/if}
+              {t('add.free', { size: f.bytes(free) })}{#if lowSpace} — {t('add.lowSpace')}{/if}
             {/if}
             {#if form.options.createFolder}
               <span class="path truncate">→ {form.dest.replace(/[\\/]+$/, '')}\{form.name}</span>
@@ -275,7 +276,7 @@
         </div>
 
         <div class="field">
-          <label for="add-pw">Contraseña del archivo comprimido <span class="muted">(opcional)</span></label>
+          <label for="add-pw">{t('add.archivePassword')} <span class="muted">({t('common.optional')})</span></label>
           <div class="pw">
             <Icon name="key" size={16} />
             <input
@@ -283,32 +284,32 @@
               class="input"
               type={showPw ? 'text' : 'password'}
               bind:value={form.password}
-              placeholder={preview.password ? '' : 'Déjalo vacío si no tiene'} />
-            <button class="icon-btn eye" onclick={() => (showPw = !showPw)} aria-label="Mostrar contraseña"><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
+              placeholder={preview.password ? '' : t('add.passwordPlaceholder')} />
+            <button class="icon-btn eye" onclick={() => (showPw = !showPw)} aria-label={t('common.showPassword')}><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
           </div>
         </div>
 
         <div class="opts">
-          <label class="opt"><Switch checked={form.options.createFolder} onchange={(v) => (form.options.createFolder = v)} /> Crear subcarpeta</label>
-          <label class="opt" title="Desactivado: no se descarga ningún archivo PAR2"><Switch checked={form.options.par2} onchange={(v) => (form.options.par2 = v)} /> Verificar y reparar (PAR2)</label>
-          <label class="opt"><Switch checked={form.options.extract} onchange={(v) => (form.options.extract = v)} /> Extraer comprimidos</label>
-          <label class="opt"><Switch checked={form.options.deleteArchives} onchange={(v) => (form.options.deleteArchives = v)} disabled={!form.options.extract} /> Borrar comprimidos al extraer</label>
-          <label class="opt"><Switch checked={form.top} onchange={(v) => (form.top = v)} /> Poner el primero en la cola</label>
-          <label class="opt"><Switch checked={form.paused} onchange={(v) => (form.paused = v)} /> Añadir en pausa</label>
+          <label class="opt"><Switch checked={form.options.createFolder} onchange={(v) => (form.options.createFolder = v)} /> {t('add.createFolder')}</label>
+          <label class="opt" title={t('add.par2Title')}><Switch checked={form.options.par2} onchange={(v) => (form.options.par2 = v)} /> {t('add.par2')}</label>
+          <label class="opt"><Switch checked={form.options.extract} onchange={(v) => (form.options.extract = v)} /> {t('add.extract')}</label>
+          <label class="opt"><Switch checked={form.options.deleteArchives} onchange={(v) => (form.options.deleteArchives = v)} disabled={!form.options.extract} /> {t('add.deleteArchives')}</label>
+          <label class="opt"><Switch checked={form.top} onchange={(v) => (form.top = v)} /> {t('add.top')}</label>
+          <label class="opt"><Switch checked={form.paused} onchange={(v) => (form.paused = v)} /> {t('add.paused')}</label>
         </div>
 
         {/if}
 
         <button class="files-toggle" onclick={() => (showFiles = !showFiles)}>
           <Icon name="chevron-right" size={14} class={showFiles ? 'rot' : ''} />
-          Ver contenido ({preview.fileCount} archivos{#if preview.groups.length} · {preview.groups[0]}{/if})
+          {t('add.showContents')} ({tn('common.files', preview.fileCount)}{#if preview.groups.length}{' · '}{preview.groups[0]}{/if})
         </button>
         {#if showFiles}
           <div class="files" transition:slide={{ duration: d(220) }}>
             {#each preview.files as file}
               <div class="file"><Icon name={file.par2 ? 'shield' : 'file'} size={13} /><span class="truncate">{file.name}</span><span class="muted">{f.bytes(file.bytes)}</span></div>
             {/each}
-            {#if preview.fileCount > preview.files.length}<div class="muted small">… y {preview.fileCount - preview.files.length} más</div>{/if}
+            {#if preview.fileCount > preview.files.length}<div class="muted small">{tn('add.moreFiles', preview.fileCount - preview.files.length)}</div>{/if}
           </div>
         {/if}
       </div>
@@ -316,16 +317,16 @@
 
     {#snippet footer()}
       {#if phase === 'error'}
-        <button class="btn ghost" onclick={cancel}>Descartar</button>
-        <button class="btn primary" onclick={retry}><Icon name="refresh" size={15} /> Reintentar</button>
+        <button class="btn ghost" onclick={cancel}>{t('add.discard')}</button>
+        <button class="btn primary" onclick={retry}><Icon name="refresh" size={15} /> {t('common.retry')}</button>
       {:else}
-        <button class="btn ghost" onclick={cancel}>Cancelar</button>
+        <button class="btn ghost" onclick={cancel}>{t('common.cancel')}</button>
         {#if !nntp}
-          <button class="btn primary" onclick={saveNzb} disabled={phase !== 'preview' || adding}><Icon name="file" size={16} /> Guardar .nzb</button>
+          <button class="btn primary" onclick={saveNzb} disabled={phase !== 'preview' || adding}><Icon name="file" size={16} /> {t('common.saveNzb')}</button>
         {:else}
         <button class="btn primary" onclick={confirm} disabled={phase !== 'preview' || adding || !form.dest.trim()}>
           {#if adding}<Icon name="loader" size={15} class="spin" />{:else}<Icon name="download" size={16} />{/if}
-          Descargar
+          {t('common.download')}
         </button>
         {/if}
       {/if}

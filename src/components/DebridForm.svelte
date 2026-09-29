@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly } from 'svelte/transition';
   import Icon from './Icon.svelte';
@@ -21,7 +22,7 @@
 
   async function test() {
     if (!provider.apiKey.trim()) {
-      result = { ok: false, message: 'Pega la API key del servicio.' };
+      result = { ok: false, message: t('debrid.pasteKey') };
       return;
     }
     testing = true;
@@ -38,7 +39,7 @@
 
 <div class="dbf">
   <div class="field">
-    <span class="label">Servicio</span>
+    <span class="label">{t('debrid.service')}</span>
     <div class="kinds">
       {#each DEBRID_KINDS as k}
         <button type="button" class="kind" class:sel={provider.kind === k.id} onclick={() => pickKind(k.id)}>
@@ -50,32 +51,32 @@
 
   <div class="grid">
     <div class="field span2">
-      <label for="db-key">API key</label>
+      <label for="db-key">{t('common.apiKey')}</label>
       <div class="pw">
-        <input id="db-key" class="input mono" type={showKey ? 'text' : 'password'} bind:value={provider.apiKey} autocomplete="off" spellcheck="false" placeholder="Pega aquí tu API key" />
-        <button type="button" class="icon-btn eye" onclick={() => (showKey = !showKey)} aria-label="Mostrar API key"><Icon name={showKey ? 'eye-off' : 'eye'} size={16} /></button>
+        <input id="db-key" class="input mono" type={showKey ? 'text' : 'password'} bind:value={provider.apiKey} autocomplete="off" spellcheck="false" placeholder={t('debrid.keyPlaceholder')} />
+        <button type="button" class="icon-btn eye" onclick={() => (showKey = !showKey)} aria-label={t('common.showApiKey')}><Icon name={showKey ? 'eye-off' : 'eye'} size={16} /></button>
       </div>
       <div class="hint">
         {info.keyHelp}
-        <button type="button" class="link" onclick={() => invoke('open_url', { url: info.keyUrl })}>Abrir <Icon name="external" size={11} /></button>
+        <button type="button" class="link" onclick={() => invoke('open_url', { url: info.keyUrl })}>{t('common.open')} <Icon name="external" size={11} /></button>
       </div>
     </div>
     <div class="field">
-      <label for="db-name">Nombre <span class="muted">(opcional)</span></label>
+      <label for="db-name">{t('common.name')} <span class="muted">({t('common.optional')})</span></label>
       <input id="db-name" class="input" placeholder={info.name} bind:value={provider.name} />
     </div>
   </div>
 
-  <label class="opt"><Switch checked={provider.enabled} onchange={(v) => (provider.enabled = v)} /> Activo</label>
+  <label class="opt"><Switch checked={provider.enabled} onchange={(v) => (provider.enabled = v)} /> {t('common.enabled')}</label>
 
   <div class="test-row">
     <button type="button" class="btn" onclick={test} disabled={testing}>
-      {#if testing}<Icon name="loader" size={15} class="spin" /> Probando…{:else}<Icon name="plug" size={15} /> Probar API key{/if}
+      {#if testing}<Icon name="loader" size={15} class="spin" /> {t('common.testing')}{:else}<Icon name="plug" size={15} /> {t('debrid.testKey')}{/if}
     </button>
     {#if result}
       <div class="result {result.ok ? 'ok' : 'err'}" in:fly={{ x: -10, duration: d(250) }}>
         <Icon name={result.ok ? 'check-circle' : 'x-circle'} size={16} />
-        <span class="selectable">{result.message}{#if result.ok && result.latencyMs} · {result.latencyMs} ms{/if}</span>
+        <span class="selectable">{result.message}{#if result.ok && result.latencyMs}{' · '}{result.latencyMs} ms{/if}</span>
       </div>
     {/if}
   </div>

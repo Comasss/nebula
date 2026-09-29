@@ -9,16 +9,16 @@ pub struct Fetched {
 
 fn describe(e: reqwest::Error) -> String {
     if e.is_timeout() {
-        "Tiempo de espera agotado al descargar el NZB.".into()
+        t!("fetch.timeout")
     } else if e.is_connect() {
-        "No se pudo conectar con el servidor del enlace. Comprueba tu conexión o la URL.".into()
+        t!("fetch.connect")
     } else if e.is_redirect() {
-        "Demasiadas redirecciones en el enlace.".into()
+        t!("fetch.redirects")
     } else if e.is_builder() {
-        "La URL no es válida.".into()
+        t!("fetch.badUrl")
     } else {
         // Sin la URL: puede contener la API key del indexador.
-        format!("Error al descargar el NZB: {}", e.without_url())
+        t!("fetch.error", error = e.without_url())
     }
 }
 
@@ -62,7 +62,7 @@ fn percent_decode(s: &str) -> String {
 pub async fn fetch(url: &str) -> Result<Fetched, String> {
     let url = url.trim();
     if !(url.starts_with("http://") || url.starts_with("https://")) {
-        return Err("El enlace debe empezar por http:// o https://".into());
+        return Err(t!("fetch.scheme"));
     }
     let client = reqwest::Client::builder()
         .user_agent(concat!("Nebula/", env!("CARGO_PKG_VERSION"), " (Usenet downloader)"))
@@ -75,16 +75,16 @@ pub async fn fetch(url: &str) -> Result<Fetched, String> {
     let status = resp.status();
     if !status.is_success() {
         return Err(match status.as_u16() {
-            401 | 403 => format!("Acceso denegado (HTTP {}): el enlace requiere iniciar sesión o una API key válida.", status.as_u16()),
-            404 | 410 => "El NZB no existe en esa dirección (HTTP 404).".into(),
-            429 => "El indexador ha limitado las descargas (HTTP 429). Inténtalo más tarde.".into(),
-            500..=599 => format!("El servidor del enlace tiene un error (HTTP {}).", status.as_u16()),
-            c => format!("El servidor respondió con un error HTTP {}.", c),
+            401 | 403 => t!("fetch.denied", status = status.as_u16()),
+            404 | 410 => t!("fetch.notFound"),
+            429 => t!("fetch.rateLimited"),
+            500..=599 => t!("fetch.serverError", status = status.as_u16()),
+            c => t!("fetch.httpError", status = c),
         });
     }
     if let Some(len) = resp.content_length() {
         if len > 200 * 1024 * 1024 {
-            return Err("El archivo es demasiado grande para ser un NZB.".into());
+            return Err(t!("fetch.tooLarge"));
         }
     }
     let cd = resp
@@ -124,17 +124,17 @@ pub fn explain_not_nzb(data: &[u8]) -> String {
         let code = attr("code").unwrap_or_default();
         let desc = attr("description").unwrap_or_default();
         if code.is_empty() && desc.is_empty() {
-            return "El indexador devolvió un error en lugar del NZB.".into();
+            return t!("fetch.indexerError");
         }
         return crate::indexer::newznab_error(&code, &desc);
     }
     if lower.contains("<html") || lower.contains("<!doctype html") {
-        return "El enlace devuelve una página web, no un NZB. Puede que requiera iniciar sesión o que no sea un enlace directo.".into();
+        return t!("fetch.html");
     }
     if lower.trim_start().starts_with('{') {
-        return "El enlace devuelve datos JSON, no un NZB.".into();
+        return t!("fetch.json");
     }
-    "El contenido descargado no es un archivo NZB válido.".into()
+    t!("fetch.invalid")
 }
 
 #[cfg(test)]
@@ -151,9 +151,9 @@ mod tests {
 pub fn save_nzb_file(data: &[u8], dir: &str, name: &str) -> Result<String, String> {
     let dir = std::path::PathBuf::from(dir.trim());
     if dir.as_os_str().is_empty() {
-        return Err("No hay una carpeta configurada para guardar los .nzb.".into());
+        return Err(t!("fetch.noSaveDir"));
     }
-    std::fs::create_dir_all(&dir).map_err(|e| format!("No se puede crear la carpeta «{}»: {}", dir.display(), e))?;
+    std::fs::create_dir_all(&dir).map_err(|e| t!("err.createDir", path = dir.display(), error = e))?;
     let base = name.trim().trim_end_matches(".gz").trim_end_matches(".nzb").trim_end_matches(".NZB");
     let base = crate::util::sanitize_filename(if base.is_empty() { "descarga" } else { base });
     let mut path = dir.join(format!("{}.nzb", base));
@@ -162,7 +162,7 @@ pub fn save_nzb_file(data: &[u8], dir: &str, name: &str) -> Result<String, Strin
         path = dir.join(format!("{} ({}).nzb", base, n));
         n += 1;
     }
-    std::fs::write(&path, data).map_err(|e| format!("No se pudo guardar el NZB: {}", e))?;
-    crate::linfo!("NZB guardado en {}", path.display());
+    std::fs::write(&path, data).map_err(|e| t!("err.saveNzb", error = e))?;
+    crate::linfo!("{}", t!("log.nzbSaved", path = path.display()));
     Ok(path.to_string_lossy().to_string())
 }

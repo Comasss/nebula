@@ -146,14 +146,14 @@ pub fn nzb_hash(data: &[u8]) -> String {
 fn key(cfg: &DebridConfig) -> Result<&str, DebridError> {
     let k = cfg.api_key.trim();
     if k.is_empty() {
-        Err(DebridError::new(ErrKind::Auth, format!("Falta la API key de {}.", cfg.label())))
+        Err(DebridError::new(ErrKind::Auth, t!("debrid.noKey", name = cfg.label())))
     } else {
         Ok(k)
     }
 }
 
 fn unknown(kind: &str) -> DebridError {
-    DebridError::new(ErrKind::Fatal, format!("Servicio debrid desconocido: {}", kind))
+    DebridError::new(ErrKind::Fatal, t!("debrid.unknown", kind = kind))
 }
 
 /// Envía el NZB al servicio.
@@ -230,22 +230,22 @@ pub async fn test(cfg: &DebridConfig) -> DebridTest {
 fn net(label: &str, e: reqwest::Error) -> DebridError {
     // Sin la URL: puede llevar la API key.
     let msg = if e.is_timeout() {
-        format!("{} no respondió a tiempo", label)
+        t!("debrid.timeout", name = label)
     } else if e.is_connect() {
-        format!("No se pudo conectar con {}", label)
+        t!("debrid.connect", name = label)
     } else {
-        format!("Error de conexión con {}: {}", label, e.without_url())
+        t!("debrid.netError", name = label, error = e.without_url())
     };
     DebridError::new(ErrKind::Transient, msg)
 }
 
 fn http_status(label: &str, status: u16) -> DebridError {
     match status {
-        401 | 403 => DebridError::new(ErrKind::Auth, format!("{} rechazó la API key (HTTP {}).", label, status)),
-        429 => DebridError::new(ErrKind::Busy, format!("{} ha limitado las peticiones; se reintentará.", label)),
-        500..=599 => DebridError::new(ErrKind::Transient, format!("{} tiene un error temporal (HTTP {}).", label, status)),
-        200..=299 => DebridError::new(ErrKind::Transient, format!("Respuesta no válida de {}.", label)),
-        c => DebridError::new(ErrKind::Fatal, format!("{} respondió con un error HTTP {}.", label, c)),
+        401 | 403 => DebridError::new(ErrKind::Auth, t!("debrid.keyRejected", name = label, status = status)),
+        429 => DebridError::new(ErrKind::Busy, t!("debrid.rateLimited", name = label)),
+        500..=599 => DebridError::new(ErrKind::Transient, t!("debrid.serverError", name = label, status = status)),
+        200..=299 => DebridError::new(ErrKind::Transient, t!("debrid.badResponse", name = label)),
+        c => DebridError::new(ErrKind::Fatal, t!("debrid.httpError", name = label, status = c)),
     }
 }
 
@@ -367,30 +367,27 @@ mod torbox {
         let d = if detail.is_empty() { code } else { detail };
         let e = match code {
             "NO_AUTH" | "BAD_TOKEN" | "AUTH_ERROR" => {
-                DebridError::new(Auth, "TorBox rechazó la API key. Revísala en la pestaña Debrid.")
+                DebridError::new(Auth, t!("debrid.keyRejectedTab", name = "TorBox"))
             }
             "PLAN_RESTRICTED_FEATURE" => {
-                DebridError::new(Fatal, "Tu plan de TorBox no permite descargar NZB (hace falta el plan Pro).")
+                DebridError::new(Fatal, t!("torbox.planRestricted"))
             }
-            "ACTIVE_LIMIT" => DebridError::new(
-                Busy,
-                "TorBox: has llegado al límite de descargas activas; se reintentará cuando haya hueco.",
-            ),
-            "COOLDOWN_LIMIT" => DebridError::new(Busy, format!("TorBox pide esperar antes de otra descarga ({}).", d)),
-            "MONTHLY_LIMIT" => DebridError::new(Fatal, "Has alcanzado el límite mensual de tu cuenta de TorBox."),
+            "ACTIVE_LIMIT" => DebridError::new(Busy, t!("torbox.activeLimit")),
+            "COOLDOWN_LIMIT" => DebridError::new(Busy, t!("torbox.cooldown", detail = d)),
+            "MONTHLY_LIMIT" => DebridError::new(Fatal, t!("torbox.monthlyLimit")),
             "DOWNLOAD_TOO_LARGE" | "TOO_MUCH_DATA" => {
-                DebridError::new(Fatal, "La descarga es demasiado grande para tu plan de TorBox.")
+                DebridError::new(Fatal, t!("torbox.tooLarge"))
             }
-            "BOZO_NZB" => DebridError::new(Fatal, "TorBox rechazó el NZB por no ser válido."),
-            "ITEM_NOT_FOUND" => DebridError::new(Fatal, "La descarga ya no existe en TorBox."),
-            "DUPLICATE_ITEM" => DebridError::new(Fatal, "Este NZB ya estaba añadido en TorBox."),
+            "BOZO_NZB" => DebridError::new(Fatal, t!("torbox.badNzb")),
+            "ITEM_NOT_FOUND" => DebridError::new(Fatal, t!("debrid.gone", name = "TorBox")),
+            "DUPLICATE_ITEM" => DebridError::new(Fatal, t!("debrid.duplicate", name = "TorBox")),
             "DATABASE_ERROR" | "UNKNOWN_ERROR" | "NO_SERVERS_AVAILABLE_ERROR" | "DOWNLOAD_SERVER_ERROR" => {
-                DebridError::new(Transient, format!("TorBox tiene un problema temporal: {}", d))
+                DebridError::new(Transient, t!("debrid.tempProblem", name = "TorBox", detail = d))
             }
             _ => match status {
-                401 | 403 => DebridError::new(Auth, format!("TorBox rechazó la petición: {}", d)),
-                429 => DebridError::new(Busy, "TorBox ha limitado las peticiones; se reintentará."),
-                500..=599 => DebridError::new(Transient, format!("TorBox tiene un error temporal: {}", d)),
+                401 | 403 => DebridError::new(Auth, t!("torbox.requestRejected", detail = d)),
+                429 => DebridError::new(Busy, t!("debrid.rateLimited", name = "TorBox")),
+                500..=599 => DebridError::new(Transient, t!("debrid.tempError", name = "TorBox", detail = d)),
                 _ if d.is_empty() => http_status(LABEL, status),
                 _ => DebridError::new(Fatal, format!("TorBox: {}", d)),
             },
@@ -436,7 +433,7 @@ mod torbox {
             };
             return Ok(Status {
                 id: None,
-                state: item.map(|v| parse_item(&v)).unwrap_or_else(|| RemoteState::Failed("La descarga ya no existe en TorBox.".into())),
+                state: item.map(|v| parse_item(&v)).unwrap_or_else(|| RemoteState::Failed(t!("debrid.gone", name = "TorBox"))),
             });
         }
         let data = send(API.get(&url).bearer_auth(key).query(&[("bypass_cache", "true")])).await?;
@@ -447,7 +444,7 @@ mod torbox {
             Some(v) => Status { id: id_of(v, "id"), state: parse_item(v) },
             None => Status {
                 id: None,
-                state: RemoteState::Working { percent: 0.0, speed: 0, eta: 0, state: "En cola".into() },
+                state: RemoteState::Working { percent: 0.0, speed: 0, eta: 0, state: t!("remote.queued") },
             },
         })
     }
@@ -461,7 +458,7 @@ mod torbox {
             return RemoteState::Ready { files, folder: String::new() };
         }
         if lower.contains("fail") || lower.contains("error") {
-            return RemoteState::Failed(format!("TorBox no pudo completar la descarga ({}).", state));
+            return RemoteState::Failed(t!("torbox.failed", detail = state));
         }
         RemoteState::Working {
             percent: percent(num(v, "progress")),
@@ -494,30 +491,27 @@ mod torbox {
 
     fn describe(state: &str) -> String {
         let l = state.to_ascii_lowercase();
-        let s = if l.starts_with("download") {
-            "Descargando"
+        if l.starts_with("download") {
+            t!("remote.downloading")
         } else if l.contains("queue") {
-            "En cola"
+            t!("remote.queued")
         } else if l.starts_with("paused") {
-            "En pausa"
+            t!("remote.paused")
         } else if l.starts_with("verif") || l.starts_with("check") {
-            "Verificando"
+            t!("remote.verifying")
         } else if l.starts_with("repair") {
-            "Reparando"
+            t!("remote.repairing")
         } else if l.contains("unpack") || l.starts_with("extract") {
-            "Extrayendo"
+            t!("remote.extracting")
         } else if l.starts_with("moving") {
-            "Moviendo"
-        } else if l.starts_with("fetch") || l.starts_with("grab") || l.starts_with("metadl") {
-            "Preparando"
+            t!("remote.moving")
+        } else if l.starts_with("fetch") || l.starts_with("grab") || l.starts_with("metadl") || state.is_empty() {
+            t!("remote.preparing")
         } else if l.starts_with("completed") || l.starts_with("cached") {
-            "Terminando"
-        } else if state.is_empty() {
-            "Preparando"
+            t!("remote.finishing")
         } else {
-            return state.to_string();
-        };
-        s.to_string()
+            state.to_string()
+        }
     }
 
     pub async fn link(key: &str, id: &str, file_id: &str) -> Result<String, DebridError> {
@@ -531,7 +525,7 @@ mod torbox {
         data.as_str()
             .filter(|s| s.starts_with("http"))
             .map(String::from)
-            .ok_or_else(|| DebridError::new(ErrKind::Transient, "TorBox no devolvió el enlace de descarga."))
+            .ok_or_else(|| DebridError::new(ErrKind::Transient, t!("debrid.noLink", name = "TorBox")))
     }
 
     pub async fn remove(key: &str, id: &str) -> Result<(), DebridError> {
@@ -569,18 +563,19 @@ mod torbox {
             1 => "Essential",
             2 => "Pro",
             3 => "Standard",
-            _ => "desconocido",
+            _ => "?",
         };
         let email = str_of(data, "email");
         let until = str_of(data, "premium_expires_at");
-        let mut msg = if email.is_empty() { "Conectado".to_string() } else { format!("Conectado como {}", email) };
-        msg.push_str(&format!(" · plan {}", plan_name));
-        if let (Some(y), Some(m), Some(d)) = (until.get(0..4), until.get(5..7), until.get(8..10)) {
-            if plan > 0 {
-                msg.push_str(&format!(" hasta {}/{}/{}", d, m, y));
+        let mut msg = if email.is_empty() { t!("debrid.connected") } else { t!("debrid.connectedAs", email = email) };
+        msg.push_str(" · ");
+        match (until.get(0..4), until.get(5..7), until.get(8..10)) {
+            (Some(y), Some(m), Some(d)) if plan > 0 => {
+                msg.push_str(&t!("torbox.planUntil", plan = plan_name, date = format!("{}/{}/{}", d, m, y)))
             }
+            _ => msg.push_str(&t!("torbox.plan", plan = plan_name)),
         }
-        let warning = (plan != 2).then(|| "La descarga de NZB (Usenet) de TorBox solo está incluida en el plan Pro.".to_string());
+        let warning = (plan != 2).then(|| t!("torbox.proOnly"));
         (msg, warning)
     }
 }
@@ -626,13 +621,13 @@ mod premiumize {
         use ErrKind::*;
         let l = message.to_ascii_lowercase();
         if l.contains("not logged in") || l.contains("apikey") || l.contains("api key") || status == 401 {
-            DebridError::new(Auth, "Premiumize rechazó la API key. Revísala en la pestaña Debrid.")
+            DebridError::new(Auth, t!("debrid.keyRejectedTab", name = "Premiumize"))
         } else if l.contains("already added") {
-            DebridError::new(Fatal, "Este NZB ya estaba añadido en Premiumize.").with_code("DUPLICATE")
+            DebridError::new(Fatal, t!("debrid.duplicate", name = "Premiumize")).with_code("DUPLICATE")
         } else if status == 429 || l.contains("too many") {
-            DebridError::new(Busy, "Premiumize ha limitado las peticiones; se reintentará.")
+            DebridError::new(Busy, t!("debrid.rateLimited", name = "Premiumize"))
         } else if status >= 500 {
-            DebridError::new(Transient, format!("Premiumize tiene un error temporal: {}", message))
+            DebridError::new(Transient, t!("debrid.tempError", name = "Premiumize", detail = message))
         } else if message.is_empty() {
             http_status(LABEL, status)
         } else {
@@ -647,7 +642,7 @@ mod premiumize {
         match send(req).await {
             Ok(v) => match id_of(&v, "id") {
                 Some(id) => Ok(Submitted { id, hash }),
-                None => Err(DebridError::new(ErrKind::Transient, "Premiumize no devolvió el id de la transferencia.")),
+                None => Err(DebridError::new(ErrKind::Transient, t!("premiumize.noId"))),
             },
             Err(e) if e.code == "DUPLICATE" => {
                 // Ya estaba añadido: se busca la transferencia por nombre.
@@ -675,13 +670,13 @@ mod premiumize {
     pub async fn status(key: &str, id: &str) -> Result<Status, DebridError> {
         let list = transfers(key).await?;
         let Some(t) = list.iter().find(|t| id_of(t, "id").as_deref() == Some(id)) else {
-            return Ok(Status { id: None, state: RemoteState::Failed("La transferencia ya no existe en Premiumize.".into()) });
+            return Ok(Status { id: None, state: RemoteState::Failed(t!("premiumize.gone")) });
         };
         let state = match parse_transfer(t) {
             Transfer::Folder(folder) => {
                 let files = strip_common_root(list_folder(key, &folder).await?);
                 if files.is_empty() {
-                    RemoteState::Failed("Premiumize terminó la transferencia pero no contiene archivos.".into())
+                    RemoteState::Failed(t!("premiumize.empty"))
                 } else {
                     RemoteState::Ready { files, folder }
                 }
@@ -716,12 +711,12 @@ mod premiumize {
                 } else if let Some(f) = id_of(t, "file_id") {
                     Transfer::File(f)
                 } else {
-                    Transfer::State(RemoteState::Failed("Premiumize terminó la transferencia pero no contiene archivos.".into()))
+                    Transfer::State(RemoteState::Failed(t!("premiumize.empty")))
                 }
             }
-            "error" | "timeout" | "deleted" | "banned" => Transfer::State(RemoteState::Failed(format!(
-                "Premiumize no pudo descargarlo: {}.",
-                if msg.is_empty() { st.as_str() } else { msg.trim_end_matches('.') }
+            "error" | "timeout" | "deleted" | "banned" => Transfer::State(RemoteState::Failed(t!(
+                "premiumize.failed",
+                detail = if msg.is_empty() { st.as_str() } else { msg.trim_end_matches('.') }
             ))),
             _ => {
                 let speed = RE_SPEED
@@ -738,10 +733,9 @@ mod premiumize {
                     })
                     .unwrap_or(0);
                 let state = match st.as_str() {
-                    "waiting" | "queued" => "En cola",
-                    _ => "Descargando",
-                }
-                .to_string();
+                    "waiting" | "queued" => t!("remote.queued"),
+                    _ => t!("remote.downloading"),
+                };
                 Transfer::State(RemoteState::Working { percent: percent(num(t, "progress")), speed, eta: 0, state })
             }
         }
@@ -776,7 +770,7 @@ mod premiumize {
         if l.starts_with("http") {
             Ok(l)
         } else {
-            Err(DebridError::new(ErrKind::Transient, "Premiumize no devolvió el enlace de descarga."))
+            Err(DebridError::new(ErrKind::Transient, t!("debrid.noLink", name = "Premiumize")))
         }
     }
 
@@ -804,11 +798,16 @@ mod premiumize {
     pub(super) fn describe_account(v: &Value) -> (String, Option<String>) {
         let until = num(v, "premium_until") as u64;
         let used = num(v, "limit_used");
-        let mut msg = if until > 0 { format!("Conectado · premium hasta {}", fmt_date(until)) } else { "Conectado".to_string() };
-        if used > 0.0 {
-            msg.push_str(&format!(" · {:.0} % del límite usado", percent(used)));
+        let mut msg = t!("debrid.connected");
+        if until > 0 {
+            msg.push_str(" · ");
+            msg.push_str(&t!("premiumize.premiumUntil", date = fmt_date(until)));
         }
-        let warning = (until == 0).then(|| "La cuenta no es premium: Premiumize solo descarga NZB con cuenta premium.".to_string());
+        if used > 0.0 {
+            msg.push_str(" · ");
+            msg.push_str(&t!("premiumize.limitUsed", percent = format!("{:.0}", percent(used))));
+        }
+        let warning = (until == 0).then(|| t!("premiumize.notPremium"));
         (msg, warning)
     }
 }

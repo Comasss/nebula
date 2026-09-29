@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[macro_use]
+mod i18n;
 mod commands;
 mod config;
 mod debrid;
@@ -23,12 +25,31 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent, Wry};
 
 struct TrayItems {
+    show: MenuItem<Wry>,
     pause: MenuItem<Wry>,
+    quit: MenuItem<Wry>,
+}
+
+fn pause_label(paused: bool) -> String {
+    if paused {
+        t!("tray.resume")
+    } else {
+        t!("tray.pause")
+    }
 }
 
 pub fn update_tray_pause(app: &AppHandle, paused: bool) {
     if let Some(items) = app.try_state::<TrayItems>() {
-        let _ = items.pause.set_text(if paused { "Reanudar descargas" } else { "Pausar descargas" });
+        let _ = items.pause.set_text(pause_label(paused));
+    }
+}
+
+/// Vuelve a poner los textos del menú de la bandeja (tras cambiar de idioma).
+pub fn refresh_tray_texts(app: &AppHandle, paused: bool) {
+    if let Some(items) = app.try_state::<TrayItems>() {
+        let _ = items.show.set_text(t!("tray.show"));
+        let _ = items.pause.set_text(pause_label(paused));
+        let _ = items.quit.set_text(t!("tray.quit"));
     }
 }
 
@@ -59,12 +80,12 @@ fn parse_args(args: &[String], cwd: Option<&str>) -> Vec<OpenItem> {
 }
 
 fn build_tray(app: &tauri::App) -> tauri::Result<()> {
-    let show = MenuItem::with_id(app, "show", "Mostrar Nebula", true, None::<&str>)?;
-    let pause = MenuItem::with_id(app, "pause", "Pausar descargas", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "show", t!("tray.show"), true, None::<&str>)?;
+    let pause = MenuItem::with_id(app, "pause", pause_label(false), true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", t!("tray.quit"), true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &pause, &sep, &quit])?;
-    app.manage(TrayItems { pause });
+    app.manage(TrayItems { show, pause, quit });
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("Nebula")
         .menu(&menu)
@@ -102,6 +123,9 @@ fn main() {
     let paths = config::AppPaths::init();
     logger::init(&paths.logs);
     let settings = config::Settings::load(&paths);
+    if settings.language.is_empty() || !i18n::set(&settings.language) {
+        i18n::set(i18n::system_language());
+    }
     if let Err(err) = tools::ensure(&paths.tools) {
         lerror!("{}", err);
     }
@@ -136,7 +160,7 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(6)).await;
                 if !minimized && !e2.ui_ready.load(std::sync::atomic::Ordering::SeqCst) {
-                    lerror!("La interfaz no respondió a tiempo; se muestra la ventana");
+                    lerror!("{}", t!("log.uiTimeout"));
                     e2.show_main();
                 }
             });
@@ -192,6 +216,7 @@ fn main() {
             commands::open_url,
             commands::test_debrid,
             commands::debrid_cached,
+            commands::set_language,
         ])
         .build(tauri::generate_context!())
         .expect("no se pudo iniciar Nebula");

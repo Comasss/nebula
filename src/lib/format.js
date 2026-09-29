@@ -1,3 +1,5 @@
+import { t, locale } from './i18n.svelte.js';
+
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
 
 export function bytes(n, dec = 1) {
@@ -19,50 +21,48 @@ export function speed(n) {
 export function duration(s) {
   if (!s || s <= 0 || !isFinite(s)) return '—';
   s = Math.round(s);
-  if (s < 60) return `${s} s`;
+  const u = (n, unit) => t(`time.${unit}`, { n });
+  if (s < 60) return u(s, 's');
   const m = Math.floor(s / 60);
-  if (m < 60) return s % 60 && m < 10 ? `${m} min ${s % 60} s` : `${m} min`;
+  if (m < 60) return s % 60 && m < 10 ? `${u(m, 'min')} ${u(s % 60, 's')}` : u(m, 'min');
   const h = Math.floor(m / 60);
-  if (h < 24) return m % 60 ? `${h} h ${m % 60} min` : `${h} h`;
+  if (h < 24) return m % 60 ? `${u(h, 'h')} ${u(m % 60, 'min')}` : u(h, 'h');
   const d = Math.floor(h / 24);
-  return h % 24 ? `${d} d ${h % 24} h` : `${d} d`;
+  return h % 24 ? `${u(d, 'd')} ${u(h % 24, 'h')}` : u(d, 'd');
 }
 
 export function ago(ts) {
   if (!ts) return '';
   const d = Date.now() / 1000 - ts;
-  if (d < 60) return 'ahora mismo';
-  if (d < 3600) return `hace ${Math.floor(d / 60)} min`;
-  if (d < 86400) return `hace ${Math.floor(d / 3600)} h`;
-  if (d < 86400 * 7) return `hace ${Math.floor(d / 86400)} d`;
-  return new Date(ts * 1000).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (d < 60) return t('time.justNow');
+  if (d < 3600) return t('time.ago', { time: t('time.min', { n: Math.floor(d / 60) }) });
+  if (d < 86400) return t('time.ago', { time: t('time.h', { n: Math.floor(d / 3600) }) });
+  if (d < 86400 * 7) return t('time.ago', { time: t('time.d', { n: Math.floor(d / 86400) }) });
+  return new Date(ts * 1000).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function dateTime(ts) {
   if (!ts) return '';
-  return new Date(ts * 1000).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+  return new Date(ts * 1000).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export function clock(ms) {
-  return new Date(ms).toLocaleTimeString('es-ES', { hour12: false });
+  return new Date(ms).toLocaleTimeString(locale(), { hour12: false });
 }
 
 export const STATUS = {
-  queued: { label: 'En cola', kind: 'muted', icon: 'clock' },
-  downloading: { label: 'Descargando', kind: 'accent', icon: 'download' },
-  paused: { label: 'En pausa', kind: 'muted', icon: 'pause' },
-  verifying: { label: 'Verificando', kind: 'info', icon: 'shield' },
-  repairing: { label: 'Reparando', kind: 'warn', icon: 'wrench' },
-  extracting: { label: 'Extrayendo', kind: 'teal', icon: 'archive' },
-  moving: { label: 'Moviendo', kind: 'teal', icon: 'folder' },
-  completed: { label: 'Completado', kind: 'ok', icon: 'check-circle' },
-  failed: { label: 'Fallido', kind: 'err', icon: 'x-circle' },
+  queued: { get label() { return t('status.queued'); }, kind: 'muted', icon: 'clock' },
+  downloading: { get label() { return t('status.downloading'); }, kind: 'accent', icon: 'download' },
+  paused: { get label() { return t('status.paused'); }, kind: 'muted', icon: 'pause' },
+  verifying: { get label() { return t('status.verifying'); }, kind: 'info', icon: 'shield' },
+  repairing: { get label() { return t('status.repairing'); }, kind: 'warn', icon: 'wrench' },
+  extracting: { get label() { return t('status.extracting'); }, kind: 'teal', icon: 'archive' },
+  moving: { get label() { return t('status.moving'); }, kind: 'teal', icon: 'folder' },
+  completed: { get label() { return t('status.completed'); }, kind: 'ok', icon: 'check-circle' },
+  failed: { get label() { return t('status.failed'); }, kind: 'err', icon: 'x-circle' },
 };
 
-export const STAGES = {
-  download: 'descarga',
-  verify: 'verificación',
-  repair: 'reparación',
-  extract: 'extracción',
-  move: 'movimiento de archivos',
-};
+/** Nombre de la fase en la que falló una descarga. */
+export function stageLabel(stage) {
+  return stage ? t(`failedStage.${stage}`) : '';
+}

@@ -50,7 +50,7 @@ pub async fn run(engine: Arc<Engine>, id: String) {
     if ctx.cancel.is() {
         return;
     }
-    linfo!("Post-procesado de «{}»", ctx.name);
+    linfo!("{}", t!("log.pp.start", name = ctx.name));
     match pipeline(&engine, &ctx).await {
         Ok(Flow::Done(w)) => engine.finish_job(&id, w),
         Ok(Flow::Redownload) => {}
@@ -67,11 +67,7 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
     if !c.work_dir.exists() {
         return Err(PpError::new(
             "download",
-            if c.pp_only {
-                "La carpeta temporal ya no existe."
-            } else {
-                "No se ha podido descargar ningún archivo (todos los artículos faltan en el servidor)."
-            },
+            if c.pp_only { t!("pp.workDirGone") } else { t!("pp.nothingDownloaded") },
         ));
     }
 
@@ -80,15 +76,15 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
         match find_main_par2(&c.work_dir) {
             None => {
                 if c.failed_segs > 0 {
-                    warnings.push(format!("Faltan {} artículos y no hay archivos PAR2 para repararlos.", c.failed_segs));
+                    warnings.push(t!("pp.missingNoPar2", n = c.failed_segs));
                 }
             }
             Some(par2) => {
-                engine.set_stage(&c.id, JobStatus::Verifying, "Verificando", 0.0, 0, "");
+                engine.set_stage(&c.id, JobStatus::Verifying, "verifying", 0.0, 0, "");
                 let result = run_par2(engine, c, "v", &par2).await?;
                 let mut need_repair = false;
                 match result {
-                    Par2Result::AllCorrect => linfo!("«{}»: verificación correcta", c.name),
+                    Par2Result::AllCorrect => linfo!("{}", t!("log.pp.verified", name = c.name)),
                     Par2Result::RepairPossible => need_repair = true,
                     Par2Result::NeedBlocks(n) => {
                         if engine.unhold_vols(&c.id, n) {
@@ -96,41 +92,41 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
                         }
                         return Err(PpError::new(
                             "verify",
-                            format!("No se puede reparar: faltan {} bloques de recuperación y no hay más archivos PAR2 disponibles.", n),
+                            t!("pp.needBlocksNoMore", n = n),
                         ));
                     }
                     Par2Result::Repaired => {}
                     Par2Result::Failed(msg) => {
                         if c.failed_segs == 0 {
-                            lwarn!("«{}»: par2 no pudo verificar ({}); se continúa", c.name, msg);
-                            warnings.push(format!("No se pudo verificar con PAR2: {}", msg));
+                            lwarn!("{}", t!("log.pp.verifyFailedContinue", name = c.name, error = msg));
+                            warnings.push(t!("pp.verifyFailed", error = msg));
                         } else {
-                            return Err(PpError::new("verify", format!("Error de verificación PAR2: {}", msg)));
+                            return Err(PpError::new("verify", t!("pp.verifyError", error = msg)));
                         }
                     }
                 }
                 if need_repair {
                     let before: HashSet<PathBuf> = util::list_files(&c.work_dir).into_iter().map(|(p, _)| p).collect();
-                    engine.set_stage(&c.id, JobStatus::Repairing, "Reparando", 0.0, 0, "");
+                    engine.set_stage(&c.id, JobStatus::Repairing, "repairing", 0.0, 0, "");
                     match run_par2(engine, c, "r", &par2).await? {
                         Par2Result::Repaired | Par2Result::AllCorrect => {
-                            linfo!("«{}»: reparación completada", c.name);
+                            linfo!("{}", t!("log.pp.repaired", name = c.name));
                             cleanup_par2_backups(&c.work_dir, &before);
                         }
                         Par2Result::NeedBlocks(n) => {
                             if engine.unhold_vols(&c.id, n) {
                                 return Ok(Flow::Redownload);
                             }
-                            return Err(PpError::new("repair", format!("No se puede reparar: faltan {} bloques de recuperación.", n)));
+                            return Err(PpError::new("repair", t!("pp.needBlocks", n = n)));
                         }
                         Par2Result::RepairPossible => {}
-                        Par2Result::Failed(msg) => return Err(PpError::new("repair", format!("La reparación falló: {}", msg))),
+                        Par2Result::Failed(msg) => return Err(PpError::new("repair", t!("pp.repairFailed", error = msg))),
                     }
                 }
             }
         }
     } else if c.failed_segs > 0 && !c.pp_only {
-        warnings.push(format!("Faltan {} artículos (verificación PAR2 desactivada).", c.failed_segs));
+        warnings.push(t!("pp.missingPar2Off", n = c.failed_segs));
     }
 
     // 2) Extracción
@@ -142,16 +138,16 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
         let n = sets.len();
         for (i, set) in sets.iter().enumerate() {
             let detail = if n > 1 { format!("{} ({}/{})", set.label, i + 1, n) } else { set.label.clone() };
-            engine.set_stage(&c.id, JobStatus::Extracting, "Extrayendo", before as f64 / total as f64 * 100.0, 0, &detail);
+            engine.set_stage(&c.id, JobStatus::Extracting, "extracting", before as f64 / total as f64 * 100.0, 0, &detail);
             extract_set(engine, c, set, before, total, &detail).await?;
-            linfo!("«{}»: extraído {}", c.name, set.label);
+            linfo!("{}", t!("log.pp.extracted", name = c.name, file = set.label));
             before += set.size;
             extracted.extend(set.members.iter().cloned());
         }
     }
 
     // 3) Mover al destino final
-    engine.set_stage(&c.id, JobStatus::Moving, "Moviendo archivos", 0.0, 0, "");
+    engine.set_stage(&c.id, JobStatus::Moving, "moving", 0.0, 0, "");
     let e2 = engine.clone();
     let id = c.id.clone();
     let work = c.work_dir.clone();
@@ -159,7 +155,7 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
     let opts = c.options.clone();
     tokio::task::spawn_blocking(move || -> Result<(), PpError> {
         std::fs::create_dir_all(&fin)
-            .map_err(|e| PpError::new("move", format!("No se puede crear la carpeta de destino: {}", e)))?;
+            .map_err(|e| PpError::new("move", t!("pp.createDest", error = e)))?;
         let par2 = par2_files(&work);
         let files = util::list_files(&work);
         let to_move: Vec<&(PathBuf, u64)> = files
@@ -172,13 +168,13 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
         for (p, size) in to_move {
             let target = fin.join(util::file_name(p));
             util::move_file(p, &target)
-                .map_err(|e| PpError::new("move", format!("No se pudo mover {}: {}", util::file_name(p), e)))?;
+                .map_err(|e| PpError::new("move", t!("pp.moveFailed", file = util::file_name(p), error = e)))?;
             done += size;
             let secs = start.elapsed().as_secs_f64().max(0.001);
             e2.set_stage(
                 &id,
                 JobStatus::Moving,
-                "Moviendo archivos",
+                "moving",
                 done as f64 / total as f64 * 100.0,
                 (done as f64 / secs) as u64,
                 &util::file_name(p),
@@ -201,7 +197,7 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
         Ok(())
     })
     .await
-    .map_err(|_| PpError::new("move", "Error interno al mover archivos"))??;
+    .map_err(|_| PpError::new("move", t!("pp.moveInternal")))??;
 
     Ok(Flow::Done(if warnings.is_empty() { None } else { Some(warnings.join(" ")) }))
 }
@@ -259,9 +255,9 @@ async fn pump<F: FnMut(&str)>(
     child: &mut tokio::process::Child,
     cancel: &Cancel,
     mut on_piece: F,
-) -> Result<(i32, String), &'static str> {
-    let mut stdout = child.stdout.take().ok_or("sin stdout")?;
-    let mut stderr = child.stderr.take().ok_or("sin stderr")?;
+) -> Result<(i32, String), String> {
+    let mut stdout = child.stdout.take().ok_or_else(|| t!("pp.noStdout"))?;
+    let mut stderr = child.stderr.take().ok_or_else(|| t!("pp.noStderr"))?;
     let err_task = tokio::spawn(async move {
         let mut s = Vec::new();
         let _ = stderr.read_to_end(&mut s).await;
@@ -274,7 +270,7 @@ async fn pump<F: FnMut(&str)>(
             r = stdout.read(&mut buf) => r.unwrap_or(0),
             _ = cancel.wait() => {
                 let _ = child.kill().await;
-                return Err("cancelado");
+                return Err(t!("pp.cancelled"));
             }
         };
         if n == 0 {
@@ -301,7 +297,7 @@ async fn pump<F: FnMut(&str)>(
             on_piece(s.trim());
         }
     }
-    let status = child.wait().await.map_err(|_| "error esperando al proceso")?;
+    let status = child.wait().await.map_err(|_| t!("pp.waitFailed"))?;
     let err = err_task.await.unwrap_or_default();
     Ok((status.code().unwrap_or(-1), err))
 }
@@ -381,7 +377,7 @@ async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> R
     let stage_err: &'static str = if mode == "r" { "repair" } else { "verify" };
     let mut child = cmd
         .spawn()
-        .map_err(|e| PpError::new(stage_err, format!("No se pudo ejecutar par2: {}", e)))?;
+        .map_err(|e| PpError::new(stage_err, t!("pp.par2Spawn", error = e)))?;
     attach_child(&child);
 
     let mut total_data = c.total.max(1);
@@ -390,19 +386,19 @@ async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> R
     let mut last_stage = String::new();
     let mut last_emit = Instant::now() - Duration::from_secs(1);
     let mut verifying_repair = false;
-    let status_for = |label: &str| if label == "Reparando" { JobStatus::Repairing } else if mode == "r" { JobStatus::Repairing } else { JobStatus::Verifying };
+    let status_for = |label: &str| if label == "repairing" { JobStatus::Repairing } else if mode == "r" { JobStatus::Repairing } else { JobStatus::Verifying };
 
     let res = pump(&mut child, &c.cancel, |piece| {
         if let Some(cap) = RE_PROGRESS.captures(piece) {
             let key = cap[1].trim().to_string();
             let pct: f64 = cap[2].parse().unwrap_or(0.0);
             let label = match key.as_str() {
-                "Loading" => "Cargando PAR2",
-                "Scanning" if verifying_repair => "Comprobando reparación",
-                "Scanning" => "Verificando",
-                "Repairing" => "Reparando",
-                "Constructing" | "Solving" => "Calculando reparación",
-                _ => "Verificando",
+                "Loading" => "loadingPar2",
+                "Scanning" if verifying_repair => "checkingRepair",
+                "Scanning" => "verifying",
+                "Repairing" => "repairing",
+                "Constructing" | "Solving" => "computingRepair",
+                _ => "verifying",
             };
             if label != last_stage {
                 last_stage = label.to_string();
@@ -412,7 +408,7 @@ async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> R
             speedo.push(bytes);
             if last_emit.elapsed() >= Duration::from_millis(250) {
                 last_emit = Instant::now();
-                let speed = if matches!(label, "Verificando" | "Reparando" | "Comprobando reparación") { speedo.rate() } else { 0 };
+                let speed = if matches!(label, "verifying" | "repairing" | "checkingRepair") { speedo.rate() } else { 0 };
                 engine.set_stage(&c.id, status_for(label), label, pct, speed, "");
             }
             return;
@@ -430,7 +426,7 @@ async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> R
 
     let (code, stderr) = match res {
         Ok(r) => r,
-        Err(e) => return Err(PpError::new(stage_err, format!("par2 interrumpido ({})", e))),
+        Err(e) => return Err(PpError::new(stage_err, t!("pp.par2Interrupted", error = e))),
     };
     let all = format!("{}\n{}", text, stderr);
     let need = RE_NEED.captures(&all).and_then(|c| c[1].parse::<u32>().ok());
@@ -447,14 +443,14 @@ async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> R
         }
         (_, code) => {
             let reason = match code {
-                2 => "no hay bloques suficientes para reparar",
-                3 => "argumentos no válidos",
-                4 => "los archivos PAR2 no contienen los datos críticos necesarios",
-                5 => "la reparación falló",
-                6 => "error de lectura/escritura de archivos",
-                7 => "error interno de par2",
-                8 => "memoria insuficiente",
-                _ => "error desconocido",
+                2 => t!("par2.code2"),
+                3 => t!("par2.code3"),
+                4 => t!("par2.code4"),
+                5 => t!("par2.code5"),
+                6 => t!("par2.code6"),
+                7 => t!("par2.code7"),
+                8 => t!("par2.code8"),
+                _ => t!("par2.unknown"),
             };
             let last = all
                 .lines()
@@ -464,8 +460,8 @@ async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> R
                 .chars()
                 .take(160)
                 .collect::<String>();
-            lerror!("par2 ({}) código {}: {}", mode, code, last);
-            Par2Result::Failed(format!("{} (código {})", reason, code))
+            lerror!("{}", t!("log.pp.par2Error", mode = mode, code = code, detail = last));
+            Par2Result::Failed(t!("par2.withCode", reason = reason, code = code))
         }
     };
     Ok(result)
@@ -547,7 +543,7 @@ static RE_PCT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\d{1,3})%").unw
 
 async fn extract_set(engine: &Arc<Engine>, c: &PpCtx, set: &ArchiveSet, before: u64, total: u64, detail: &str) -> Result<(), PpError> {
     std::fs::create_dir_all(&c.final_dir)
-        .map_err(|e| PpError::new("extract", format!("No se puede crear la carpeta de destino: {}", e)))?;
+        .map_err(|e| PpError::new("extract", t!("pp.createDest", error = e)))?;
     let exe = c.tools.join("7z.exe");
     let pw = c.password.clone().filter(|p| !p.is_empty()).unwrap_or_else(|| "nebula-no-password".into());
     let mut cmd = command(&exe);
@@ -564,7 +560,7 @@ async fn extract_set(engine: &Arc<Engine>, c: &PpCtx, set: &ArchiveSet, before: 
         .arg(&set.first);
     let mut child = cmd
         .spawn()
-        .map_err(|e| PpError::new("extract", format!("No se pudo ejecutar 7-Zip: {}", e)))?;
+        .map_err(|e| PpError::new("extract", t!("pp.7zSpawn", error = e)))?;
     attach_child(&child);
 
     let mut speedo = Speedo::new(2500);
@@ -577,7 +573,7 @@ async fn extract_set(engine: &Arc<Engine>, c: &PpCtx, set: &ArchiveSet, before: 
             speedo.push(done);
             if last_emit.elapsed() >= Duration::from_millis(250) {
                 last_emit = Instant::now();
-                engine.set_stage(&c.id, JobStatus::Extracting, "Extrayendo", done as f64 / total as f64 * 100.0, speedo.rate(), detail);
+                engine.set_stage(&c.id, JobStatus::Extracting, "extracting", done as f64 / total as f64 * 100.0, speedo.rate(), detail);
             }
         } else {
             text.push_str(piece);
@@ -587,34 +583,34 @@ async fn extract_set(engine: &Arc<Engine>, c: &PpCtx, set: &ArchiveSet, before: 
     .await;
     let (code, stderr) = match res {
         Ok(r) => r,
-        Err(e) => return Err(PpError::new("extract", format!("7-Zip interrumpido ({})", e))),
+        Err(e) => return Err(PpError::new("extract", t!("pp.7zInterrupted", error = e))),
     };
     if code == 0 {
         return Ok(());
     }
     let all = format!("{}\n{}", text, stderr);
     if code == 1 {
-        lwarn!("7-Zip terminó con avisos al extraer {}: {}", set.label, stderr.trim());
+        lwarn!("{}", t!("log.pp.7zWarnings", file = set.label, detail = stderr.trim()));
         return Ok(());
     }
     let lower = all.to_ascii_lowercase();
     let msg = if lower.contains("wrong password") || lower.contains("encrypted archive") {
         if c.password.as_deref().map_or(true, |p| p.is_empty()) {
-            "El archivo está protegido con contraseña. Introdúcela y reintenta la extracción.".to_string()
+            t!("pp.passwordNeeded")
         } else {
-            "Contraseña incorrecta para el archivo comprimido.".to_string()
+            t!("pp.wrongPassword")
         }
     } else if lower.contains("not enough space") || lower.contains("disk is full") {
-        "No hay espacio suficiente en el disco de destino.".to_string()
+        t!("pp.noSpace")
     } else if lower.contains("unexpected end of archive") || lower.contains("missing volume") {
-        format!("Faltan volúmenes o {} está incompleto.", set.label)
+        t!("pp.missingVolumes", file = set.label)
     } else if lower.contains("crc failed") || lower.contains("data error") {
-        format!("Datos corruptos (error CRC) en {}.", set.label)
+        t!("pp.crc", file = set.label)
     } else if lower.contains("can not open the file as archive") || lower.contains("can't open as archive") || lower.contains("cannot open the file as archive") {
-        format!("No se pudo abrir {} como archivo comprimido.", set.label)
+        t!("pp.notArchive", file = set.label)
     } else {
         let last = stderr.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").trim().to_string();
-        format!("Error al extraer {} (código {}){}", set.label, code, if last.is_empty() { String::new() } else { format!(": {}", last) })
+        format!("{}{}", t!("pp.extractError", file = set.label, code = code), if last.is_empty() { String::new() } else { format!(": {}", last) })
     };
     lerror!("7-Zip ({}): {}", set.label, all.trim().lines().rev().take(4).collect::<Vec<_>>().join(" | "));
     Err(PpError { stage: "extract", msg, retry_extract: true })

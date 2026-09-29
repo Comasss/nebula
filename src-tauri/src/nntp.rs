@@ -24,14 +24,14 @@ pub enum NntpError {
 impl NntpError {
     pub fn message(&self) -> String {
         match self {
-            NntpError::Io(e) => format!("Error de conexión: {}", e),
-            NntpError::Timeout => "Tiempo de espera agotado".into(),
-            NntpError::Tls(e) => format!("Error SSL/TLS: {}", e),
-            NntpError::Auth(e) => format!("Autenticación rechazada ({}). Revisa usuario y contraseña.", e),
-            NntpError::TooMany(e) => format!("Demasiadas conexiones abiertas ({})", e),
-            NntpError::NotFound => "Artículo no encontrado".into(),
-            NntpError::Unavailable(e) => format!("Servicio no disponible: {}", e),
-            NntpError::Protocol(e) => format!("Respuesta inesperada del servidor: {}", e),
+            NntpError::Io(e) => t!("err.connection", error = e),
+            NntpError::Timeout => t!("nntp.timeout"),
+            NntpError::Tls(e) => t!("nntp.tls", error = e),
+            NntpError::Auth(e) => t!("nntp.auth", detail = e),
+            NntpError::TooMany(e) => t!("nntp.tooMany", detail = e),
+            NntpError::NotFound => t!("nntp.notFound"),
+            NntpError::Unavailable(e) => t!("nntp.unavailable", detail = e),
+            NntpError::Protocol(e) => t!("nntp.protocol", detail = e),
         }
     }
 }
@@ -41,9 +41,9 @@ fn io_err(e: io::Error) -> NntpError {
         return NntpError::Timeout;
     }
     let msg = match e.kind() {
-        io::ErrorKind::ConnectionRefused => "conexión rechazada (¿puerto correcto?)".to_string(),
-        io::ErrorKind::ConnectionReset => "el servidor cerró la conexión".to_string(),
-        io::ErrorKind::UnexpectedEof => "el servidor cerró la conexión".to_string(),
+        io::ErrorKind::ConnectionRefused => t!("nntp.refused"),
+        io::ErrorKind::ConnectionReset => t!("nntp.closed"),
+        io::ErrorKind::UnexpectedEof => t!("nntp.closed"),
         _ => e.to_string(),
     };
     NntpError::Io(msg)
@@ -131,7 +131,7 @@ impl NntpConn {
     pub async fn connect(cfg: &ServerConfig, idle: Duration) -> Result<Self, NntpError> {
         let host = cfg.host.trim();
         if host.is_empty() {
-            return Err(NntpError::Io("no se ha indicado el servidor".into()));
+            return Err(NntpError::Io(t!("nntp.noHost")));
         }
         let tcp = connect_tcp(host, cfg.port).await?;
         let _ = tcp.set_nodelay(true);
@@ -204,7 +204,7 @@ impl NntpConn {
         self.line.clear();
         let n = self.r.read_until(b'\n', &mut self.line).await.map_err(io_err)?;
         if n == 0 {
-            return Err(NntpError::Io("el servidor cerró la conexión".into()));
+            return Err(NntpError::Io(t!("nntp.closed")));
         }
         Ok(n)
     }
@@ -215,7 +215,7 @@ impl NntpConn {
         let code: u16 = s
             .get(..3)
             .and_then(|c| c.parse().ok())
-            .ok_or_else(|| NntpError::Protocol(format!("respuesta no válida: {}", s.chars().take(80).collect::<String>())))?;
+            .ok_or_else(|| NntpError::Protocol(t!("nntp.badResponse", detail = s.chars().take(80).collect::<String>())))?;
         Ok((code, s.get(4..).unwrap_or("").to_string()))
     }
 
@@ -276,10 +276,10 @@ impl NntpConn {
 /// Conecta por TCP probando todas las direcciones del host (IPv4 primero) de forma escalonada:
 /// si una ruta (típicamente IPv6 tras una VPN) no responde, no bloquea a las demás.
 async fn connect_tcp(host: &str, port: u16) -> Result<TcpStream, NntpError> {
-    let not_found = || NntpError::Io(format!("no se encuentra el servidor «{}»", host));
+    let not_found = || NntpError::Io(t!("nntp.hostNotFound", host = host));
     let addrs: Vec<std::net::SocketAddr> = timeout(Duration::from_secs(10), tokio::net::lookup_host((host, port)))
         .await
-        .map_err(|_| NntpError::Io(format!("el DNS no responde al resolver «{}»", host)))?
+        .map_err(|_| NntpError::Io(t!("nntp.dns", host = host)))?
         .map_err(|_| not_found())?
         .collect();
     let (v4, v6): (Vec<_>, Vec<_>) = addrs.into_iter().partition(|a| a.is_ipv4());
@@ -329,10 +329,7 @@ async fn connect_tcp(host: &str, port: u16) -> Result<TcpStream, NntpError> {
     }
     set.abort_all();
     Err(match last_err {
-        Some(NntpError::Timeout) | None => NntpError::Io(format!(
-            "no hay respuesta de {}:{} (tiempo agotado). Revisa el puerto, el cortafuegos o la VPN",
-            host, port
-        )),
+        Some(NntpError::Timeout) | None => NntpError::Io(t!("nntp.noResponse", host = host, port = port)),
         Some(e) => e,
     })
 }

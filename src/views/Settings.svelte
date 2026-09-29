@@ -1,4 +1,5 @@
 <script>
+  import { t, th, LANGUAGES, setLanguage, systemLanguage } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { open } from '@tauri-apps/plugin-dialog';
   import { fly, scale } from 'svelte/transition';
@@ -12,35 +13,42 @@
   let newPattern = $state('');
 
   const SECTIONS = [
-    { id: 'features', label: 'Funciones', icon: 'sparkles' },
-    { id: 'debrid', label: 'NNTP / Debrid', icon: 'cloud' },
-    { id: 'search', label: 'Búsqueda', icon: 'search' },
-    { id: 'folders', label: 'Carpetas', icon: 'folder' },
-    { id: 'post', label: 'Post-procesado', icon: 'package' },
-    { id: 'links', label: 'Enlaces y portapapeles', icon: 'clipboard' },
-    { id: 'windows', label: 'Windows', icon: 'monitor' },
-    { id: 'network', label: 'Conexión', icon: 'wifi' },
-    { id: 'look', label: 'Apariencia', icon: 'palette' },
-    { id: 'about', label: 'Acerca de', icon: 'info' },
+    { id: 'features', icon: 'sparkles' },
+    { id: 'language', icon: 'globe' },
+    { id: 'debrid', icon: 'cloud' },
+    { id: 'search', icon: 'search' },
+    { id: 'folders', icon: 'folder' },
+    { id: 'post', icon: 'package' },
+    { id: 'links', icon: 'clipboard' },
+    { id: 'windows', icon: 'monitor' },
+    { id: 'network', icon: 'wifi' },
+    { id: 'look', icon: 'palette' },
+    { id: 'about', icon: 'info' },
   ];
   let section = $state('features');
 
   function setFeature(key, v) {
     const other = key === 'featureNntp' ? 'featureIndexers' : 'featureNntp';
     if (!v && !s[other]) {
-      toast('warn', 'Debe quedar al menos una función activa.');
+      toast('warn', t('settings.keepOneFeature'));
       return;
     }
     saveSettings({ [key]: v });
   }
 
   const ACCENTS = [
-    { id: 'nebula', name: 'Nebula', a: '#7c5cff', b: '#22d3ee' },
-    { id: 'ocean', name: 'Océano', a: '#3b82f6', b: '#2dd4bf' },
-    { id: 'emerald', name: 'Esmeralda', a: '#10b981', b: '#a3e635' },
-    { id: 'sunset', name: 'Atardecer', a: '#f97316', b: '#ec4899' },
-    { id: 'rose', name: 'Rosa', a: '#ec4899', b: '#8b5cf6' },
+    { id: 'nebula', a: '#7c5cff', b: '#22d3ee' },
+    { id: 'ocean', a: '#3b82f6', b: '#2dd4bf' },
+    { id: 'emerald', a: '#10b981', b: '#a3e635' },
+    { id: 'sunset', a: '#f97316', b: '#ec4899' },
+    { id: 'rose', a: '#ec4899', b: '#8b5cf6' },
   ];
+
+  const systemLang = LANGUAGES.find((l) => l.code === systemLanguage())?.name ?? 'English';
+
+  async function setLang(code) {
+    if (await saveSettings({ language: code })) setLanguage(code);
+  }
 
   function set(key) {
     return (v) => saveSettings({ [key]: v });
@@ -91,12 +99,12 @@
 {#if s}
   <div class="wrap">
     <aside class="toc">
-      <h1>Configuración</h1>
-      <p class="saved"><Icon name="check" size={13} /> Los cambios se guardan solos</p>
+      <h1>{t('nav.settings')}</h1>
+      <p class="saved"><Icon name="check" size={13} /> {t('settings.autosave')}</p>
       <nav>
         {#each SECTIONS as sec}
           <button class:sel={section === sec.id} onclick={() => scrollTo(sec.id)}>
-            <Icon name={sec.icon} size={16} /> {sec.label}
+            <Icon name={sec.icon} size={16} /> {t(`settings.section.${sec.id}`)}
           </button>
         {/each}
       </nav>
@@ -104,111 +112,123 @@
 
     <div class="content" onscroll={onScroll}>
       <section id="sec-features">
-        <h2><Icon name="sparkles" size={18} /> Funciones</h2>
+        <h2><Icon name="sparkles" size={18} /> {t('settings.section.features')}</h2>
         <div class="card group">
-          <SettingRow icon="search" label="Indexadores" description="Buscar en tus indexadores Newznab desde Nebula." checked={s.featureIndexers} onchange={(v) => setFeature('featureIndexers', v)} />
-          <SettingRow icon="server" label="Descargas (Usenet / debrid)" description="Descargar, reparar y extraer con tu proveedor Usenet o con un servicio debrid (TorBox, Premiumize). Si la desactivas, desde la búsqueda solo se guardan los .nzb en tu PC." checked={s.featureNntp} onchange={(v) => setFeature('featureNntp', v)} />
+          <SettingRow icon="search" label={t('nav.indexers')} description={t('settings.featIndexersDesc')} checked={s.featureIndexers} onchange={(v) => setFeature('featureIndexers', v)} />
+          <SettingRow icon="server" label={t('settings.featNntp')} description={t('settings.featNntpDesc')} checked={s.featureNntp} onchange={(v) => setFeature('featureNntp', v)} />
+        </div>
+      </section>
+
+      <section id="sec-language">
+        <h2><Icon name="globe" size={18} /> {t('settings.section.language')}</h2>
+        <div class="card group">
+          <SettingRow icon="globe" label={t('settings.language')} description={t('settings.languageDesc')}>
+            <select class="select lang" value={s.language || ''} onchange={(e) => setLang(e.target.value)}>
+              <option value="">{t('settings.languageAuto', { lang: systemLang })}</option>
+              {#each LANGUAGES as l (l.code)}<option value={l.code}>{l.name}</option>{/each}
+            </select>
+          </SettingRow>
         </div>
       </section>
 
       <section id="sec-debrid" class:dim={!s.featureNntp}>
-        <h2><Icon name="cloud" size={18} /> Método de descarga</h2>
+        <h2><Icon name="cloud" size={18} /> {t('settings.downloadMethod')}</h2>
         <div class="card group">
           <SettingRow
             icon="download"
-            label="Descargar los NZB con"
+            label={t('settings.downloadWith')}
             description={debridList.length
-              ? `NNTP usa tus servidores Usenet. Debrid envía el NZB a ${debridLabel(debridList[0])}${debridList.length > 1 ? ' (o al siguiente si falla)' : ''} y baja los archivos desde sus servidores, normalmente mucho más rápido. Al añadir cada NZB puedes elegir otro método.`
-              : 'Añade un servicio debrid (TorBox Pro o Premiumize) para poder descargar a través de él.'}>
+              ? t(debridList.length > 1 ? 'settings.downloadWithDescMany' : 'settings.downloadWithDesc', { name: debridLabel(debridList[0]) })
+              : t('settings.downloadWithNone')}>
             <div class="seg">
               <button class:sel={s.downloadVia !== 'debrid'} onclick={() => saveSettings({ downloadVia: 'nntp' })}><Icon name="server" size={14} /> Usenet (NNTP)</button>
               <button class:sel={s.downloadVia === 'debrid'} disabled={!debridList.length} onclick={() => saveSettings({ downloadVia: 'debrid' })}><Icon name="cloud" size={14} /> Debrid</button>
             </div>
           </SettingRow>
           {#if debridList.length && !hasNntp(s) && s.downloadVia !== 'debrid'}
-            <div class="note"><Icon name="info" size={14} /> No tienes servidores NNTP activos: mientras sea así se usará {debridLabel(debridList[0])}.</div>
+            <div class="note"><Icon name="info" size={14} /> {t('settings.noNntpNote', { name: debridLabel(debridList[0]) })}</div>
           {/if}
-          <SettingRow label="Si el servicio debrid falla, descargar por NNTP" description="Antes se prueban los demás servicios debrid de la lista (si el método se eligió automáticamente)." checked={s.debridFallbackNntp} onchange={set('debridFallbackNntp')} />
-          <SettingRow label="Conexiones al bajar de debrid" description="Descargas simultáneas por HTTPS, por rangos de 32 MB. Más conexiones suelen dar más velocidad.">
+          <SettingRow label={t('settings.fallbackNntp')} description={t('settings.fallbackNntpDesc')} checked={s.debridFallbackNntp} onchange={set('debridFallbackNntp')} />
+          <SettingRow label={t('settings.debridConns')} description={t('settings.debridConnsDesc')}>
             <input class="input small" type="number" min="1" max="32" value={s.debridConnections} onchange={num('debridConnections', 1, 32)} />
           </SettingRow>
-          <SettingRow label="Borrar del servicio al terminar" description="Quita la descarga de tu cuenta debrid cuando ya está en tu PC (libera espacio y huecos de descarga)." checked={s.debridDeleteAfter} onchange={set('debridDeleteAfter')} />
-          <SettingRow icon="cloud" label="Servicios debrid" description={debridList.length ? `En orden de preferencia: ${debridList.map(debridLabel).join(', ')}.` : 'TorBox (plan Pro) o Premiumize, con su API key.'}>
-            <button class="btn sm" onclick={() => (ui.view = 'debrid')}>Gestionar <Icon name="chevron-right" size={14} /></button>
+          <SettingRow label={t('settings.debridDelete')} description={t('settings.debridDeleteDesc')} checked={s.debridDeleteAfter} onchange={set('debridDeleteAfter')} />
+          <SettingRow icon="cloud" label={t('settings.debridServices')} description={debridList.length ? t('settings.debridOrder', { list: debridList.map(debridLabel).join(', ') }) : t('settings.debridNone')}>
+            <button class="btn sm" onclick={() => (ui.view = 'debrid')}>{t('settings.manage')} <Icon name="chevron-right" size={14} /></button>
           </SettingRow>
         </div>
       </section>
 
       <section id="sec-search" class:dim={!s.featureIndexers}>
-        <h2><Icon name="search" size={18} /> Búsqueda en indexadores</h2>
+        <h2><Icon name="search" size={18} /> {t('settings.searchTitle')}</h2>
         <div class="card group">
-          <SettingRow icon="layers" label="Eliminar duplicados" description="Si el mismo release está en varios indexadores (aunque se haya resubido), se muestra una sola vez y se descarga del preferido." checked={s.searchDedup} onchange={set('searchDedup')} />
-          <SettingRow icon="zap" label="Descargar con un clic" description="El botón Descargar añade el resultado a la cola con la carpeta y opciones por defecto. Desactivado: se abre la ventana para elegir destino y opciones." checked={s.searchQuickAdd} onchange={set('searchQuickAdd')} disabled={!s.featureNntp} />
-          <SettingRow label="Resultados por indexador" description="Por búsqueda; puedes cargar más desde la lista de resultados.">
+          <SettingRow icon="layers" label={t('settings.dedup')} description={t('settings.dedupDesc')} checked={s.searchDedup} onchange={set('searchDedup')} />
+          <SettingRow icon="zap" label={t('settings.quickAdd')} description={t('settings.quickAddDesc')} checked={s.searchQuickAdd} onchange={set('searchQuickAdd')} disabled={!s.featureNntp} />
+          <SettingRow label={t('settings.searchLimit')} description={t('settings.searchLimitDesc')}>
             <input class="input small" type="number" min="10" max="500" value={s.searchLimit} onchange={num('searchLimit', 10, 500)} />
           </SettingRow>
-          <SettingRow label="Carpeta para guardar los .nzb" description="Donde se guardan con el botón «.nzb» (puede ser la carpeta vigilada de otro programa).">
+          <SettingRow label={t('settings.nzbDir')} description={t('settings.nzbDirDesc')}>
             <input class="input path" value={s.nzbSaveDir} onchange={(e) => saveSettings({ nzbSaveDir: e.target.value })} />
-            <button class="btn sm" onclick={() => pick('nzbSaveDir')}>Examinar</button>
+            <button class="btn sm" onclick={() => pick('nzbSaveDir')}>{t('common.browse')}</button>
           </SettingRow>
-          <SettingRow label="Preguntar la carpeta cada vez" checked={s.nzbAskSaveDir} onchange={set('nzbAskSaveDir')} />
-          <SettingRow icon="layers" label="Indexadores" description="URL, API key y prioridad de cada indexador.">
-            <button class="btn sm" onclick={() => (ui.view = 'indexers')}>Gestionar <Icon name="chevron-right" size={14} /></button>
+          <SettingRow label={t('settings.nzbAsk')} checked={s.nzbAskSaveDir} onchange={set('nzbAskSaveDir')} />
+          <SettingRow icon="layers" label={t('nav.indexers')} description={t('settings.indexersDesc')}>
+            <button class="btn sm" onclick={() => (ui.view = 'indexers')}>{t('settings.manage')} <Icon name="chevron-right" size={14} /></button>
           </SettingRow>
         </div>
       </section>
 
       <section id="sec-folders">
-        <h2><Icon name="folder" size={18} /> Carpetas</h2>
+        <h2><Icon name="folder" size={18} /> {t('settings.section.folders')}</h2>
         <div class="card group">
-          <SettingRow label="Carpeta de descargas" description="Destino por defecto de las descargas terminadas.">
+          <SettingRow label={t('settings.downloadDir')} description={t('settings.downloadDirDesc')}>
             <input class="input path" value={s.downloadDir} onchange={(e) => saveSettings({ downloadDir: e.target.value })} />
-            <button class="btn sm" onclick={() => pick('downloadDir')}>Examinar</button>
+            <button class="btn sm" onclick={() => pick('downloadDir')}>{t('common.browse')}</button>
           </SettingRow>
-          <SettingRow label="Carpeta temporal" description="Donde se guardan las descargas en curso. Vacío = subcarpeta «_incompleto» en el destino (más rápido al terminar).">
-            <input class="input path" value={s.incompleteDir} placeholder="Automática" onchange={(e) => saveSettings({ incompleteDir: e.target.value })} />
-            <button class="btn sm" onclick={() => pick('incompleteDir')}>Examinar</button>
+          <SettingRow label={t('settings.tempDir')} description={t('settings.tempDirDesc')}>
+            <input class="input path" value={s.incompleteDir} placeholder={t('settings.automatic')} onchange={(e) => saveSettings({ incompleteDir: e.target.value })} />
+            <button class="btn sm" onclick={() => pick('incompleteDir')}>{t('common.browse')}</button>
           </SettingRow>
-          <SettingRow label="Preguntar dónde guardar cada NZB" description="Muestra la ventana de destino al añadir archivos o enlaces." checked={s.askDestination} onchange={set('askDestination')} />
-          <SettingRow label="Crear una subcarpeta por descarga" description="Usa el nombre del NZB como carpeta dentro del destino." checked={s.createJobFolder} onchange={set('createJobFolder')} />
-          <SettingRow label="Añadir en pausa" description="Las nuevas descargas no empiezan hasta que las reanudes." checked={s.addPaused} onchange={set('addPaused')} />
+          <SettingRow label={t('settings.askDestination')} description={t('settings.askDestinationDesc')} checked={s.askDestination} onchange={set('askDestination')} />
+          <SettingRow label={t('settings.jobFolder')} description={t('settings.jobFolderDesc')} checked={s.createJobFolder} onchange={set('createJobFolder')} />
+          <SettingRow label={t('add.paused')} description={t('settings.addPausedDesc')} checked={s.addPaused} onchange={set('addPaused')} />
         </div>
       </section>
 
       <section id="sec-post">
-        <h2><Icon name="package" size={18} /> Post-procesado</h2>
+        <h2><Icon name="package" size={18} /> {t('settings.section.post')}</h2>
         <div class="card group">
-          <SettingRow icon="shield" label="Verificar y reparar con PAR2" description="Se descargan primero los archivos originales y solo el índice PAR2; los volúmenes de recuperación se piden únicamente si hay daños. Desactivado: no se descarga ningún PAR2." checked={s.par2Enabled} onchange={set('par2Enabled')} />
-          <SettingRow icon="archive" label="Extraer archivos comprimidos" description="RAR, 7z, ZIP y volúmenes divididos con el 7-Zip integrado." checked={s.extractEnabled} onchange={set('extractEnabled')} />
-          <SettingRow label="Borrar comprimidos tras extraer" description="Elimina los .rar/.7z/.zip cuando la extracción termina bien." checked={s.deleteArchives} onchange={set('deleteArchives')} disabled={!s.extractEnabled} />
-          <SettingRow label="Borrar archivos PAR2 al terminar" checked={s.deletePar2} onchange={set('deletePar2')} />
-          <SettingRow icon="zap" label="Cancelar descargas imposibles" description="Si faltan más artículos de los que el PAR2 puede reparar, se detiene para no gastar datos." checked={s.abortHopeless} onchange={set('abortHopeless')} />
+          <SettingRow icon="shield" label={t('settings.par2')} description={t('settings.par2Desc')} checked={s.par2Enabled} onchange={set('par2Enabled')} />
+          <SettingRow icon="archive" label={t('settings.extract')} description={t('settings.extractDesc')} checked={s.extractEnabled} onchange={set('extractEnabled')} />
+          <SettingRow label={t('settings.deleteArchives')} description={t('settings.deleteArchivesDesc')} checked={s.deleteArchives} onchange={set('deleteArchives')} disabled={!s.extractEnabled} />
+          <SettingRow label={t('settings.deletePar2')} checked={s.deletePar2} onchange={set('deletePar2')} />
+          <SettingRow icon="zap" label={t('settings.abortHopeless')} description={t('settings.abortHopelessDesc')} checked={s.abortHopeless} onchange={set('abortHopeless')} />
         </div>
       </section>
 
       <section id="sec-links">
-        <h2><Icon name="clipboard" size={18} /> Enlaces y portapapeles</h2>
+        <h2><Icon name="clipboard" size={18} /> {t('settings.section.links')}</h2>
         <div class="card group">
-          <SettingRow icon="clipboard" label="Vigilar el portapapeles" description="Al copiar un enlace a un .nzb te preguntará si quieres añadirlo. Nunca descarga sin confirmación." checked={s.clipboardMonitor} onchange={set('clipboardMonitor')} />
-          <SettingRow label="Analizar el enlace al detectarlo" description="Descarga el NZB para mostrar su nombre y tamaño antes de añadirlo. Algunos indexadores lo cuentan como una descarga (al añadirlo no se vuelve a pedir)." checked={s.clipboardInspect} onchange={set('clipboardInspect')} disabled={!s.clipboardMonitor} />
-          <SettingRow label="Mostrar la ventana al detectar un enlace" description="Si Nebula está en la bandeja, se abre automáticamente. Si no, muestra una notificación." checked={s.clipboardShowWindow} onchange={set('clipboardShowWindow')} disabled={!s.clipboardMonitor} />
+          <SettingRow icon="clipboard" label={t('settings.clipboard')} description={t('settings.clipboardDesc')} checked={s.clipboardMonitor} onchange={set('clipboardMonitor')} />
+          <SettingRow label={t('settings.clipboardInspect')} description={t('settings.clipboardInspectDesc')} checked={s.clipboardInspect} onchange={set('clipboardInspect')} disabled={!s.clipboardMonitor} />
+          <SettingRow label={t('settings.clipboardShow')} description={t('settings.clipboardShowDesc')} checked={s.clipboardShowWindow} onchange={set('clipboardShowWindow')} disabled={!s.clipboardMonitor} />
           <div class="patterns" class:disabled={!s.clipboardMonitor}>
             <div class="p-head">
               <div>
-                <div class="p-title">Patrones de enlace</div>
-                <div class="p-desc">Además de los enlaces que terminan en <code>.nzb</code>, se detectan los que contienen alguno de estos textos (útil para indexadores).</div>
+                <div class="p-title">{t('settings.patterns')}</div>
+                <div class="p-desc">{@html th('settings.patternsDesc')}</div>
               </div>
-              <button class="btn ghost sm" onclick={resetPatterns}><Icon name="refresh" size={13} /> Restaurar</button>
+              <button class="btn ghost sm" onclick={resetPatterns}><Icon name="refresh" size={13} /> {t('settings.restore')}</button>
             </div>
             <div class="chips">
               {#each s.clipboardPatterns as p (p)}
                 <span class="pchip" in:scale={{ start: 0.7, duration: d(200) }}>
                   <code>{p}</code>
-                  <button onclick={() => saveSettings({ clipboardPatterns: s.clipboardPatterns.filter((x) => x !== p) })} aria-label="Quitar"><Icon name="x" size={12} /></button>
+                  <button onclick={() => saveSettings({ clipboardPatterns: s.clipboardPatterns.filter((x) => x !== p) })} aria-label={t('settings.removePattern')}><Icon name="x" size={12} /></button>
                 </span>
               {/each}
               <form class="p-add" onsubmit={(e) => { e.preventDefault(); addPattern(); }}>
-                <input class="input" placeholder="Añadir patrón…" bind:value={newPattern} />
+                <input class="input" placeholder={t('settings.addPattern')} bind:value={newPattern} />
               </form>
             </div>
           </div>
@@ -216,80 +236,77 @@
       </section>
 
       <section id="sec-windows">
-        <h2><Icon name="monitor" size={18} /> Integración con Windows</h2>
+        <h2><Icon name="monitor" size={18} /> {t('settings.windowsTitle')}</h2>
         <div class="card group">
-          <SettingRow icon="file" label="Abrir archivos .nzb con Nebula" description="Doble clic en un .nzb lo añade a la cola." checked={s.associateNzb} onchange={set('associateNzb')} />
-          <SettingRow icon="power" label="Iniciar con Windows" checked={s.startWithWindows} onchange={set('startWithWindows')} />
-          <SettingRow label="Iniciar minimizado en la bandeja" checked={s.startMinimized} onchange={set('startMinimized')} />
-          <SettingRow label="Minimizar a la bandeja del sistema" description="El botón de minimizar oculta la ventana junto al reloj." checked={s.minimizeToTray} onchange={set('minimizeToTray')} />
-          <SettingRow label="Cerrar a la bandeja del sistema" description="Cerrar la ventana no detiene las descargas. Para salir usa el menú del icono de la bandeja." checked={s.closeToTray} onchange={set('closeToTray')} />
-          <SettingRow label="Notificar descargas completadas" checked={s.notifyComplete} onchange={set('notifyComplete')} />
-          <SettingRow label="Notificar errores" checked={s.notifyFailed} onchange={set('notifyFailed')} />
-          <SettingRow label="Confirmar antes de eliminar" checked={s.confirmDelete} onchange={set('confirmDelete')} />
+          <SettingRow icon="file" label={t('settings.associate')} description={t('settings.associateDesc')} checked={s.associateNzb} onchange={set('associateNzb')} />
+          <SettingRow icon="power" label={t('settings.startWithWindows')} checked={s.startWithWindows} onchange={set('startWithWindows')} />
+          <SettingRow label={t('settings.startMinimized')} checked={s.startMinimized} onchange={set('startMinimized')} />
+          <SettingRow label={t('settings.minimizeToTray')} description={t('settings.minimizeToTrayDesc')} checked={s.minimizeToTray} onchange={set('minimizeToTray')} />
+          <SettingRow label={t('settings.closeToTray')} description={t('settings.closeToTrayDesc')} checked={s.closeToTray} onchange={set('closeToTray')} />
+          <SettingRow label={t('settings.notifyComplete')} checked={s.notifyComplete} onchange={set('notifyComplete')} />
+          <SettingRow label={t('settings.notifyFailed')} checked={s.notifyFailed} onchange={set('notifyFailed')} />
+          <SettingRow label={t('settings.confirmDelete')} checked={s.confirmDelete} onchange={set('confirmDelete')} />
         </div>
       </section>
 
       <section id="sec-network">
-        <h2><Icon name="wifi" size={18} /> Conexión</h2>
+        <h2><Icon name="wifi" size={18} /> {t('settings.section.network')}</h2>
         <div class="card group">
-          <SettingRow icon="gauge" label="Límite de velocidad" description="En MB/s. 0 = sin límite.">
+          <SettingRow icon="gauge" label={t('downloads.speedLimit')} description={t('settings.speedLimitDesc')}>
             <input class="input small" type="number" min="0" step="0.5" value={s.speedLimitKbps ? +(s.speedLimitKbps / 1024).toFixed(1) : 0}
               onchange={(e) => { const v = Math.max(0, parseFloat(String(e.target.value).replace(',', '.')) || 0); saveSettings({ speedLimitKbps: Math.round(v * 1024) }); invoke('set_speed_limit', { kbps: Math.round(v * 1024) }); }} />
             <span class="unit">MB/s</span>
           </SettingRow>
-          <SettingRow label="Reintentos por artículo" description="Veces que se reintenta un artículo en el mismo servidor si la conexión falla.">
+          <SettingRow label={t('settings.retries')} description={t('settings.retriesDesc')}>
             <input class="input small" type="number" min="0" max="10" value={s.maxRetries} onchange={num('maxRetries', 0, 10)} />
           </SettingRow>
-          <SettingRow label="Tiempo de espera" description="Segundos sin respuesta antes de considerar la conexión caída.">
+          <SettingRow label={t('settings.timeout')} description={t('settings.timeoutDesc')}>
             <input class="input small" type="number" min="5" max="300" value={s.timeoutSecs} onchange={num('timeoutSecs', 5, 300)} />
             <span class="unit">s</span>
           </SettingRow>
-          <SettingRow label="Entradas en el historial" description="Las más antiguas se eliminan de la lista automáticamente.">
+          <SettingRow label={t('settings.historyLimit')} description={t('settings.historyLimitDesc')}>
             <input class="input small" type="number" min="10" max="5000" value={s.historyLimit} onchange={num('historyLimit', 10, 5000)} />
           </SettingRow>
-          <SettingRow icon="server" label="Servidores NNTP" description="Credenciales, conexiones y prioridades.">
-            <button class="btn sm" onclick={() => (ui.view = 'servers')}>Gestionar <Icon name="chevron-right" size={14} /></button>
+          <SettingRow icon="server" label={t('settings.nntpServers')} description={t('settings.nntpServersDesc')}>
+            <button class="btn sm" onclick={() => (ui.view = 'servers')}>{t('settings.manage')} <Icon name="chevron-right" size={14} /></button>
           </SettingRow>
         </div>
       </section>
 
       <section id="sec-look">
-        <h2><Icon name="palette" size={18} /> Apariencia</h2>
+        <h2><Icon name="palette" size={18} /> {t('settings.section.look')}</h2>
         <div class="card group">
-          <SettingRow label="Color de acento">
+          <SettingRow label={t('settings.accent')}>
             <div class="swatches">
               {#each ACCENTS as a}
-                <button class="swatch" class:sel={s.accent === a.id} style="--a:{a.a}; --b:{a.b}" title={a.name} onclick={() => saveSettings({ accent: a.id })}>
+                <button class="swatch" class:sel={s.accent === a.id} style="--a:{a.a}; --b:{a.b}" title={a.id === 'nebula' ? 'Nebula' : t(`settings.accentName.${a.id}`)} onclick={() => saveSettings({ accent: a.id })}>
                   {#if s.accent === a.id}<span in:scale={{ duration: d(200) }}><Icon name="check" size={14} stroke={3} /></span>{/if}
                 </button>
               {/each}
             </div>
           </SettingRow>
-          <SettingRow icon="sparkles" label="Animaciones" description="Desactívalas si prefieres una interfaz más sobria o tu equipo es lento." checked={s.animations} onchange={set('animations')} />
-          <SettingRow icon="rocket" label="Asistente de bienvenida" description="Vuelve a mostrar la configuración inicial.">
-            <button class="btn sm" onclick={() => (ui.setupOpen = true)}>Abrir</button>
+          <SettingRow icon="sparkles" label={t('settings.animations')} description={t('settings.animationsDesc')} checked={s.animations} onchange={set('animations')} />
+          <SettingRow icon="rocket" label={t('settings.wizard')} description={t('settings.wizardDesc')}>
+            <button class="btn sm" onclick={() => (ui.setupOpen = true)}>{t('common.open')}</button>
           </SettingRow>
         </div>
       </section>
 
       <section id="sec-about">
-        <h2><Icon name="info" size={18} /> Acerca de</h2>
+        <h2><Icon name="info" size={18} /> {t('settings.section.about')}</h2>
         <div class="card about">
           <div class="brand">
             <div class="logo-big"><Icon name="download" size={26} stroke={2.4} /></div>
             <div>
               <div class="app-name grad-text">Nebula</div>
-              <div class="muted">Versión {ui.info?.version} · Cliente Usenet para Windows</div>
+              <div class="muted">{t('settings.version', { version: ui.info?.version })}</div>
             </div>
           </div>
           <div class="links">
-            <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.dataDir })}><Icon name="folder" size={14} /> Datos y configuración</button>
-            <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="logs" size={14} /> Registros</button>
+            <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.dataDir })}><Icon name="folder" size={14} /> {t('settings.dataDir')}</button>
+            <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="logs" size={14} /> {t('settings.logsDir')}</button>
           </div>
-          <p class="legal">
-            Incluye <strong>7-Zip</strong> © Igor Pavlov (GNU LGPL + restricción unRAR) y <strong>par2cmdline-turbo</strong> (GNU GPL v2),
-            ejecutados como programas independientes. Las contraseñas de los servidores se cifran con la protección de datos de Windows (DPAPI).
-          </p>
+          <p class="legal">{@html th('settings.legal')}</p>
         </div>
       </section>
     </div>
@@ -297,6 +314,7 @@
 {/if}
 
 <style>
+  .select.lang { min-width: 220px; }
   .wrap { display: flex; height: 100%; max-width: 1140px; margin: 0 auto; }
   .toc { width: 230px; flex-shrink: 0; padding: 26px 10px 20px 30px; }
   h1 { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 700; }

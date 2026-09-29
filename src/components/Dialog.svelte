@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import Modal from './Modal.svelte';
   import Switch from './Switch.svelte';
   import Icon from './Icon.svelte';
@@ -32,7 +33,7 @@
             autofocus
             onkeydown={(e) => e.key === 'Enter' && ok()} />
           {#if dlg.input.password}
-            <button class="icon-btn eye" onclick={() => (showPw = !showPw)} aria-label="Mostrar"><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
+            <button class="icon-btn eye" onclick={() => (showPw = !showPw)} aria-label={t('common.show')}><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
           {/if}
         </div>
       </div>

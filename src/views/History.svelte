@@ -1,4 +1,5 @@
 <script>
+  import { t, tn } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly, fade, slide } from 'svelte/transition';
   import { flip } from 'svelte/animate';
@@ -26,7 +27,7 @@
   async function retry(h) {
     try {
       await invoke('retry_history', { id: h.id });
-      toast('info', `Reintentando: ${h.name}`, 3000);
+      toast('info', t('history.retrying', { name: h.name }), 3000);
       await refreshHistory();
       ui.view = 'downloads';
     } catch (e) {
@@ -36,11 +37,11 @@
 
   async function retryExtract(h) {
     const r = await ask({
-      title: 'Reintentar extracción',
+      title: t('history.retryExtract'),
       message: h.error,
-      confirmLabel: 'Extraer',
+      confirmLabel: t('history.extract'),
       icon: 'key',
-      input: { label: 'Contraseña', placeholder: 'Déjala vacía si no tiene', password: true },
+      input: { label: t('common.password'), placeholder: t('history.passwordPlaceholder'), password: true },
       value: h.password ?? '',
     });
     if (!r.ok) return;
@@ -57,12 +58,12 @@
     let deleteFiles = false;
     if (h.status === 'failed') {
       const r = await ask({
-        title: 'Eliminar del historial',
+        title: t('history.removeTitle'),
         message: h.name,
-        confirmLabel: 'Eliminar',
+        confirmLabel: t('common.remove'),
         danger: true,
         icon: 'trash',
-        checkbox: 'Borrar también los archivos temporales',
+        checkbox: t('history.removeFiles'),
         checkedDefault: true,
       });
       if (!r.ok) return;
@@ -74,9 +75,9 @@
 
   async function clear(onlyCompleted) {
     const r = await ask({
-      title: onlyCompleted ? '¿Limpiar completados?' : '¿Vaciar el historial?',
-      message: 'Los archivos descargados no se borran, solo la lista.',
-      confirmLabel: 'Limpiar',
+      title: onlyCompleted ? t('history.clearCompletedTitle') : t('history.clearAllTitle'),
+      message: t('history.clearMessage'),
+      confirmLabel: t('common.clear'),
       danger: true,
       icon: 'trash',
     });
@@ -89,18 +90,18 @@
 <div class="view">
   <header class="head">
     <div>
-      <h1>Historial</h1>
-      <p class="subtitle">{counts.completed} completadas · {f.bytes(totalSize)} descargados{#if counts.failed} · {counts.failed} fallidas{/if}</p>
+      <h1>{t('nav.history')}</h1>
+      <p class="subtitle">{tn('history.completedCount', counts.completed)} · {t('history.downloaded', { size: f.bytes(totalSize) })}{#if counts.failed}{' · '}{tn('history.failedCount', counts.failed)}{/if}</p>
     </div>
     <div class="head-actions">
-      <button class="btn" onclick={() => clear(true)} disabled={!counts.completed}><Icon name="check" size={15} /> Limpiar completados</button>
-      <button class="btn ghost" onclick={() => clear(false)} disabled={!counts.all}><Icon name="trash" size={15} /> Vaciar</button>
+      <button class="btn" onclick={() => clear(true)} disabled={!counts.completed}><Icon name="check" size={15} /> {t('history.clearCompleted')}</button>
+      <button class="btn ghost" onclick={() => clear(false)} disabled={!counts.all}><Icon name="trash" size={15} /> {t('history.clearAll')}</button>
     </div>
   </header>
 
   <div class="toolbar">
     <div class="tabs">
-      {#each [['all', 'Todos'], ['completed', 'Completados'], ['failed', 'Fallidos']] as [k, label]}
+      {#each [['all', t('history.all')], ['completed', t('history.completed')], ['failed', t('history.failed')]] as [k, label]}
         <button class="tab" class:sel={filter === k} onclick={() => (filter = k)}>
           {label} <span class="count">{counts[k]}</span>
           {#if filter === k}<span class="underline" in:fly={{ x: 0, duration: 0 }}></span>{/if}
@@ -109,7 +110,7 @@
     </div>
     <div class="search">
       <Icon name="search" size={15} />
-      <input class="input" placeholder="Buscar…" bind:value={search} />
+      <input class="input" placeholder={t('common.searchPlaceholder')} bind:value={search} />
     </div>
   </div>
 
@@ -125,22 +126,22 @@
               <span>{f.bytes(h.size)}</span>
               <span>·</span>
               <span title={f.dateTime(h.completedAt)}>{f.ago(h.completedAt)}</span>
-              {#if ok && h.avgSpeed}<span>·</span><span>media {f.speed(h.avgSpeed)}</span>{/if}
-              {#if h.viaName}<span class="chip info" title="Descargado a través de {h.viaName}"><Icon name="cloud" size={10} stroke={2.6} /> {h.viaName}</span>{/if}
-              {#if h.warning}<span class="chip warn"><Icon name="alert-triangle" size={10} stroke={2.6} /> Aviso</span>{/if}
-              {#if !ok}<span class="chip err">Falló en {f.STAGES[h.failedStage] ?? h.failedStage}</span>{/if}
+              {#if ok && h.avgSpeed}<span>·</span><span>{t('history.avg', { speed: f.speed(h.avgSpeed) })}</span>{/if}
+              {#if h.viaName}<span class="chip info" title={t('history.via', { provider: h.viaName })}><Icon name="cloud" size={10} stroke={2.6} /> {h.viaName}</span>{/if}
+              {#if h.warning}<span class="chip warn"><Icon name="alert-triangle" size={10} stroke={2.6} /> {t('history.warning')}</span>{/if}
+              {#if !ok}<span class="chip err">{t('history.failedAt', { stage: f.stageLabel(h.failedStage) })}</span>{/if}
             </div>
           </div>
           <div class="h-actions" onclick={(e) => e.stopPropagation()} role="presentation">
             {#if ok}
-              <button class="btn sm" onclick={() => invoke('open_path', { path: h.dest })}><Icon name="folder" size={14} /> Abrir</button>
+              <button class="btn sm" onclick={() => invoke('open_path', { path: h.dest })}><Icon name="folder" size={14} /> {t('common.open')}</button>
             {:else}
               {#if h.canRetryExtract}
-                <button class="btn sm" onclick={() => retryExtract(h)}><Icon name="key" size={14} /> Reintentar extracción</button>
+                <button class="btn sm" onclick={() => retryExtract(h)}><Icon name="key" size={14} /> {t('history.retryExtract')}</button>
               {/if}
-              <button class="btn sm" onclick={() => retry(h)}><Icon name="refresh" size={14} /> Reintentar</button>
+              <button class="btn sm" onclick={() => retry(h)}><Icon name="refresh" size={14} /> {t('common.retry')}</button>
             {/if}
-            <button class="icon-btn danger" onclick={() => remove(h)} title="Eliminar del historial"><Icon name="trash" size={15} /></button>
+            <button class="icon-btn danger" onclick={() => remove(h)} title={t('history.removeTitle')}><Icon name="trash" size={15} /></button>
           </div>
         </div>
         {#if !ok && h.error}
@@ -148,18 +149,18 @@
         {/if}
         {#if open === h.id}
           <div class="h-details" transition:slide={{ duration: d(220) }}>
-            <div><span class="k">Carpeta</span><span class="v selectable">{ok ? h.dest : h.workDir}</span></div>
-            <div><span class="k">Añadido</span><span class="v">{f.dateTime(h.addedAt)}</span></div>
-            <div><span class="k">Terminado</span><span class="v">{f.dateTime(h.completedAt)}</span></div>
-            <div><span class="k">Duración</span><span class="v">{f.duration(h.downloadSecs)}</span></div>
-            {#if h.warning}<div class="wide"><span class="k">Aviso</span><span class="v selectable">{h.warning}</span></div>{/if}
+            <div><span class="k">{t('history.folder')}</span><span class="v selectable">{ok ? h.dest : h.workDir}</span></div>
+            <div><span class="k">{t('common.added')}</span><span class="v">{f.dateTime(h.addedAt)}</span></div>
+            <div><span class="k">{t('history.finished')}</span><span class="v">{f.dateTime(h.completedAt)}</span></div>
+            <div><span class="k">{t('history.duration')}</span><span class="v">{f.duration(h.downloadSecs)}</span></div>
+            {#if h.warning}<div class="wide"><span class="k">{t('history.warning')}</span><span class="v selectable">{h.warning}</span></div>{/if}
           </div>
         {/if}
       </article>
     {:else}
       <div class="empty" in:fade={{ duration: d(250) }}>
         <Icon name="history" size={36} stroke={1.6} />
-        <p>{search ? 'Nada coincide con la búsqueda.' : 'Aquí aparecerán tus descargas terminadas.'}</p>
+        <p>{search ? t('history.noMatch') : t('history.empty')}</p>
       </div>
     {/each}
   </div>

@@ -1,4 +1,5 @@
 <script>
+  import { t, tn } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { slide } from 'svelte/transition';
   import Icon from './Icon.svelte';
@@ -21,7 +22,7 @@
       ? 'info'
       : ({ downloading: 'accent', queued: 'muted', paused: 'paused', verifying: 'info', repairing: 'warn', extracting: 'teal', moving: 'teal' }[job.status] ?? 'accent')
   );
-  const waiting = $derived(pp && job.post?.stage === 'En espera');
+  const waiting = $derived(pp && job.post?.stage === 'waiting');
 
   $effect(() => {
     if (!expanded) return;
@@ -33,10 +34,10 @@
       } catch {}
     };
     load();
-    const t = setInterval(load, 1500);
+    const timer = setInterval(load, 1500);
     return () => {
       alive = false;
-      clearInterval(t);
+      clearInterval(timer);
     };
   });
 
@@ -48,32 +49,40 @@
     let deleteFiles = true;
     if (ui.settings?.confirmDelete) {
       const r = await ask({
-        title: '¿Eliminar de la cola?',
+        title: t('job.removeTitle'),
         message: job.name,
-        confirmLabel: 'Eliminar',
+        confirmLabel: t('common.remove'),
         danger: true,
         icon: 'trash',
-        checkbox: 'Borrar también los archivos ya descargados',
+        checkbox: t('job.removeFiles'),
         checkedDefault: true,
       });
       if (!r.ok) return;
       deleteFiles = r.checked;
     }
     await invoke('remove_job', { id: job.id, deleteFiles });
-    toast('info', `Eliminado: ${job.name}`);
+    toast('info', t('job.removed', { name: job.name }));
   }
 
   function move(to) {
     invoke('move_job', { id: job.id, to });
   }
 
+  // Fase del post-procesado (clave de traducción; las colas antiguas pueden traer el texto ya escrito).
+  function stageText(stage) {
+    const key = `stage.${stage}`;
+    const text = t(key);
+    return text === key ? stage : text;
+  }
+
   function subline() {
     if (pp) {
-      return job.post?.detail ? `${job.post.stage} · ${job.post.detail}` : job.post?.stage ?? st.label;
+      const stage = job.post?.stage ? stageText(job.post.stage) : st.label;
+      return job.post?.detail ? `${stage} · ${job.post.detail}` : stage;
     }
-    if (remote) return job.status === 'paused' ? `En pausa · ${job.debrid.state}` : job.debrid.state;
-    const parts = [`${f.bytes(job.done + job.failed)} de ${f.bytes(job.total)}`];
-    parts.push(`${job.filesDone}/${job.files} archivos`);
+    if (remote) return job.status === 'paused' ? `${t('status.paused')} · ${job.debrid.state}` : job.debrid.state;
+    const parts = [t('job.progress', { done: f.bytes(job.done + job.failed), total: f.bytes(job.total) })];
+    parts.push(t('job.filesProgress', { done: job.filesDone, total: job.files }));
     return parts.join(' · ');
   }
 </script>
@@ -90,20 +99,20 @@
     <div class="main">
       <div class="name truncate" title={job.name}>{job.name}</div>
       <div class="meta">
-        <span class="chip {st.kind}">{waiting ? 'En espera' : st.label}</span>
+        <span class="chip {st.kind}">{waiting ? t('stage.waiting') : st.label}</span>
         {#if job.debrid}
-          <span class="chip info" title="Se descarga a través de {job.debrid.provider}"><Icon name="cloud" size={11} stroke={2.4} /> {job.debrid.provider}</span>
+          <span class="chip info" title={t('job.viaTitle', { provider: job.debrid.provider })}><Icon name="cloud" size={11} stroke={2.4} /> {job.debrid.provider}</span>
         {/if}
         <span class="sub truncate">{subline()}</span>
         {#if job.heldPar2 > 0 && ['queued', 'downloading', 'paused'].includes(job.status)}
-          <span class="chip muted" title="Los volúmenes de recuperación PAR2 ({job.heldPar2}) solo se descargarán si la verificación encuentra archivos dañados.">
-            <Icon name="shield" size={11} stroke={2.4} /> PAR2 en reserva
+          <span class="chip muted" title={t('job.heldPar2Title', { n: job.heldPar2 })}>
+            <Icon name="shield" size={11} stroke={2.4} /> {t('job.heldPar2')}
           </span>
         {/if}
         {#if job.failedArticles > 0}
-          <span class="chip warn" title="Artículos que no se encontraron en ningún servidor. Se intentarán reparar con PAR2.">
+          <span class="chip warn" title={t('job.missingTitle')}>
             <Icon name="alert-triangle" size={11} stroke={2.5} />
-            {job.failedArticles} faltan
+            {t('job.missing', { n: job.failedArticles })}
           </span>
         {/if}
       </div>
@@ -111,29 +120,29 @@
 
     <div class="stats">
       {#if rate > 0}
-        <div class="rate" title={remote ? `Velocidad de descarga en ${job.debrid.provider}` : ''}>{f.speed(rate)}</div>
+        <div class="rate" title={remote ? t('job.remoteSpeed', { provider: job.debrid.provider }) : ''}>{f.speed(rate)}</div>
       {/if}
       {#if job.status === 'downloading' && job.eta > 0}
         <div class="eta"><Icon name="clock" size={12} /> {f.duration(job.eta)}</div>
       {:else if remote && job.status === 'downloading'}
-        <div class="eta"><Icon name="cloud" size={12} /> en {job.debrid.provider}</div>
+        <div class="eta"><Icon name="cloud" size={12} /> {t('job.atProvider', { provider: job.debrid.provider })}</div>
       {:else if job.status === 'queued'}
-        <div class="eta">#{index + 1} en cola</div>
+        <div class="eta">{t('job.queuePos', { n: index + 1 })}</div>
       {/if}
     </div>
 
     <div class="actions">
       {#if !pp}
-        <button class="icon-btn" onclick={() => move(0)} disabled={index === 0} title="Mover al principio"><Icon name="arrow-up-to-line" size={16} /></button>
-        <button class="icon-btn" onclick={() => move(index - 1)} disabled={index === 0} title="Subir"><Icon name="chevron-up" size={17} /></button>
-        <button class="icon-btn" onclick={() => move(index + 1)} disabled={index >= count - 1} title="Bajar"><Icon name="chevron-down" size={17} /></button>
-        <button class="icon-btn" onclick={togglePause} title={job.status === 'paused' ? 'Reanudar' : 'Pausar'}>
+        <button class="icon-btn" onclick={() => move(0)} disabled={index === 0} title={t('job.moveTop')}><Icon name="arrow-up-to-line" size={16} /></button>
+        <button class="icon-btn" onclick={() => move(index - 1)} disabled={index === 0} title={t('job.moveUp')}><Icon name="chevron-up" size={17} /></button>
+        <button class="icon-btn" onclick={() => move(index + 1)} disabled={index >= count - 1} title={t('job.moveDown')}><Icon name="chevron-down" size={17} /></button>
+        <button class="icon-btn" onclick={togglePause} title={job.status === 'paused' ? t('common.resume') : t('common.pause')}>
           <Icon name={job.status === 'paused' ? 'play' : 'pause'} size={16} />
         </button>
       {/if}
-      <button class="icon-btn" onclick={() => invoke('open_path', { path: job.dest })} title="Abrir carpeta de destino"><Icon name="folder" size={16} /></button>
-      <button class="icon-btn danger" onclick={remove} title="Eliminar"><Icon name="trash" size={16} /></button>
-      <button class="icon-btn chevron" class:open={expanded} onclick={() => (expanded = !expanded)} title="Detalles"><Icon name="chevron-down" size={17} /></button>
+      <button class="icon-btn" onclick={() => invoke('open_path', { path: job.dest })} title={t('job.openDest')}><Icon name="folder" size={16} /></button>
+      <button class="icon-btn danger" onclick={remove} title={t('common.remove')}><Icon name="trash" size={16} /></button>
+      <button class="icon-btn chevron" class:open={expanded} onclick={() => (expanded = !expanded)} title={t('common.details')}><Icon name="chevron-down" size={17} /></button>
     </div>
   </div>
 
@@ -150,21 +159,21 @@
   {/if}
   {#if job.status === 'downloading' && ui.queue.noServers && !job.debrid}
     <div class="alert warn" transition:slide={{ duration: d(200) }}>
-      <Icon name="wifi" size={16} /><span>Esperando conexión con algún servidor… Revisa la pestaña Servidores.</span>
+      <Icon name="wifi" size={16} /><span>{t('job.waitingServer')}</span>
     </div>
   {/if}
 
   {#if expanded}
     <div class="details" transition:slide={{ duration: d(260) }}>
       <div class="d-grid">
-        <div><span class="k">Destino</span><span class="v truncate selectable" title={job.dest}>{job.dest}</span></div>
-        <div><span class="k">Tamaño</span><span class="v">{f.bytes(job.total)}</span></div>
-        <div><span class="k">Añadido</span><span class="v">{f.ago(job.addedAt)}</span></div>
+        <div><span class="k">{t('job.destination')}</span><span class="v truncate selectable" title={job.dest}>{job.dest}</span></div>
+        <div><span class="k">{t('common.size')}</span><span class="v">{f.bytes(job.total)}</span></div>
+        <div><span class="k">{t('common.added')}</span><span class="v">{f.ago(job.addedAt)}</span></div>
         {#if job.debrid}
-          <div><span class="k">Método</span><span class="v">{job.debrid.provider} (debrid)</span></div>
+          <div><span class="k">{t('job.method')}</span><span class="v">{job.debrid.provider} (debrid)</span></div>
         {/if}
         {#if job.heldPar2 > 0}
-          <div><span class="k">PAR2 en reserva</span><span class="v">{job.heldPar2} volúmenes (solo si hacen falta)</span></div>
+          <div><span class="k">{t('job.heldPar2')}</span><span class="v">{tn('job.heldVolumes', job.heldPar2)}</span></div>
         {/if}
       </div>
       {#if files.length}
@@ -176,9 +185,9 @@
               <span class="fname truncate" title={file.name}>{file.name}</span>
               <span>
                 {#if file.held}
-                  <span class="chip muted">reserva</span>
+                  <span class="chip muted">{t('job.held')}</span>
                 {:else if file.failedSegs > 0}
-                  <span class="chip warn">{file.failedSegs} faltan</span>
+                  <span class="chip warn">{t('job.missing', { n: file.failedSegs })}</span>
                 {/if}
               </span>
               <span class="fsize">{f.bytes(file.bytes)}</span>

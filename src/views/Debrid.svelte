@@ -1,4 +1,5 @@
 <script>
+  import { t, th } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly, fade } from 'svelte/transition';
   import { flip } from 'svelte/animate';
@@ -33,7 +34,7 @@
     item.apiKey = item.apiKey.trim();
     item.name = item.name.trim();
     if (!item.apiKey) {
-      toast('error', 'Pega la API key del servicio.');
+      toast('error', t('debrid.pasteKey'));
       return;
     }
     const all = $state.snapshot(ui.settings.debrid ?? []);
@@ -41,13 +42,13 @@
     if (i >= 0) all[i] = item;
     else all.push(item);
     if (await saveSettings({ debrid: all })) {
-      toast('success', isNew ? `${debridLabel(item)} añadido` : `${debridLabel(item)} actualizado`, 2500);
+      toast('success', isNew ? t('debridView.added', { name: debridLabel(item) }) : t('debridView.updated', { name: debridLabel(item) }), 2500);
       editing = null;
     }
   }
 
   async function remove(p) {
-    const r = await ask({ title: '¿Eliminar servicio?', message: `${debridLabel(p)} dejará de usarse para descargar.`, confirmLabel: 'Eliminar', danger: true, icon: 'trash' });
+    const r = await ask({ title: t('debridView.removeTitle'), message: t('common.removeMessage', { name: debridLabel(p) }), confirmLabel: t('common.remove'), danger: true, icon: 'trash' });
     if (!r.ok) return;
     await saveSettings({ debrid: $state.snapshot(ui.settings.debrid).filter((x) => x.id !== p.id) });
   }
@@ -75,22 +76,22 @@
 
   function masked(key) {
     const k = (key ?? '').trim();
-    return k.length > 8 ? `${k.slice(0, 4)}…${k.slice(-4)}` : k ? '••••' : 'sin API key';
+    return k.length > 8 ? `${k.slice(0, 4)}…${k.slice(-4)}` : k ? '••••' : t('debridView.noKey');
   }
 </script>
 
 <div class="view">
   <header class="head">
     <div>
-      <h1>Debrid</h1>
-      <p class="subtitle">Servicios que descargan el NZB en sus servidores y te lo sirven a toda velocidad por HTTPS: los mismos archivos que por NNTP, sin comprimir en un .zip.</p>
+      <h1>{t('nav.debrid')}</h1>
+      <p class="subtitle">{t('debridView.subtitle')}</p>
     </div>
-    <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir servicio</button>
+    <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> {t('debridView.add')}</button>
   </header>
 
   <div class="list">
     {#each list as p, i (p.id)}
-      {@const t = testing[p.id]}
+      {@const tst = testing[p.id]}
       {@const info = kindInfo(p.kind)}
       {@const first = usable[0]?.id === p.id}
       <article class="db card" class:off={!p.enabled} animate:flip={{ duration: d(350), easing: cubicOut }} in:fly={{ y: 14, duration: d(300) }} out:fade={{ duration: d(180) }}>
@@ -99,36 +100,36 @@
           <div class="db-main">
             <div class="db-name">
               {debridLabel(p)}
-              {#if first}<span class="chip accent">Preferido</span>{:else}<span class="chip muted">Prioridad {i + 1}</span>{/if}
-              {#if !p.apiKey?.trim()}<span class="chip warn">Sin API key</span>{/if}
+              {#if first}<span class="chip accent">{t('common.preferred')}</span>{:else}<span class="chip muted">{t('common.priorityN', { n: i + 1 })}</span>{/if}
+              {#if !p.apiKey?.trim()}<span class="chip warn">{t('common.noApiKey')}</span>{/if}
             </div>
-            <div class="db-sub">{#if p.name?.trim()}{info.name} · {/if}API key <span class="mono">{masked(p.apiKey)}</span></div>
+            <div class="db-sub">{#if p.name?.trim()}{info.name} · {/if}{t('common.apiKey')} <span class="mono">{masked(p.apiKey)}</span></div>
           </div>
           <div class="db-actions">
-            <button class="icon-btn" title="Subir prioridad" onclick={() => move(i, -1)} disabled={i === 0}><Icon name="chevron-up" size={17} /></button>
-            <button class="icon-btn" title="Bajar prioridad" onclick={() => move(i, 1)} disabled={i === list.length - 1}><Icon name="chevron-down" size={17} /></button>
-            <button class="icon-btn" title="Probar" onclick={() => test(p)}><Icon name="plug" size={16} /></button>
-            <button class="icon-btn" title="Editar" onclick={() => edit(p)}><Icon name="edit" size={16} /></button>
-            <button class="icon-btn danger" title="Eliminar" onclick={() => remove(p)}><Icon name="trash" size={16} /></button>
-            <Switch checked={p.enabled} onchange={(v) => toggle(p, v)} label="Activo" />
+            <button class="icon-btn" title={t('common.priorityUp')} onclick={() => move(i, -1)} disabled={i === 0}><Icon name="chevron-up" size={17} /></button>
+            <button class="icon-btn" title={t('common.priorityDown')} onclick={() => move(i, 1)} disabled={i === list.length - 1}><Icon name="chevron-down" size={17} /></button>
+            <button class="icon-btn" title={t('common.test')} onclick={() => test(p)}><Icon name="plug" size={16} /></button>
+            <button class="icon-btn" title={t('common.edit')} onclick={() => edit(p)}><Icon name="edit" size={16} /></button>
+            <button class="icon-btn danger" title={t('common.remove')} onclick={() => remove(p)}><Icon name="trash" size={16} /></button>
+            <Switch checked={p.enabled} onchange={(v) => toggle(p, v)} label={t('common.enabled')} />
           </div>
         </div>
-        {#if t}
-          <div class="alert {t.busy ? 'info' : t.ok ? 'ok' : 'err'}" in:fly={{ y: -6, duration: d(200) }}>
-            <Icon name={t.busy ? 'loader' : t.ok ? 'check-circle' : 'x-circle'} size={15} class={t.busy ? 'spin' : ''} />
-            <span class="selectable">{t.busy ? 'Comprobando la cuenta…' : `${t.message}${t.ok ? ` · ${t.latencyMs} ms` : ''}`}</span>
+        {#if tst}
+          <div class="alert {tst.busy ? 'info' : tst.ok ? 'ok' : 'err'}" in:fly={{ y: -6, duration: d(200) }}>
+            <Icon name={tst.busy ? 'loader' : tst.ok ? 'check-circle' : 'x-circle'} size={15} class={tst.busy ? 'spin' : ''} />
+            <span class="selectable">{tst.busy ? t('debridView.checking') : `${tst.message}${tst.ok ? ` · ${tst.latencyMs} ms` : ''}`}</span>
           </div>
-          {#if t.warning}
-            <div class="alert warn"><Icon name="alert-triangle" size={15} /><span>{t.warning}</span></div>
+          {#if tst.warning}
+            <div class="alert warn"><Icon name="alert-triangle" size={15} /><span>{tst.warning}</span></div>
           {/if}
         {/if}
       </article>
     {:else}
       <div class="empty card" in:fade>
         <Icon name="cloud" size={36} stroke={1.6} />
-        <h3>Aún no hay servicios debrid</h3>
-        <p>Añade tu API key de <strong>TorBox</strong> (plan Pro) o <strong>Premiumize</strong> para descargar los NZB desde sus servidores.</p>
-        <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir servicio</button>
+        <h3>{t('debridView.emptyTitle')}</h3>
+        <p>{@html th('debridView.emptyText')}</p>
+        <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> {t('debridView.add')}</button>
       </div>
     {/each}
   </div>
@@ -138,22 +139,22 @@
       <Icon name="info" size={16} />
       <span>
         {#if byDefault}
-          Los NZB nuevos se descargan con <strong>{debridLabel(usable[0])}</strong>{#if usable.length > 1}; si falla, se prueba el siguiente de la lista{/if}{#if ui.settings.debridFallbackNntp && hasNntp(ui.settings)} y, en último caso, NNTP{/if}.
+          {@html th('debridView.defaultDebrid', { name: debridLabel(usable[0]) })}{#if usable.length > 1}{t('debridView.fallbackNext')}{/if}{#if ui.settings.debridFallbackNntp && hasNntp(ui.settings)}{t('debridView.fallbackNntp')}{/if}{t('debridView.end')}
         {:else}
-          Los NZB nuevos se descargan por NNTP. Al añadir cada NZB puedes elegir el servicio debrid, o hacerlo el método por defecto.
+          {t('debridView.defaultNntp')}
         {/if}
-        <button class="link" onclick={() => (ui.view = 'settings')}>Cambiar</button>
+        <button class="link" onclick={() => (ui.view = 'settings')}>{t('common.change')}</button>
       </span>
     </div>
   {/if}
 </div>
 
 {#if editing}
-  <Modal title={isNew ? 'Nuevo servicio debrid' : 'Editar servicio'} subtitle="Descarga de NZB a través de la API del servicio" icon="cloud" width={640} onclose={() => (editing = null)}>
+  <Modal title={isNew ? t('debridView.new') : t('debridView.edit')} subtitle={t('debridView.modalSubtitle')} icon="cloud" width={640} onclose={() => (editing = null)}>
     <DebridForm bind:provider={editing} />
     {#snippet footer()}
-      <button class="btn ghost" onclick={() => (editing = null)}>Cancelar</button>
-      <button class="btn primary" onclick={save}><Icon name="check" size={16} /> Guardar</button>
+      <button class="btn ghost" onclick={() => (editing = null)}>{t('common.cancel')}</button>
+      <button class="btn primary" onclick={save}><Icon name="check" size={16} /> {t('common.save')}</button>
     {/snippet}
   </Modal>
 {/if}

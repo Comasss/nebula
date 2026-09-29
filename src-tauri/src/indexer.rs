@@ -55,7 +55,7 @@ pub struct IndexerTest {
 fn api_url(ix: &IndexerConfig) -> Result<String, String> {
     let base = ix.url.trim().trim_end_matches('/');
     if !(base.starts_with("http://") || base.starts_with("https://")) {
-        return Err("La URL del indexador debe empezar por https:// o http://".into());
+        return Err(t!("indexer.scheme"));
     }
     let path = if ix.api_path.trim().is_empty() { "/api" } else { ix.api_path.trim() };
     let path = format!("/{}", path.trim_matches('/'));
@@ -65,17 +65,17 @@ fn api_url(ix: &IndexerConfig) -> Result<String, String> {
 /// Traduce los códigos de error de Newznab.
 pub fn newznab_error(code: &str, description: &str) -> String {
     match code {
-        "100" => "API key incorrecta".into(),
-        "101" => "Cuenta suspendida en el indexador".into(),
-        "102" => "Tu cuenta no tiene permiso para usar la API".into(),
-        "200" | "201" => format!("Parámetros no aceptados por el indexador ({})", description),
-        "202" | "203" => "El indexador no admite esta función".into(),
-        "300" => "El NZB ya no existe en el indexador".into(),
-        "429" | "500" => "Límite de peticiones a la API alcanzado; inténtalo más tarde".into(),
-        "501" => "Límite diario de descargas de NZB alcanzado en el indexador".into(),
-        "910" => "La API del indexador está desactivada".into(),
-        _ if !description.is_empty() => format!("El indexador respondió: {}", description),
-        _ => format!("Error del indexador (código {})", code),
+        "100" => t!("indexer.badKey"),
+        "101" => t!("indexer.suspended"),
+        "102" => t!("indexer.noPermission"),
+        "200" | "201" => t!("indexer.badParams", detail = description),
+        "202" | "203" => t!("indexer.unsupported"),
+        "300" => t!("indexer.nzbGone"),
+        "429" | "500" => t!("indexer.rateLimited"),
+        "501" => t!("indexer.dailyLimit"),
+        "910" => t!("indexer.apiDisabled"),
+        _ if !description.is_empty() => t!("indexer.replied", detail = description),
+        _ => t!("indexer.errorCode", code = code),
     }
 }
 
@@ -87,29 +87,29 @@ async fn get(ix: &IndexerConfig, params: &[(&str, String)]) -> Result<String, St
     }
     let resp = CLIENT.get(&url).query(&query).send().await.map_err(|e| {
         if e.is_timeout() {
-            "El indexador no respondió a tiempo".to_string()
+            t!("indexer.timeout")
         } else if e.is_connect() {
-            "No se pudo conectar con el indexador (revisa la URL)".to_string()
+            t!("indexer.connect")
         } else {
-            format!("Error de conexión: {}", e.without_url())
+            t!("err.connection", error = e.without_url())
         }
     })?;
     let status = resp.status();
-    let body = resp.text().await.map_err(|e| format!("Respuesta incompleta: {}", e.without_url()))?;
+    let body = resp.text().await.map_err(|e| t!("indexer.incomplete", error = e.without_url()))?;
     if let Some(err) = parse_error(&body) {
         return Err(err);
     }
     if !status.is_success() {
         return Err(match status.as_u16() {
-            401 | 403 => "Acceso denegado: revisa la API key".into(),
-            404 => "No se encontró la API en esa URL (revisa la URL y la ruta de la API)".into(),
-            429 => "Límite de peticiones a la API alcanzado; inténtalo más tarde".into(),
-            c => format!("El indexador respondió con un error HTTP {}", c),
+            401 | 403 => t!("indexer.denied"),
+            404 => t!("indexer.notFound"),
+            429 => t!("indexer.rateLimited"),
+            c => t!("indexer.httpError", status = c),
         });
     }
     let head = body.trim_start().get(..200).unwrap_or(body.trim_start()).to_ascii_lowercase();
     if head.starts_with("<!doctype html") || head.starts_with("<html") {
-        return Err("La URL no es una API Newznab (devuelve una página web)".into());
+        return Err(t!("indexer.notNewznab"));
     }
     Ok(body)
 }
@@ -161,8 +161,8 @@ pub async fn test(ix: &IndexerConfig) -> IndexerTest {
     IndexerTest {
         ok: true,
         message: match max {
-            Some(m) => format!("Conectado a {} · hasta {} resultados por búsqueda", name, m),
-            None => format!("Conectado a {}", name),
+            Some(m) => t!("indexer.connectedMax", name = name, max = m),
+            None => t!("indexer.connected", name = name),
         },
         latency_ms: latency,
     }
@@ -185,7 +185,7 @@ fn parse_caps(body: &str) -> (Option<String>, Option<u32>) {
 pub fn parse_rss(body: &str, indexer_id: &str, indexer_name: &str) -> Result<(Vec<SearchItem>, Option<u64>), String> {
     let text = body.trim_start().trim_start_matches('\u{feff}');
     let opts = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
-    let doc = roxmltree::Document::parse_with_options(text, opts).map_err(|_| "Respuesta del indexador no válida".to_string())?;
+    let doc = roxmltree::Document::parse_with_options(text, opts).map_err(|_| t!("indexer.invalidResponse"))?;
     let mut total = None;
     let mut items = Vec::new();
     for n in doc.descendants() {

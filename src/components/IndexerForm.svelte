@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly } from 'svelte/transition';
   import Icon from './Icon.svelte';
@@ -24,7 +25,7 @@
 
   async function test() {
     if (!indexer.url.trim()) {
-      result = { ok: false, message: 'Indica la URL del indexador.' };
+      result = { ok: false, message: t('indexer.urlRequired') };
       return;
     }
     testing = true;
@@ -41,33 +42,33 @@
 
 <div class="ixf">
   <div class="field">
-    <span class="label">Indexador</span>
+    <span class="label">{t('indexer.indexer')}</span>
     <div class="presets">
       {#each PRESETS as p}
         <button type="button" class="preset" class:sel={preset === p.name} onclick={() => pickPreset(p.name)}>{p.name}</button>
       {/each}
-      <button type="button" class="preset" class:sel={!preset} onclick={() => { indexer.url = ''; indexer.name = ''; }}>Otro (Newznab)</button>
+      <button type="button" class="preset" class:sel={!preset} onclick={() => { indexer.url = ''; indexer.name = ''; }}>{t('indexer.other')}</button>
     </div>
   </div>
   <div class="grid">
     <div class="field span2">
       <label for="ix-url">URL</label>
-      <input id="ix-url" class="input" placeholder="https://api.indexador.com" bind:value={indexer.url} spellcheck="false" />
+      <input id="ix-url" class="input" placeholder={t('indexer.urlPlaceholder')} bind:value={indexer.url} spellcheck="false" />
     </div>
     <div class="field">
-      <label for="ix-name">Nombre</label>
-      <input id="ix-name" class="input" placeholder="Mi indexador" bind:value={indexer.name} />
+      <label for="ix-name">{t('common.name')}</label>
+      <input id="ix-name" class="input" placeholder={t('indexer.namePlaceholder')} bind:value={indexer.name} />
     </div>
     <div class="field span3">
-      <label for="ix-key">API key</label>
+      <label for="ix-key">{t('common.apiKey')}</label>
       <div class="pw">
-        <input id="ix-key" class="input mono" type={showKey ? 'text' : 'password'} bind:value={indexer.apiKey} autocomplete="off" spellcheck="false" placeholder="La encontrarás en tu perfil del indexador" />
-        <button type="button" class="icon-btn eye" onclick={() => (showKey = !showKey)} aria-label="Mostrar API key"><Icon name={showKey ? 'eye-off' : 'eye'} size={16} /></button>
+        <input id="ix-key" class="input mono" type={showKey ? 'text' : 'password'} bind:value={indexer.apiKey} autocomplete="off" spellcheck="false" placeholder={t('indexer.keyPlaceholder')} />
+        <button type="button" class="icon-btn eye" onclick={() => (showKey = !showKey)} aria-label={t('common.showApiKey')}><Icon name={showKey ? 'eye-off' : 'eye'} size={16} /></button>
       </div>
     </div>
     {#if advanced}
       <div class="field" transition:fly={{ y: -6, duration: d(180) }}>
-        <label for="ix-path">Ruta de la API</label>
+        <label for="ix-path">{t('indexer.apiPath')}</label>
         <input id="ix-path" class="input mono" bind:value={indexer.apiPath} placeholder="/api" />
       </div>
     {/if}
@@ -75,21 +76,21 @@
 
   <div class="row2">
     {#if !compact}
-      <label class="opt"><Switch checked={indexer.enabled} onchange={(v) => (indexer.enabled = v)} /> Activo</label>
+      <label class="opt"><Switch checked={indexer.enabled} onchange={(v) => (indexer.enabled = v)} /> {t('common.enabled')}</label>
     {/if}
     <button type="button" class="btn ghost sm" onclick={() => (advanced = !advanced)}>
-      <Icon name="settings" size={13} /> {advanced ? 'Ocultar avanzado' : 'Avanzado'}
+      <Icon name="settings" size={13} /> {advanced ? t('indexer.hideAdvanced') : t('indexer.advanced')}
     </button>
   </div>
 
   <div class="test-row">
     <button type="button" class="btn" onclick={test} disabled={testing}>
-      {#if testing}<Icon name="loader" size={15} class="spin" /> Probando…{:else}<Icon name="plug" size={15} /> Probar indexador{/if}
+      {#if testing}<Icon name="loader" size={15} class="spin" /> {t('common.testing')}{:else}<Icon name="plug" size={15} /> {t('indexer.test')}{/if}
     </button>
     {#if result}
       <div class="result {result.ok ? 'ok' : 'err'}" in:fly={{ x: -10, duration: d(250) }}>
         <Icon name={result.ok ? 'check-circle' : 'x-circle'} size={16} />
-        <span class="selectable">{result.message}{#if result.ok && result.latencyMs} · {result.latencyMs} ms{/if}</span>
+        <span class="selectable">{result.message}{#if result.ok && result.latencyMs}{' · '}{result.latencyMs} ms{/if}</span>
       </div>
     {/if}
   </div>

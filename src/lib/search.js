@@ -1,32 +1,37 @@
+import { t } from './i18n.svelte.js';
+
 // Lógica de búsqueda en indexadores: categorías, presets, agrupación de duplicados y orden.
 
 export const CATEGORIES = [
-  { id: '', label: 'Todas las categorías' },
-  { id: '2000', label: 'Películas' },
-  { id: '5000', label: 'Series' },
-  { id: '3000', label: 'Música' },
-  { id: '7000', label: 'Libros' },
-  { id: '4000', label: 'PC y software' },
-  { id: '1000', label: 'Consolas' },
-  { id: '8000', label: 'Otros' },
-  { id: '6000', label: 'Adultos' },
+  { id: '', get label() { return t('category.all'); } },
+  { id: '2000', get label() { return t('category.movies'); } },
+  { id: '5000', get label() { return t('category.tv'); } },
+  { id: '3000', get label() { return t('category.music'); } },
+  { id: '7000', get label() { return t('category.books'); } },
+  { id: '4000', get label() { return t('category.pc'); } },
+  { id: '1000', get label() { return t('category.console'); } },
+  { id: '8000', get label() { return t('category.other'); } },
+  { id: '6000', get label() { return t('category.xxx'); } },
 ];
 
-const PARENT = { 1000: 'Consolas', 2000: 'Películas', 3000: 'Música', 4000: 'PC', 5000: 'Series', 6000: 'Adultos', 7000: 'Libros', 8000: 'Otros' };
+const PARENT = { 1000: 'console', 2000: 'movies', 3000: 'music', 4000: 'pcShort', 5000: 'tv', 6000: 'xxx', 7000: 'books', 8000: 'other' };
 
 export function categoryLabel(item) {
   const id = (item.categoryIds ?? []).find((c) => c >= 1000);
-  if (id) return PARENT[Math.floor(id / 1000) * 1000] ?? item.category;
+  if (id) {
+    const key = PARENT[Math.floor(id / 1000) * 1000];
+    return key ? t(`category.${key}`) : item.category;
+  }
   return (item.category ?? '').split('>')[0].trim();
 }
 
 export const SORTS = [
-  { id: 'date', label: 'Más recientes' },
-  { id: 'date-asc', label: 'Más antiguos' },
-  { id: 'size-desc', label: 'Mayor tamaño' },
-  { id: 'size-asc', label: 'Menor tamaño' },
-  { id: 'grabs', label: 'Más descargados' },
-  { id: 'name', label: 'Nombre' },
+  { id: 'date', get label() { return t('sort.newest'); } },
+  { id: 'date-asc', get label() { return t('sort.oldest'); } },
+  { id: 'size-desc', get label() { return t('sort.largest'); } },
+  { id: 'size-asc', get label() { return t('sort.smallest'); } },
+  { id: 'grabs', get label() { return t('sort.popular'); } },
+  { id: 'name', get label() { return t('sort.name'); } },
 ];
 
 export const PRESETS = [

@@ -1,4 +1,5 @@
 <script>
+  import { t, tn } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import Icon from './Icon.svelte';
   import SpeedGraph from './SpeedGraph.svelte';
@@ -7,14 +8,14 @@
   import { usableDebrid, debridLabel } from '../lib/debrid.js';
 
   const ALL = [
-    { id: 'search', label: 'Buscar', icon: 'search', feature: 'indexers' },
-    { id: 'downloads', label: 'Descargas', icon: 'download', feature: 'nntp' },
-    { id: 'history', label: 'Historial', icon: 'history', feature: 'nntp' },
-    { id: 'indexers', label: 'Indexadores', icon: 'layers', feature: 'indexers' },
-    { id: 'servers', label: 'Servidores', icon: 'server', feature: 'nntp' },
-    { id: 'debrid', label: 'Debrid', icon: 'cloud', feature: 'nntp' },
-    { id: 'settings', label: 'Configuración', icon: 'settings' },
-    { id: 'logs', label: 'Registro', icon: 'logs' },
+    { id: 'search', icon: 'search', feature: 'indexers' },
+    { id: 'downloads', icon: 'download', feature: 'nntp' },
+    { id: 'history', icon: 'history', feature: 'nntp' },
+    { id: 'indexers', icon: 'layers', feature: 'indexers' },
+    { id: 'servers', icon: 'server', feature: 'nntp' },
+    { id: 'debrid', icon: 'cloud', feature: 'nntp' },
+    { id: 'settings', icon: 'settings' },
+    { id: 'logs', icon: 'logs' },
   ];
   const items = $derived(
     ALL.filter(
@@ -32,16 +33,16 @@
   const serverState = $derived.by(() => {
     const s = ui.queue.servers;
     const debrid = usableDebrid(ui.settings);
-    if (debridJob && !ui.queue.activeConns) return { cls: 'active', text: `Descargando vía ${debridJob.debrid.provider}` };
-    if (!ui.settings?.servers?.length) return debrid.length ? { cls: 'ok', text: `Listo · ${debridLabel(debrid[0])}` } : { cls: 'err', text: 'Sin servidores' };
-    if (!s.length) return { cls: '', text: 'Servidores desactivados' };
-    if (s.some((x) => x.state === 'auth')) return { cls: 'err', text: 'Error de autenticación' };
-    if (s.every((x) => x.state === 'down')) return { cls: 'err', text: 'Sin conexión' };
-    if (s.some((x) => x.state === 'down' || x.state === 'warn')) return { cls: 'warn', text: 'Conexión inestable' };
+    if (debridJob && !ui.queue.activeConns) return { cls: 'active', text: t('sidebar.downloadingVia', { provider: debridJob.debrid.provider }) };
+    if (!ui.settings?.servers?.length) return debrid.length ? { cls: 'ok', text: t('sidebar.readyVia', { provider: debridLabel(debrid[0]) }) } : { cls: 'err', text: t('sidebar.noServers') };
+    if (!s.length) return { cls: '', text: t('sidebar.serversDisabled') };
+    if (s.some((x) => x.state === 'auth')) return { cls: 'err', text: t('sidebar.authError') };
+    if (s.every((x) => x.state === 'down')) return { cls: 'err', text: t('sidebar.offline') };
+    if (s.some((x) => x.state === 'down' || x.state === 'warn')) return { cls: 'warn', text: t('sidebar.unstable') };
     const conns = s.reduce((a, x) => a + x.connected, 0);
-    if (s.some((x) => x.state === 'active')) return { cls: 'active', text: `${ui.queue.activeConns} conexiones activas` };
-    if (conns) return { cls: 'idle', text: `${conns} conexiones abiertas` };
-    return { cls: 'ok', text: 'Listo' };
+    if (s.some((x) => x.state === 'active')) return { cls: 'active', text: tn('sidebar.activeConns', ui.queue.activeConns) };
+    if (conns) return { cls: 'idle', text: tn('sidebar.openConns', conns) };
+    return { cls: 'ok', text: t('sidebar.ready') };
   });
 
   function togglePause() {
@@ -55,7 +56,7 @@
     {#each items as it (it.id)}
       <button class="item" class:active={ui.view === it.id} onclick={() => (ui.view = it.id)}>
         <Icon name={it.icon} size={18} />
-        <span class="label">{it.label}</span>
+        <span class="label">{t(`nav.${it.id}`)}</span>
         {#if it.id === 'downloads' && queueCount}
           <span class="badge">{queueCount}</span>
         {:else if it.id === 'history' && failedCount}
@@ -73,14 +74,14 @@
   <div class="speed-card card">
     <div class="sc-head">
       <div>
-        <div class="sc-label">Velocidad</div>
+        <div class="sc-label">{t('sidebar.speed')}</div>
         <div class="sc-speed">{ui.queue.paused ? '—' : speed(ui.queue.speed)}</div>
       </div>
       <button
         class="pause-btn"
         class:paused={ui.queue.paused}
         onclick={togglePause}
-        title={ui.queue.paused ? 'Reanudar todas las descargas' : 'Pausar todas las descargas'}>
+        title={ui.queue.paused ? t('sidebar.resumeAll') : t('sidebar.pauseAll')}>
         <Icon name={ui.queue.paused ? 'play' : 'pause'} size={15} stroke={2.4} />
       </button>
     </div>

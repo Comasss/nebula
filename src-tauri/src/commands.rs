@@ -14,6 +14,16 @@ pub fn get_settings(e: Eng) -> Settings {
     e.settings.read().clone()
 }
 
+/// La interfaz avisa del idioma que usa (el elegido o el del sistema) para el menú de la bandeja,
+/// las notificaciones y los mensajes del motor.
+#[tauri::command]
+pub fn set_language(app: AppHandle, e: Eng, lang: String) {
+    if crate::i18n::set(&lang) {
+        let paused = e.st.lock().paused;
+        crate::refresh_tray_texts(&app, paused);
+    }
+}
+
 #[tauri::command]
 pub fn save_settings(e: Eng, settings: Settings) -> Result<(), String> {
     e.inner().apply_settings(settings)
@@ -26,7 +36,7 @@ pub async fn test_server(server: ServerConfig) -> TestResult {
 
 #[tauri::command]
 pub async fn inspect_nzb_file(e: Eng<'_>, path: String) -> Result<NzbPreview, String> {
-    let data = tokio::fs::read(&path).await.map_err(|err| format!("No se pudo leer el archivo: {}", err))?;
+    let data = tokio::fs::read(&path).await.map_err(|err| t!("err.readFile", error = err))?;
     let name = std::path::Path::new(&path)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -34,7 +44,7 @@ pub async fn inspect_nzb_file(e: Eng<'_>, path: String) -> Result<NzbPreview, St
     let engine = e.inner().clone();
     tokio::task::spawn_blocking(move || engine.register_pending(data, &name, true, path))
         .await
-        .map_err(|_| "Error interno".to_string())?
+        .map_err(|_| t!("err.internal"))?
 }
 
 #[tauri::command]
@@ -48,7 +58,7 @@ pub async fn inspect_nzb_url(e: Eng<'_>, url: String) -> Result<NzbPreview, Stri
     let name = f.filename.unwrap_or_default();
     tokio::task::spawn_blocking(move || engine.register_pending(data, &name, f.strong, url))
         .await
-        .map_err(|_| "Error interno".to_string())?
+        .map_err(|_| t!("err.internal"))?
 }
 
 #[tauri::command]
@@ -235,7 +245,7 @@ pub async fn search_indexer(
 ) -> Result<indexer::SearchResult, String> {
     let (ix, limit) = {
         let s = e.settings.read();
-        let ix = s.indexers.iter().find(|i| i.id == id).cloned().ok_or("Indexador no encontrado")?;
+        let ix = s.indexers.iter().find(|i| i.id == id).cloned().ok_or_else(|| t!("err.indexerNotFound"))?;
         (ix, s.search_limit)
     };
     indexer::search(&ix, &query, category.as_deref(), offset, limit)
@@ -266,7 +276,7 @@ pub async fn save_nzb_url(url: String, dir: String, name: String) -> Result<Stri
 /// Guarda el NZB de una vista previa ya analizada (sin volver a pedirlo al indexador).
 #[tauri::command]
 pub fn save_pending_nzb(e: Eng, token: String, dir: String, name: String) -> Result<String, String> {
-    let (raw, pending_name) = e.pending_nzb(&token).ok_or("La vista previa ha caducado; vuelve a intentarlo.")?;
+    let (raw, pending_name) = e.pending_nzb(&token).ok_or_else(|| t!("err.previewExpiredRetry"))?;
     let data = nzb::maybe_gunzip(&raw)?;
     let path = fetch::save_nzb_file(&data, &dir, if name.trim().is_empty() { &pending_name } else { &name })?;
     e.discard_pending(&token);
@@ -276,7 +286,7 @@ pub fn save_pending_nzb(e: Eng, token: String, dir: String, name: String) -> Res
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     if !(url.starts_with("https://") || url.starts_with("http://")) {
-        return Err("Enlace no válido".into());
+        return Err(t!("err.invalidLink"));
     }
     std::process::Command::new("explorer").arg(url).spawn().map(|_| ()).map_err(|e| e.to_string())
 }
@@ -295,7 +305,7 @@ pub async fn debrid_cached(e: Eng<'_>, token: String) -> Result<Vec<String>, Str
     if !providers.iter().any(|p| p.kind == "torbox") {
         return Ok(Vec::new());
     }
-    let (raw, _) = e.pending_nzb(&token).ok_or("La vista previa ha caducado.")?;
+    let (raw, _) = e.pending_nzb(&token).ok_or_else(|| t!("err.previewExpired"))?;
     let hash = debrid::nzb_hash(&nzb::maybe_gunzip(&raw)?);
     let mut out = Vec::new();
     for p in providers {

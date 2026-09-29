@@ -1,4 +1,5 @@
 <script>
+  import { t, tn, th, locale, num } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { open } from '@tauri-apps/plugin-dialog';
   import { fly, fade, scale } from 'svelte/transition';
@@ -23,7 +24,7 @@
   const serverErrors = $derived(ui.queue.servers.filter((s) => ['auth', 'down', 'warn'].includes(s.state) && s.lastError));
 
   const LIMITS = [
-    { kbps: 0, label: 'Sin límite' },
+    { kbps: 0, get label() { return t('downloads.noLimit'); } },
     { kbps: 1024, label: '1 MB/s' },
     { kbps: 5 * 1024, label: '5 MB/s' },
     { kbps: 10 * 1024, label: '10 MB/s' },
@@ -35,7 +36,7 @@
     const u = url.trim();
     if (!u) return;
     if (!/^https?:\/\/\S+$/i.test(u)) {
-      toast('error', 'Introduce un enlace que empiece por http:// o https://');
+      toast('error', t('downloads.invalidUrl'));
       return;
     }
     queueAdd([{ kind: 'url', value: u }]);
@@ -55,8 +56,8 @@
   async function addFiles() {
     const sel = await open({
       multiple: true,
-      title: 'Selecciona archivos NZB',
-      filters: [{ name: 'Archivos NZB', extensions: ['nzb', 'gz'] }],
+      title: t('downloads.pickFiles'),
+      filters: [{ name: t('downloads.nzbFiles'), extensions: ['nzb', 'gz'] }],
     });
     if (!sel) return;
     const arr = Array.isArray(sel) ? sel : [sel];
@@ -67,7 +68,7 @@
     await invoke('set_speed_limit', { kbps });
     if (ui.settings) ui.settings.speedLimitKbps = kbps;
     limitOpen = false;
-    toast('info', kbps ? `Velocidad limitada a ${f.speed(kbps * 1024)}` : 'Límite de velocidad desactivado', 2500);
+    toast('info', kbps ? t('downloads.limitSet', { speed: f.speed(kbps * 1024) }) : t('downloads.limitOff'), 2500);
   }
 
   function applyCustom() {
@@ -82,22 +83,22 @@
 <div class="view">
   <header class="head">
     <div>
-      <h1>Descargas</h1>
+      <h1>{t('nav.downloads')}</h1>
       <p class="subtitle">
         {#if jobs.length === 0}
-          No hay nada en la cola
+          {t('downloads.empty')}
         {:else}
-          {jobs.length} en cola{#if ui.queue.remaining > 0} · {f.bytes(ui.queue.remaining)} restantes{/if}{#if ui.queue.eta > 0} · termina en {f.duration(ui.queue.eta)}{/if}
+          {t('downloads.inQueue', { n: jobs.length })}{#if ui.queue.remaining > 0}{' · '}{t('downloads.remaining', { size: f.bytes(ui.queue.remaining) })}{/if}{#if ui.queue.eta > 0}{' · '}{t('downloads.finishesIn', { time: f.duration(ui.queue.eta) })}{/if}
         {/if}
       </p>
     </div>
     <div class="head-actions">
       <button class="btn" onclick={() => invoke('set_paused', { paused: !ui.queue.paused })} disabled={!jobs.length && !ui.queue.paused}>
         <Icon name={ui.queue.paused ? 'play' : 'pause'} size={16} />
-        {ui.queue.paused ? 'Reanudar todo' : 'Pausar todo'}
+        {ui.queue.paused ? t('downloads.resumeAll') : t('downloads.pauseAll')}
       </button>
       <button class="btn primary" onclick={addFiles}>
-        <Icon name="file-plus" size={17} /> Añadir NZB
+        <Icon name="file-plus" size={17} /> {t('downloads.addNzb')}
       </button>
     </div>
   </header>
@@ -106,13 +107,13 @@
     <Icon name="link" size={18} />
     <input
       class="url-input"
-      placeholder="Pega aquí el enlace directo a un .nzb y te preguntaré dónde guardarlo…"
+      placeholder={t('downloads.urlPlaceholder')}
       bind:value={url}
       onpaste={onPaste}
       spellcheck="false" />
     {#if url.trim()}
       <button class="btn primary sm" type="submit" transition:scale={{ start: 0.8, duration: d(180) }}>
-        <Icon name="search" size={14} /> Detectar
+        <Icon name="search" size={14} /> {t('downloads.detect')}
       </button>
     {:else}
       <span class="kbd">Ctrl+V</span>
@@ -122,19 +123,19 @@
   {#if noServerConfigured}
     <div class="alert warn banner" transition:fly={{ y: -8, duration: d(250) }}>
       <Icon name="server" size={18} />
-      <div class="spacer">No has configurado ningún servidor Usenet ni servicio debrid. Las descargas no empezarán hasta que añadas uno.</div>
+      <div class="spacer">{t('downloads.noServer')}</div>
       <button class="btn sm" onclick={() => (ui.view = 'debrid')}><Icon name="cloud" size={14} /> Debrid</button>
-      <button class="btn sm" onclick={() => (ui.setupOpen = true)}>Configurar servidor</button>
+      <button class="btn sm" onclick={() => (ui.setupOpen = true)}>{t('downloads.setupServer')}</button>
     </div>
   {:else if serverErrors.length && jobs.length}
     <div class="alert err banner" transition:fly={{ y: -8, duration: d(250) }}>
       <Icon name="plug" size={18} />
       <div class="spacer">
         {#each serverErrors as s}
-          <div><strong>{s.name}:</strong> {s.lastError ?? 'sin conexión'}</div>
+          <div><strong>{s.name}:</strong> {s.lastError ?? t('downloads.noConnection')}</div>
         {/each}
       </div>
-      <button class="btn sm" onclick={() => (ui.view = 'servers')}>Ver servidores</button>
+      <button class="btn sm" onclick={() => (ui.view = 'servers')}>{t('downloads.viewServers')}</button>
     </div>
   {/if}
 
@@ -142,17 +143,17 @@
     <div class="stat card speed">
       <div class="st-top">
         <div>
-          <div class="st-label">Velocidad actual</div>
-          <div class="st-value big">{ui.queue.paused ? 'En pausa' : f.speed(ui.queue.speed)}</div>
+          <div class="st-label">{t('downloads.currentSpeed')}</div>
+          <div class="st-value big">{ui.queue.paused ? t('status.paused') : f.speed(ui.queue.speed)}</div>
         </div>
         <div class="limit-wrap">
           <button
             class="limit-btn"
             class:on={ui.queue.speedLimit > 0}
             onclick={(e) => { e.stopPropagation(); limitOpen = !limitOpen; }}
-            title="Límite de velocidad">
+            title={t('downloads.speedLimit')}>
             <Icon name="gauge" size={14} />
-            {ui.queue.speedLimit > 0 ? `Máx. ${f.speed(ui.queue.speedLimit * 1024)}` : 'Sin límite'}
+            {ui.queue.speedLimit > 0 ? t('downloads.max', { speed: f.speed(ui.queue.speedLimit * 1024) }) : t('downloads.noLimit')}
           </button>
           {#if limitOpen}
             <div class="popover card" transition:scale={{ start: 0.95, duration: d(160), easing: cubicOut }} onclick={(e) => e.stopPropagation()} role="presentation">
@@ -163,7 +164,7 @@
                 </button>
               {/each}
               <form class="custom" onsubmit={(e) => { e.preventDefault(); applyCustom(); }}>
-                <input class="input" placeholder="Otro (MB/s)" bind:value={customLimit} />
+                <input class="input" placeholder={t('downloads.customLimit')} bind:value={customLimit} />
                 <button class="btn sm" type="submit">OK</button>
               </form>
             </div>
@@ -171,25 +172,25 @@
         </div>
       </div>
       <div class="graph"><SpeedGraph data={ui.speedHistory} height={64} id="main" /></div>
-      <div class="st-foot">Pico en el último minuto: {f.speed(peak)}</div>
+      <div class="st-foot">{t('downloads.peak', { speed: f.speed(peak) })}</div>
     </div>
     <div class="stat card">
       <div class="st-icon"><Icon name="hard-drive" size={18} /></div>
-      <div class="st-label">Pendiente</div>
+      <div class="st-label">{t('downloads.pending')}</div>
       <div class="st-value">{f.bytes(ui.queue.remaining)}</div>
-      <div class="st-foot">{activeJobs ? `${activeJobs} descargando` : 'Nada descargando'}</div>
+      <div class="st-foot">{activeJobs ? t('downloads.activeJobs', { n: activeJobs }) : t('downloads.nothingActive')}</div>
     </div>
     <div class="stat card">
       <div class="st-icon"><Icon name="clock" size={18} /></div>
-      <div class="st-label">Tiempo estimado</div>
+      <div class="st-label">{t('downloads.eta')}</div>
       <div class="st-value">{f.duration(ui.queue.eta)}</div>
-      <div class="st-foot">{ui.queue.eta > 0 ? `A las ${new Date(Date.now() + ui.queue.eta * 1000).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : '—'}</div>
+      <div class="st-foot">{ui.queue.eta > 0 ? t('downloads.at', { time: new Date(Date.now() + ui.queue.eta * 1000).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) }) : '—'}</div>
     </div>
     <div class="stat card">
       <div class="st-icon"><Icon name="plug" size={18} /></div>
-      <div class="st-label">Conexiones</div>
+      <div class="st-label">{t('downloads.connections')}</div>
       <div class="st-value">{ui.queue.activeConns}<span class="of">/{totalConns}</span></div>
-      <div class="st-foot">{ui.queue.servers.length} servidor{ui.queue.servers.length === 1 ? '' : 'es'} activo{ui.queue.servers.length === 1 ? '' : 's'}</div>
+      <div class="st-foot">{tn('downloads.activeServers', ui.queue.servers.length)}</div>
     </div>
   </section>
 
@@ -204,11 +205,11 @@
           <div class="orb-ring"></div>
           <Icon name="download" size={34} stroke={1.8} />
         </div>
-        <h3>Todo tranquilo por aquí</h3>
-        <p>Arrastra un archivo <strong>.nzb</strong> a la ventana, pega un enlace arriba o copia uno al portapapeles.</p>
+        <h3>{t('downloads.emptyTitle')}</h3>
+        <p>{@html th('downloads.emptyText')}</p>
         <div class="empty-actions">
-          <button class="btn primary" onclick={addFiles}><Icon name="file-plus" size={16} /> Elegir archivo NZB</button>
-          <button class="btn" onclick={() => (ui.view = 'history')}><Icon name="history" size={16} /> Ver historial</button>
+          <button class="btn primary" onclick={addFiles}><Icon name="file-plus" size={16} /> {t('downloads.chooseFile')}</button>
+          <button class="btn" onclick={() => (ui.view = 'history')}><Icon name="history" size={16} /> {t('downloads.viewHistory')}</button>
         </div>
       </div>
     {/each}

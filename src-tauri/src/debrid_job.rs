@@ -87,7 +87,7 @@ impl DebridJob {
             remote_percent: 0.0,
             remote_speed: 0,
             remote_eta: 0,
-            remote_state: format!("Se enviará a {}", cfg.label()),
+            remote_state: t!("dj.willSend", name = cfg.label()),
             notice: None,
             running: false,
             links: HashMap::new(),
@@ -111,9 +111,9 @@ impl DebridJob {
 
     pub fn from_saved(s: SavedDebrid) -> Self {
         let state = match s.phase {
-            DebridPhase::Submit => format!("Se enviará a {}", s.label),
-            DebridPhase::Remote => format!("Consultando {}", s.label),
-            DebridPhase::Fetch => format!("Bajando desde {}", s.label),
+            DebridPhase::Submit => t!("dj.willSend", name = s.label),
+            DebridPhase::Remote => t!("dj.checking", name = s.label),
+            DebridPhase::Fetch => t!("dj.fetching", name = s.label),
         };
         Self {
             provider: s.provider,
@@ -324,7 +324,7 @@ async fn drive(e: Arc<Engine>, id: String) {
         let Some(s) = e.debrid_snap(&id) else { return };
         let cfg = e.settings.read().debrid.iter().find(|d| d.id == s.provider).cloned();
         let Some(cfg) = cfg.filter(|c| c.usable()) else {
-            e.debrid_failed(&id, format!("{} ya no está configurado o está desactivado.", s.label)).await;
+            e.debrid_failed(&id, t!("dj.notConfigured", name = s.label)).await;
             return;
         };
         let res = match s.phase {
@@ -350,7 +350,7 @@ async fn drive(e: Arc<Engine>, id: String) {
                     if failures == 1 || failures % 10 == 0 {
                         lwarn!("«{}»: {}", s.name, with_label(&err.msg, &s.label));
                     }
-                    e.debrid_mut(&id, |_, d| d.notice = Some(format!("{} Nuevo intento en {} s.", err.msg, wait)));
+                    e.debrid_mut(&id, |_, d| d.notice = Some(format!("{} {}", err.msg, t!("dj.retryIn", secs = wait))));
                     sleep_or_cancel(&s.cancel, Duration::from_secs(wait)).await;
                 }
                 ErrKind::Auth | ErrKind::Fatal => {
@@ -363,10 +363,10 @@ async fn drive(e: Arc<Engine>, id: String) {
 }
 
 async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Result<Next, DebridError> {
-    e.debrid_mut(id, |_, d| d.remote_state = format!("Enviando el NZB a {}", s.label));
+    e.debrid_mut(id, |_, d| d.remote_state = t!("dj.sending", name = s.label));
     let raw = tokio::fs::read(&s.nzb_path)
         .await
-        .map_err(|err| DebridError::new(ErrKind::Fatal, format!("No se pudo leer el NZB guardado: {}", err)))?;
+        .map_err(|err| DebridError::new(ErrKind::Fatal, t!("dj.readNzb", error = err)))?;
     let data = nzb::maybe_gunzip(&raw).map_err(|m| DebridError::new(ErrKind::Fatal, m))?;
     let up = Upload { nzb: &data, name: &s.name, password: s.password.as_deref(), post_processing: pp_mode(&s.options) };
     let r = debrid::submit(cfg, &up).await?;
@@ -374,7 +374,7 @@ async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resu
         d.remote_id = r.id.clone();
         d.remote_hash = r.hash.clone();
         d.phase = DebridPhase::Remote;
-        d.remote_state = format!("En cola en {}", s.label);
+        d.remote_state = t!("dj.queuedAt", name = s.label);
         d.remote_percent = 0.0;
         d.notice = None;
     });
@@ -385,7 +385,7 @@ async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resu
         }
         return Ok(Next::Stop);
     }
-    linfo!("«{}» enviado a {}", s.name, s.label);
+    linfo!("{}", t!("log.dj.sent", name = s.name, provider = s.label));
     e.save_queue();
     Ok(Next::Now)
 }
@@ -402,7 +402,7 @@ async fn poll(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Result
                 d.remote_percent = percent;
                 d.remote_speed = speed;
                 d.remote_eta = eta;
-                d.remote_state = format!("{} en {}", state, s.label);
+                d.remote_state = t!("dj.stateAt", state = state, name = s.label);
                 d.notice = None;
             });
             Ok(Next::After(POLL))
@@ -411,7 +411,7 @@ async fn poll(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Result
             let n = files.len();
             let total: u64 = files.iter().map(|f| f.size).sum();
             e.debrid_ready(id, new_id, files, folder);
-            linfo!("«{}»: {} lo tiene listo; se bajan {} archivos ({})", s.name, s.label, n, util::fmt_bytes(total));
+            linfo!("{}", t!("log.dj.ready", name = s.name, provider = s.label, n = n, size = util::fmt_bytes(total)));
             e.save_queue();
             Ok(Next::Now)
         }
@@ -427,7 +427,7 @@ async fn fetch(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resul
     let permit = match e.debrid_fetch.try_acquire() {
         Ok(p) => p,
         Err(_) => {
-            e.debrid_mut(id, |_, d| d.remote_state = format!("Listo en {} · esperando turno para bajarlo", s.label));
+            e.debrid_mut(id, |_, d| d.remote_state = t!("dj.readyWaiting", name = s.label));
             tokio::select! {
                 p = e.debrid_fetch.acquire() => match p {
                     Ok(p) => p,
@@ -441,7 +441,7 @@ async fn fetch(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resul
         return Ok(Next::Now);
     }
     e.debrid_mut(id, |_, d| {
-        d.remote_state = format!("Bajando desde {}", s.label);
+        d.remote_state = t!("dj.fetching", name = s.label);
         d.notice = None;
     });
     let conns = e.settings.read().debrid_connections.clamp(1, 32) as usize;
@@ -571,7 +571,7 @@ async fn chunk(
                 if tries > 6 {
                     return Err(ChunkErr::Api(DebridError::new(
                         ErrKind::Transient,
-                        format!("No se pudo bajar {}: {}", t.name, err.without_url()),
+                        t!("dj.fetchFailed", file = t.name, error = err.without_url()),
                     )));
                 }
                 sleep_or_cancel(cancel, backoff(tries)).await;
@@ -580,7 +580,7 @@ async fn chunk(
             Err(_) => {
                 tries += 1;
                 if tries > 6 {
-                    return Err(ChunkErr::Api(DebridError::new(ErrKind::Transient, format!("{} no responde al bajar {}", cfg.label(), t.name))));
+                    return Err(ChunkErr::Api(DebridError::new(ErrKind::Transient, t!("dj.noResponse", name = cfg.label(), file = t.name))));
                 }
                 continue;
             }
@@ -595,7 +595,7 @@ async fn chunk(
                 if tries > 4 {
                     return Err(ChunkErr::Api(DebridError::new(
                         ErrKind::Transient,
-                        format!("El enlace de {} no es válido (HTTP {}).", t.name, status),
+                        t!("dj.badLink", file = t.name, status = status),
                     )));
                 }
                 refresh = true;
@@ -604,7 +604,7 @@ async fn chunk(
             416 => {
                 return Err(ChunkErr::Api(DebridError::new(
                     ErrKind::Fatal,
-                    format!("El tamaño de {} no coincide con el que indica {}.", t.name, cfg.label()),
+                    t!("dj.sizeMismatch", file = t.name, name = cfg.label()),
                 )))
             }
             429 | 500..=599 => {
@@ -612,14 +612,14 @@ async fn chunk(
                 if tries > 6 {
                     return Err(ChunkErr::Api(DebridError::new(
                         ErrKind::Transient,
-                        format!("Error HTTP {} al bajar {}.", status, t.name),
+                        t!("dj.httpError", status = status, file = t.name),
                     )));
                 }
                 sleep_or_cancel(cancel, backoff(tries)).await;
                 continue;
             }
             c => {
-                return Err(ChunkErr::Api(DebridError::new(ErrKind::Fatal, format!("Error HTTP {} al bajar {}.", c, t.name))))
+                return Err(ChunkErr::Api(DebridError::new(ErrKind::Fatal, t!("dj.httpError", status = c, file = t.name))))
             }
         };
         match stream(e, id, resp, &file, start, end + 1 - start, skip, cancel, run, written).await {
@@ -665,9 +665,9 @@ async fn stream(
             _ = cancel.wait() => return Err(StreamErr::Stop),
         };
         let bytes = match next {
-            Err(_) => return Err(StreamErr::Net("Sin datos durante 60 s".into())),
-            Ok(Err(err)) => return Err(StreamErr::Net(format!("Conexión interrumpida: {}", err.without_url()))),
-            Ok(Ok(None)) => return Err(StreamErr::Net("La conexión se cerró antes de tiempo".into())),
+            Err(_) => return Err(StreamErr::Net(t!("dj.stalled"))),
+            Ok(Err(err)) => return Err(StreamErr::Net(t!("dj.interrupted", error = err.without_url()))),
+            Ok(Ok(None)) => return Err(StreamErr::Net(t!("dj.closedEarly"))),
             Ok(Ok(Some(b))) => b,
         };
         let mut data = &bytes[..];
@@ -694,7 +694,7 @@ async fn stream(
             let at = off;
             let back = tokio::task::spawn_blocking(move || write_all_at(&f, &data, at).map(|_| data))
                 .await
-                .map_err(|_| StreamErr::Disk(std::io::Error::other("escritura interrumpida")))?
+                .map_err(|_| StreamErr::Disk(std::io::Error::other(t!("dj.writeInterrupted"))))?
                 .map_err(StreamErr::Disk)?;
             buf = back;
             buf.clear();
@@ -910,7 +910,7 @@ impl Engine {
             }
             Ok(d.links.get(&t.fi).filter(|(_, at)| at.elapsed() < LINK_TTL).map(|(u, _)| u.clone()))
         };
-        let stopped = || DebridError::new(ErrKind::Transient, "La descarga ya no está en la cola.");
+        let stopped = || DebridError::new(ErrKind::Transient, t!("dj.notQueued"));
         // Varias conexiones empiezan a la vez con el mismo archivo: una sola petición de enlace.
         let _lock = self.debrid_links.lock().await;
         if let Some(u) = cached(self).map_err(|_| stopped())? {
@@ -933,8 +933,8 @@ impl Engine {
         let ok = self
             .debrid_mut(id, |j, d| {
                 j.status = JobStatus::Verifying;
-                j.post = Some(PostInfo { stage: "En espera".into(), ..Default::default() });
-                d.remote_state = format!("Descargado desde {}", s.label);
+                j.post = Some(PostInfo { stage: "waiting".into(), ..Default::default() });
+                d.remote_state = t!("dj.downloadedFrom", name = s.label);
                 d.notice = None;
                 for f in j.files.iter_mut() {
                     f.handle = None;
@@ -942,13 +942,13 @@ impl Engine {
                 (d.remote_id.clone(), d.remote_folder.clone())
             });
         let Some((rid, folder)) = ok else { return };
-        linfo!("«{}»: descargado desde {}", s.name, s.label);
+        linfo!("{}", t!("log.dj.downloaded", name = s.name, provider = s.label));
         if delete && !rid.is_empty() {
             let cfg = cfg.clone();
             let name = s.name.clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(err) = debrid::remove(&cfg, &rid, &folder).await {
-                    lwarn!("No se pudo borrar «{}» de {}: {}", name, cfg.label(), err);
+                    lwarn!("{}", t!("log.dj.removeFailed", name = name, provider = cfg.label(), error = err));
                 }
             });
         }
@@ -959,12 +959,12 @@ impl Engine {
     fn debrid_write_error(&self, id: &str, err: std::io::Error) {
         let disk_full = matches!(err.raw_os_error(), Some(112) | Some(39));
         if disk_full {
-            lerror!("Disco lleno al escribir. Se pausa la cola.");
+            lerror!("{}", t!("log.diskFull"));
             self.set_paused(true);
-            self.toast("error", "El disco está lleno. La cola se ha pausado: libera espacio y reanuda.");
+            self.toast("error", t!("toast.diskFull"));
             return;
         }
-        let msg = format!("Error de escritura en disco: {}", err);
+        let msg = t!("err.diskWrite", error = err);
         lerror!("{}", msg);
         {
             let mut st = self.st.lock();
@@ -987,7 +987,7 @@ impl Engine {
         let (rid, folder) = (d.remote_id.clone(), d.remote_folder.clone());
         tauri::async_runtime::spawn(async move {
             if let Err(err) = debrid::remove(&cfg, &rid, &folder).await {
-                lwarn!("No se pudo borrar la descarga de {}: {}", cfg.label(), err);
+                lwarn!("{}", t!("log.dj.removeRemoteFailed", provider = cfg.label(), error = err));
             }
         });
     }
@@ -1043,9 +1043,9 @@ impl Engine {
         match then {
             Then::Fail => self.fail_job(id, msg, "download", false),
             Then::Next(p) => {
-                lwarn!("«{}»: {}; se intenta con {}", name, msg.trim_end_matches('.'), p.label());
+                lwarn!("{}", t!("log.dj.tryNext", name = name, error = msg.trim_end_matches('.'), provider = p.label()));
                 self.debrid_clear_work(id).await;
-                let notice = format!("{} Se intenta con {}.", msg.trim_end_matches('.'), p.label());
+                let notice = format!("{}. {}", msg.trim_end_matches('.'), t!("dj.tryingNext", name = p.label()));
                 self.debrid_mut(id, |j, d| {
                     // `running` lo libera el gestor actual al salir (evita dos gestores a la vez).
                     let running = d.running;
@@ -1062,7 +1062,7 @@ impl Engine {
                 self.save_queue();
             }
             Then::Nntp => {
-                lwarn!("«{}»: {}; se descarga por NNTP", name, msg.trim_end_matches('.'));
+                lwarn!("{}", t!("log.dj.fallbackNntp", name = name, error = msg.trim_end_matches('.')));
                 self.debrid_to_nntp(id, msg).await
             }
         }
@@ -1079,7 +1079,7 @@ impl Engine {
         let nzb = match parsed {
             Ok(n) => n,
             Err(err) => {
-                self.fail_job(id, format!("{} Tampoco se puede descargar por NNTP: {}", msg, err), "download", false);
+                self.fail_job(id, format!("{} {}", msg, t!("dj.nntpAlsoFailed", error = err)), "download", false);
                 return;
             }
         };
@@ -1099,7 +1099,7 @@ impl Engine {
             );
             j.files = fresh.files;
             j.debrid = None;
-            j.warning = Some(format!("{} Se descarga por NNTP.", msg.trim_end_matches('.')));
+            j.warning = Some(format!("{}. {}", msg.trim_end_matches('.'), t!("dj.viaNntp")));
             if j.status.is_download() {
                 j.status = JobStatus::Queued;
             }
