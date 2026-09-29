@@ -1,0 +1,121 @@
+# Compila Nebula para Windows en cada push / PR.
+# - Artefactos: instalador NSIS y ejecutable portable (pestaña Actions → ejecución → Artifacts).
+# - Al subir una etiqueta vX.Y.Z (igual que la versión de src-tauri/tauri.conf.json) se publica una Release
+#   con los dos .exe adjuntos.
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: test
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar interfaz
+        run: npm run build
+
+      - name: Tests del motor (Rust)
+        working-directory: src-tauri
+        run: cargo test --locked
+
+  build:
+    name: Build Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: release
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Comprobar la versión de la etiqueta
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $v = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          if ("v$v" -ne "${{ github.ref_name }}") {
+            Write-Error "La etiqueta ${{ github.ref_name }} no coincide con la versión $v de tauri.conf.json"
+            exit 1
+          }
+
+      - name: Compilar (tauri build)
+        run: npx tauri build --ci
+
+      - name: Preparar ejecutables
+        shell: pwsh
+        run: |
+          $v = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          New-Item -ItemType Directory -Force release | Out-Null
+          $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          if (-not $setup) { Write-Error "No se generó el instalador NSIS"; exit 1 }
+          Copy-Item $setup.FullName "release/Nebula_${v}_x64-setup.exe"
+          Copy-Item src-tauri/target/release/nebula.exe "release/Nebula_${v}_x64_portable.exe"
+          Get-ChildItem release | Format-Table Name, Length
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nebula_${{ env.VERSION }}_x64
+          path: release/*.exe
+          if-no-files-found: error
+
+  release:
+    name: Publicar release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          generate_release_notes: true
