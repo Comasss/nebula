@@ -1,5 +1,5 @@
 // Vista previa de la interfaz en un navegador normal, con la API de Tauri simulada.
-// Uso: npm run dev  →  http://localhost:1420/dev/preview.html  (?setup=1 muestra el asistente, ?nodebrid sin servicios debrid)
+// Uso: npm run dev  →  http://localhost:1420/dev/preview.html  (?setup=1 muestra el asistente, ?nodebrid sin servicios debrid, ?lang=en fija el idioma)
 import { mockIPC, mockWindows } from '@tauri-apps/api/mocks';
 import { emit } from '@tauri-apps/api/event';
 
@@ -61,6 +61,7 @@ const settings = {
   timeoutSecs: 30,
   animations: true,
   accent: params.get('accent') || 'nebula',
+  language: params.get('lang') || '',
   confirmDelete: true,
   addPaused: false,
   historyLimit: 300,
@@ -70,7 +71,7 @@ if (params.has('setup')) settings.servers = [];
 
 const jobs = [
   { id: 'j1', name: 'The.Expanse.S06E01.2160p.WEB-DL.DDP5.1.HDR.HEVC', status: 'downloading', total: 7.4 * GB, done: 3.1 * GB, failed: 12 * MB, failedArticles: 16, percent: 0, speed: 0, eta: 0, files: 78, filesDone: 31, heldPar2: 6, dest: 'D:\\Descargas\\Nebula', error: null, warning: null, post: null, addedAt: now() - 600 },
-  { id: 'j2', name: 'Ubuntu.24.04.LTS.Desktop.amd64.ISO', status: 'extracting', total: 5.8 * GB, done: 5.8 * GB, failed: 0, failedArticles: 0, percent: 100, speed: 0, eta: 0, files: 62, filesDone: 62, heldPar2: 0, dest: 'D:\\Descargas\\Nebula', error: null, warning: null, post: { stage: 'Extrayendo', percent: 38, speed: 312 * MB, detail: 'ubuntu-24.04.part01.rar' }, addedAt: now() - 1800 },
+  { id: 'j2', name: 'Ubuntu.24.04.LTS.Desktop.amd64.ISO', status: 'extracting', total: 5.8 * GB, done: 5.8 * GB, failed: 0, failedArticles: 0, percent: 100, speed: 0, eta: 0, files: 62, filesDone: 62, heldPar2: 0, dest: 'D:\\Descargas\\Nebula', error: null, warning: null, post: { stage: 'extracting', percent: 38, speed: 312 * MB, detail: 'ubuntu-24.04.part01.rar' }, addedAt: now() - 1800 },
   { id: 'j3', name: 'Blender.Open.Movie.Collection.1080p', status: 'queued', total: 12.2 * GB, done: 0, failed: 0, failedArticles: 0, percent: 0, speed: 0, eta: 0, files: 131, filesDone: 0, heldPar2: 9, dest: 'E:\\Peliculas', error: null, warning: null, post: null, addedAt: now() - 120 },
   { id: 'j5', name: 'Planet.Earth.III.S01.2160p.UHD.BluRay.x265-DEBRID', status: 'downloading', total: 41.2 * GB, done: 30.1 * GB, failed: 0, failedArticles: 0, percent: 73, speed: 780 * MB, eta: 14, files: 0, filesDone: 0, heldPar2: 0, dest: 'E:\\Series', error: null, warning: null, post: null, addedAt: now() - 300, debrid: { provider: 'TorBox', kind: 'torbox', phase: 'remote', state: 'Descargando en TorBox' } },
   { id: 'j6', name: 'Dune.Part.Two.2024.2160p.WEB-DL.DV.HDR10.DDP5.1.Atmos', status: 'downloading', total: 22.8 * GB, done: 9.4 * GB, failed: 0, failedArticles: 0, percent: 41, speed: 0, eta: 0, files: 3, filesDone: 1, heldPar2: 0, dest: 'E:\\Peliculas', error: null, warning: null, post: null, addedAt: now() - 900, debrid: { provider: 'Premiumize', kind: 'premiumize', phase: 'fetch', state: 'Bajando desde Premiumize' } },

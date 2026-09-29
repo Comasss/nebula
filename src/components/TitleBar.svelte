@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import Icon from './Icon.svelte';
@@ -30,19 +31,19 @@
   </div>
   <div class="center">
     {#if ui.queue.paused && ui.queue.jobs.length}
-      <span class="status paused"><Icon name="pause" size={11} stroke={2.5} /> En pausa</span>
+      <span class="status paused"><Icon name="pause" size={11} stroke={2.5} /> {t('status.paused')}</span>
     {:else if downloading}
       <span class="status live"><Icon name="arrow-down" size={11} stroke={2.8} /> {speed(ui.queue.speed)}</span>
     {/if}
   </div>
   <div class="controls">
-    <button class="tb" onclick={() => invoke('window_minimize')} title="Minimizar" aria-label="Minimizar">
+    <button class="tb" onclick={() => invoke('window_minimize')} title={t('window.minimize')} aria-label={t('window.minimize')}>
       <Icon name="minus" size={16} stroke={1.6} />
     </button>
-    <button class="tb" onclick={() => win.toggleMaximize()} title={maximized ? 'Restaurar' : 'Maximizar'} aria-label="Maximizar">
+    <button class="tb" onclick={() => win.toggleMaximize()} title={maximized ? t('window.restore') : t('window.maximize')} aria-label={t('window.maximize')}>
       <Icon name={maximized ? 'restore' : 'maximize'} size={13} stroke={1.6} />
     </button>
-    <button class="tb close" onclick={() => invoke('window_close')} title="Cerrar" aria-label="Cerrar">
+    <button class="tb close" onclick={() => invoke('window_close')} title={t('common.close')} aria-label={t('common.close')}>
       <Icon name="x" size={16} stroke={1.6} />
     </button>
   </div>

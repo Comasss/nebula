@@ -18,9 +18,9 @@ pub fn ensure(dir: &Path) -> Result<(), String> {
             continue;
         }
         let tmp = dir.join(format!("{}.tmp", name));
-        std::fs::write(&tmp, data).map_err(|e| format!("No se pudo preparar {}: {}", name, e))?;
+        std::fs::write(&tmp, data).map_err(|e| t!("err.prepareTool", name = name, error = e))?;
         let _ = std::fs::remove_file(&target);
-        std::fs::rename(&tmp, &target).map_err(|e| format!("No se pudo preparar {}: {}", name, e))?;
+        std::fs::rename(&tmp, &target).map_err(|e| t!("err.prepareTool", name = name, error = e))?;
     }
     Ok(())
 }

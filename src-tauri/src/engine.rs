@@ -313,7 +313,7 @@ impl Job {
             started_at: Some(util::now_secs()),
             error: None,
             warning: None,
-            post: Some(PostInfo { stage: "En espera".into(), ..Default::default() }),
+            post: Some(PostInfo { stage: "waiting".into(), ..Default::default() }),
             speed: 0,
             speedo: Speedo::default(),
             cancel: Arc::new(Cancel::default()),
@@ -920,7 +920,7 @@ pub(crate) fn write_all_at(f: &File, mut buf: &[u8], mut off: u64) -> std::io::R
     while !buf.is_empty() {
         let n = f.seek_write(buf, off)?;
         if n == 0 {
-            return Err(std::io::Error::new(std::io::ErrorKind::WriteZero, "escritura vacía"));
+            return Err(std::io::Error::new(std::io::ErrorKind::WriteZero, t!("err.emptyWrite")));
         }
         buf = &buf[n..];
         off += n as u64;
@@ -968,7 +968,7 @@ impl Engine {
         }
         let e = self.clone();
         tauri::async_runtime::spawn(async move { e.sampler().await });
-        linfo!("Nebula {} iniciado", env!("CARGO_PKG_VERSION"));
+        linfo!("{}", t!("log.started", version = env!("CARGO_PKG_VERSION")));
     }
 
     pub fn toast(&self, kind: &'static str, message: impl Into<String>) {
@@ -1131,7 +1131,7 @@ impl Engine {
                     if !crc_ok {
                         seg.tried |= bit;
                         if seg.tried & avail != avail {
-                            lwarn!("CRC incorrecto en {}, se reintentará en otro servidor", t.message_id);
+                            lwarn!("{}", t!("log.badCrc", id = t.message_id));
                             Next::Requeue
                         } else {
                             Next::Done
@@ -1182,7 +1182,7 @@ impl Engine {
                     hopeless = Some(job.id.clone());
                 } else if job.remaining == 0 {
                     job.status = JobStatus::Verifying;
-                    job.post = Some(PostInfo { stage: "En espera".into(), ..Default::default() });
+                    job.post = Some(PostInfo { stage: "waiting".into(), ..Default::default() });
                     start_pp = Some(job.id.clone());
                 }
             }
@@ -1192,9 +1192,9 @@ impl Engine {
             self.work.notify_one();
         }
         if let Some(id) = hopeless {
-            let msg = "Faltan demasiados artículos en el servidor y los archivos PAR2 no bastan para repararlo. Se ha cancelado para no gastar ancho de banda.";
-            lerror!("Descarga imposible de completar: {}", id);
-            self.fail_job(&id, msg.into(), "download", false);
+            let msg = t!("err.hopeless");
+            lerror!("{}", t!("log.hopeless", id = id));
+            self.fail_job(&id, msg, "download", false);
         }
         if let Some(id) = start_pp {
             self.start_pp(id);
@@ -1213,7 +1213,7 @@ impl Engine {
             return Ok(Some(h.clone()));
         }
         std::fs::create_dir_all(&work_dir)
-            .map_err(|e| format!("No se puede crear la carpeta temporal {}: {}", work_dir.display(), e))?;
+            .map_err(|e| t!("err.createTemp", path = work_dir.display(), error = e))?;
         let path = work_dir.join(&f.name);
         let file = OpenOptions::new()
             .read(true)
@@ -1221,7 +1221,7 @@ impl Engine {
             .create(true)
             .truncate(false)
             .open(&path)
-            .map_err(|e| format!("No se puede crear {}: {}", path.display(), e))?;
+            .map_err(|e| t!("err.create", path = path.display(), error = e))?;
         if let Some(sz) = dec.total_size {
             if file.metadata().map(|m| m.len()).unwrap_or(0) < sz {
                 let _ = file.set_len(sz);
@@ -1236,11 +1236,11 @@ impl Engine {
         self.complete(t, s, gen, Outcome::Returned);
         let disk_full = matches!(err.raw_os_error(), Some(112) | Some(39));
         if disk_full {
-            lerror!("Disco lleno al escribir. Se pausa la cola.");
+            lerror!("{}", t!("log.diskFull"));
             self.set_paused(true);
-            self.toast("error", "El disco está lleno. La cola se ha pausado: libera espacio y reanuda.");
+            self.toast("error", t!("toast.diskFull"));
         } else {
-            let msg = format!("Error de escritura en disco: {}", err);
+            let msg = t!("err.diskWrite", error = err);
             lerror!("{}", msg);
             let mut st = self.st.lock();
             if let Some(job) = st.jobs.iter_mut().find(|j| j.id == t.job_id) {
@@ -1258,7 +1258,7 @@ impl Engine {
         let mut st = self.st.lock();
         if let Some(r) = st.servers.get_mut(s) {
             if r.last_error.is_some() {
-                linfo!("Conexión restablecida con {}", r.name);
+                linfo!("{}", t!("log.reconnected", name = r.name));
             }
             r.fails = 0;
             r.down_until = None;
@@ -1291,11 +1291,7 @@ impl Engine {
                 NntpError::TooMany(_) => {
                     if !r.conn_limited {
                         r.conn_limited = true;
-                        lwarn!(
-                            "{}: el servidor no admite tantas conexiones ({}); se usarán solo las que acepte. Reduce el número en la configuración del servidor.",
-                            r.name,
-                            msg
-                        );
+                        lwarn!("{}", t!("log.connLimit", name = r.name, error = msg));
                     }
                     Duration::from_secs(30)
                 }
@@ -1308,7 +1304,7 @@ impl Engine {
                         let secs = (10u64 << (r.fails - 3).min(5)).min(300);
                         r.down_until = Some(Instant::now() + Duration::from_secs(secs));
                         if r.fails == 3 {
-                            toast = Some(format!("No se puede conectar con {}: {}", r.name, msg));
+                            toast = Some(t!("toast.cantConnect", name = r.name, error = msg));
                         }
                     }
                     Duration::from_secs(3)
@@ -1338,7 +1334,7 @@ impl Engine {
                 .iter()
                 .find(|f| !f.is_par2())
                 .map(|f| f.filename.split('.').next().unwrap_or(&f.filename).to_string())
-                .unwrap_or_else(|| "Descarga".into())
+                .unwrap_or_else(|| t!("job.defaultName"))
         };
         let raw_name = if strong_hint && !hint.is_empty() {
             hint.clone()
@@ -1369,10 +1365,7 @@ impl Engine {
             let age_days = util::now_secs().saturating_sub(oldest) / 86400;
             let ret = settings.servers.iter().filter(|s| s.enabled).map(|s| s.retention_days).max().unwrap_or(0);
             if ret > 0 && age_days as u32 > ret {
-                Some(format!(
-                    "Publicado hace {} días y tu servidor retiene {} días: es probable que falten artículos.",
-                    age_days, ret
-                ))
+                Some(t!("warn.retention", age = age_days, days = ret))
             } else {
                 None
             }
@@ -1437,22 +1430,22 @@ impl Engine {
             .lock()
             .pending
             .remove(&req.token)
-            .ok_or("La vista previa ha caducado; vuelve a añadir el NZB.")?;
+            .ok_or_else(|| t!("err.previewExpiredReAdd"))?;
         let dest = if req.dest_dir.trim().is_empty() {
             PathBuf::from(self.settings.read().download_dir.clone())
         } else {
             PathBuf::from(req.dest_dir.trim())
         };
         std::fs::create_dir_all(&dest)
-            .map_err(|e| format!("No se puede crear la carpeta de destino «{}»: {}", dest.display(), e))?;
+            .map_err(|e| t!("err.createDest", path = dest.display(), error = e))?;
         let id = util::new_id();
         let nzb_path = self.paths.nzb.join(format!("{}.nzb", id));
-        std::fs::write(&nzb_path, &pending.raw).map_err(|e| format!("No se pudo guardar el NZB: {}", e))?;
+        std::fs::write(&nzb_path, &pending.raw).map_err(|e| t!("err.saveNzb", error = e))?;
         let name = if req.name.trim().is_empty() { pending.name.clone() } else { util::sanitize_filename(req.name.trim()) };
         let work_dir = self.work_dir_for(&dest, &name, &id);
         let password = req.password.filter(|p| !p.trim().is_empty());
         let via = crate::debrid_job::resolve(&self.settings.read(), req.via.as_deref());
-        let via_label = via.as_ref().map(|(c, _)| format!(" (vía {})", c.label())).unwrap_or_default();
+        let via_label = via.as_ref().map(|(c, _)| format!(" ({})", t!("log.via", name = c.label()))).unwrap_or_default();
         let mut job = match via {
             Some((cfg, auto)) => {
                 let estimate = pending.nzb.files.iter().filter(|f| !f.is_par2()).map(|f| f.bytes).sum();
@@ -1473,7 +1466,7 @@ impl Engine {
                 st.jobs.push(job);
             }
         }
-        linfo!("Añadido a la cola: {}{}", name, via_label);
+        linfo!("{}{}", t!("log.added", name = name), via_label);
         self.save_queue();
         self.work.notify_waiters();
         self.debrid_schedule();
@@ -1488,7 +1481,7 @@ impl Engine {
         if !paused {
             self.work.notify_waiters();
         }
-        linfo!("{}", if paused { "Cola en pausa" } else { "Cola reanudada" });
+        linfo!("{}", if paused { t!("log.queuePaused") } else { t!("log.queueResumed") });
         crate::update_tray_pause(&self.app, paused);
         self.save_queue();
     }
@@ -1538,7 +1531,7 @@ impl Engine {
         if let Some(d) = &job.debrid {
             self.debrid_forget(d);
         }
-        linfo!("Eliminado de la cola: {}", job.name);
+        linfo!("{}", t!("log.removed", name = job.name));
         let work = job.work_dir.clone();
         let nzb = job.nzb_path.clone();
         drop(job);
@@ -1627,7 +1620,7 @@ impl Engine {
                 }
             }
         }
-        linfo!("{}: se descargan {} bloques PAR2 adicionales para reparar", job.name, blocks);
+        linfo!("{}", t!("log.par2Extra", name = job.name, n = blocks));
         job.status = JobStatus::Queued;
         job.post = None;
         drop(st);
@@ -1646,7 +1639,7 @@ impl Engine {
                     j.status = JobStatus::Verifying;
                 }
                 if j.post.is_none() {
-                    j.post = Some(PostInfo { stage: "En espera".into(), ..Default::default() });
+                    j.post = Some(PostInfo { stage: "waiting".into(), ..Default::default() });
                 }
             }
         }
@@ -1738,11 +1731,11 @@ impl Engine {
         };
         let mut entry = Self::history_from(&job, "completed");
         entry.warning = warning.clone().or(entry.warning);
-        linfo!("Completado: {}{}", job.name, warning.as_ref().map(|w| format!(" (aviso: {})", w)).unwrap_or_default());
+        linfo!("{}{}", t!("log.completed", name = job.name), warning.as_ref().map(|w| format!(" ({})", t!("log.warning", detail = w))).unwrap_or_default());
         if self.settings.read().notify_complete {
-            self.notify_os("Descarga completada", &job.name);
+            self.notify_os(&t!("notify.completed"), &job.name);
         }
-        self.toast("success", format!("Completado: {}", job.name));
+        self.toast("success", t!("log.completed", name = job.name));
         self.push_history(entry);
         self.save_queue();
     }
@@ -1758,9 +1751,9 @@ impl Engine {
         entry.error = Some(error.clone());
         entry.failed_stage = Some(stage.into());
         entry.can_retry_extract = retry_extract;
-        lerror!("Falló «{}»: {}", job.name, error);
+        lerror!("{}", t!("log.failed", name = job.name, error = error));
         if self.settings.read().notify_failed {
-            self.notify_os("Descarga fallida", &format!("{}: {}", job.name, error));
+            self.notify_os(&t!("notify.failed"), &format!("{}: {}", job.name, error));
         }
         self.toast("error", format!("{}: {}", job.name, error));
         self.push_history(entry);
@@ -1804,9 +1797,9 @@ impl Engine {
     pub fn retry_history(self: &Arc<Self>, id: &str) -> Result<String, String> {
         let entry = {
             let st = self.st.lock();
-            st.history.iter().find(|h| h.id == id).cloned().ok_or("No se encuentra la entrada del historial.")?
+            st.history.iter().find(|h| h.id == id).cloned().ok_or_else(|| t!("err.historyNotFound"))?
         };
-        let raw = std::fs::read(&entry.nzb_path).map_err(|_| "Ya no se conserva el NZB original de esta descarga.".to_string())?;
+        let raw = std::fs::read(&entry.nzb_path).map_err(|_| t!("err.nzbGone"))?;
         let nzb = nzb::parse(&raw)?;
         let new_id = util::new_id();
         let via = crate::debrid_job::resolve(&self.settings.read(), entry.via.as_deref());
@@ -1838,7 +1831,7 @@ impl Engine {
             st.history.retain(|h| h.id != id);
             st.jobs.push(job);
         }
-        linfo!("Reintentando: {}", entry.name);
+        linfo!("{}", t!("log.retrying", name = entry.name));
         self.save_history();
         self.save_queue();
         self.work.notify_waiters();
@@ -1849,10 +1842,10 @@ impl Engine {
     pub fn retry_extract(self: &Arc<Self>, id: &str, password: Option<String>) -> Result<(), String> {
         let entry = {
             let st = self.st.lock();
-            st.history.iter().find(|h| h.id == id).cloned().ok_or("No se encuentra la entrada del historial.")?
+            st.history.iter().find(|h| h.id == id).cloned().ok_or_else(|| t!("err.historyNotFound"))?
         };
         if !Path::new(&entry.work_dir).exists() {
-            return Err("Los archivos temporales ya no existen; usa «Reintentar descarga».".into());
+            return Err(t!("err.tempGone"));
         }
         let pw = password.filter(|p| !p.is_empty()).or(entry.password.clone());
         let job = Job::pp_only_job(&entry, pw);
@@ -1862,7 +1855,7 @@ impl Engine {
             st.history.retain(|h| h.id != id);
             st.jobs.insert(0, job);
         }
-        linfo!("Reintentando extracción: {}", entry.name);
+        linfo!("{}", t!("log.retryExtract", name = entry.name));
         self.save_history();
         self.save_queue();
         self.start_pp(jid);
@@ -2009,11 +2002,11 @@ impl Engine {
             if tick % 4 == 0 {
                 let active = snap.jobs.iter().filter(|j| j.status.is_download() || j.status.is_pp()).count();
                 let tip = if snap.paused {
-                    format!("Nebula — En pausa ({} en cola)", active)
+                    format!("Nebula — {}", t!("tray.paused", n = active))
                 } else if snap.speed > 0 {
-                    format!("Nebula — {}/s · {} en cola", util::fmt_bytes(snap.speed), active)
+                    format!("Nebula — {}/s · {}", util::fmt_bytes(snap.speed), t!("tray.queued", n = active))
                 } else {
-                    format!("Nebula — {} en cola", active)
+                    format!("Nebula — {}", t!("tray.queued", n = active))
                 };
                 if let Some(tray) = self.app.tray_by_id("main") {
                     let _ = tray.set_tooltip(Some(tip));
@@ -2072,7 +2065,7 @@ impl Engine {
                     lerror!("{}", e);
                 }
             }
-            Err(e) => lerror!("No se pudo serializar la cola: {}", e),
+            Err(e) => lerror!("{}", t!("log.queueSerialize", error = e)),
         }
     }
 
@@ -2080,7 +2073,7 @@ impl Engine {
     fn load_queue(&self) -> Vec<String> {
         let Ok(data) = std::fs::read(self.paths.queue_file()) else { return Vec::new() };
         let Ok(saved) = serde_json::from_slice::<SavedQueue>(&data) else {
-            lerror!("El archivo de cola está dañado; se ignora.");
+            lerror!("{}", t!("log.queueCorrupt"));
             return Vec::new();
         };
         let mut pp = Vec::new();
@@ -2147,7 +2140,7 @@ impl Engine {
             let nzb = match std::fs::read(&sj.nzb_path).map_err(|e| e.to_string()).and_then(|r| nzb::parse(&r)) {
                 Ok(n) => n,
                 Err(e) => {
-                    lerror!("No se pudo restaurar «{}»: {}", sj.name, e);
+                    lerror!("{}", t!("log.restoreFailed", name = sj.name, error = e));
                     continue;
                 }
             };
@@ -2228,7 +2221,7 @@ impl Engine {
         }
         self.save_queue();
         self.save_history();
-        linfo!("Nebula cerrado");
+        linfo!("{}", t!("log.closed"));
     }
 
     // ---- Apertura de archivos / enlaces externos ----
@@ -2247,20 +2240,20 @@ impl Engine {
     pub fn apply_settings(self: &Arc<Self>, new: Settings) -> Result<(), String> {
         for s in &new.servers {
             if s.enabled && s.host.trim().is_empty() {
-                return Err("Hay un servidor activo sin dirección.".into());
+                return Err(t!("err.serverNoHost"));
             }
         }
         let old = self.settings.read().clone();
         new.save(&self.paths)?;
         if old.associate_nzb != new.associate_nzb {
             if let Err(e) = crate::winint::set_association(new.associate_nzb) {
-                lerror!("No se pudo cambiar la asociación de .nzb: {}", e);
-                self.toast("error", format!("No se pudo cambiar la asociación de archivos .nzb: {}", e));
+                lerror!("{}", t!("err.association", error = e));
+                self.toast("error", t!("err.association", error = e));
             }
         }
         if old.start_with_windows != new.start_with_windows {
             if let Err(e) = crate::winint::set_autostart(new.start_with_windows) {
-                lerror!("No se pudo cambiar el inicio automático: {}", e);
+                lerror!("{}", t!("err.autostart", error = e));
             }
         }
         self.limiter.set(new.speed_limit_kbps * 1024);
@@ -2268,7 +2261,7 @@ impl Engine {
             || old.timeout_secs != new.timeout_secs;
         *self.settings.write() = new;
         if servers_changed {
-            linfo!("Configuración de servidores actualizada");
+            linfo!("{}", t!("log.serversUpdated"));
             self.restart_workers();
         }
         Ok(())
@@ -2359,7 +2352,7 @@ async fn worker(e: Arc<Engine>, cfg: ServerConfig, sidx: usize, gen: u64, counte
                         }
                     }
                     Err(_) => {
-                        lwarn!("Artículo {} no contiene datos yEnc válidos", task.message_id);
+                        lwarn!("{}", t!("log.badYenc", id = task.message_id));
                         e.complete(&task, sidx, gen, Outcome::Missing);
                     }
                 }
@@ -2414,7 +2407,8 @@ pub async fn test_server(cfg: ServerConfig) -> TestResult {
             TestResult {
                 ok: true,
                 message: format!(
-                    "Conexión correcta{}",
+                    "{}{}",
+                    t!("server.testOk"),
                     if greeting.is_empty() { String::new() } else { format!(": {}", greeting.chars().take(90).collect::<String>()) }
                 ),
                 latency_ms: latency,

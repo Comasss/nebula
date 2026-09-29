@@ -1,4 +1,5 @@
 <script>
+  import { t, tn } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly, fade } from 'svelte/transition';
   import { flip } from 'svelte/animate';
@@ -51,7 +52,7 @@
 
   async function save() {
     if (!editing.host.trim()) {
-      toast('error', 'Indica la dirección del servidor.');
+      toast('error', t('server.hostRequired'));
       return;
     }
     editing.port = Number(editing.port) || (editing.ssl ? 563 : 119);
@@ -63,13 +64,13 @@
     if (i >= 0) list[i] = item;
     else list.push(item);
     if (await saveSettings({ servers: list })) {
-      toast('success', isNew ? 'Servidor añadido' : 'Servidor actualizado', 2500);
+      toast('success', isNew ? t('servers.added') : t('servers.updated'), 2500);
       editing = null;
     }
   }
 
   async function remove(s) {
-    const r = await ask({ title: '¿Eliminar servidor?', message: `${s.name || s.host} dejará de usarse para descargar.`, confirmLabel: 'Eliminar', danger: true, icon: 'trash' });
+    const r = await ask({ title: t('servers.removeTitle'), message: t('common.removeMessage', { name: s.name || s.host }), confirmLabel: t('common.remove'), danger: true, icon: 'trash' });
     if (!r.ok) return;
     await saveSettings({ servers: $state.snapshot(ui.settings.servers).filter((x) => x.id !== s.id) });
   }
@@ -94,30 +95,27 @@
     }
   }
 
-  const STATE = {
-    active: { cls: 'active', text: 'Descargando' },
-    idle: { cls: 'idle', text: 'Conectado' },
-    ready: { cls: 'ok', text: 'Listo' },
-    warn: { cls: 'warn', text: 'Con errores' },
-    down: { cls: 'err', text: 'Sin conexión' },
-    auth: { cls: 'err', text: 'Credenciales rechazadas' },
-  };
+  const STATE_CLS = { active: 'active', idle: 'idle', ready: 'ok', warn: 'warn', down: 'err', auth: 'err' };
+  function serverState(state) {
+    const k = STATE_CLS[state] ? state : 'ready';
+    return { cls: STATE_CLS[k], text: t(`servers.state.${k}`) };
+  }
 </script>
 
 <div class="view">
   <header class="head">
     <div>
-      <h1>Servidores</h1>
-      <p class="subtitle">Tus proveedores Usenet. Los de respaldo solo se usan cuando al principal le falta un artículo.</p>
+      <h1>{t('nav.servers')}</h1>
+      <p class="subtitle">{t('servers.subtitle')}</p>
     </div>
-    <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir servidor</button>
+    <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> {t('servers.add')}</button>
   </header>
 
   <div class="list">
     {#each servers as s (s.id)}
       {@const rt = runtime(s.id)}
-      {@const stt = s.enabled ? STATE[rt?.state ?? 'ready'] : { cls: '', text: 'Desactivado' }}
-      {@const t = testing[s.id]}
+      {@const stt = s.enabled ? serverState(rt?.state ?? 'ready') : { cls: '', text: t('servers.disabled') }}
+      {@const tst = testing[s.id]}
       <article class="srv card" class:off={!s.enabled} animate:flip={{ duration: d(350), easing: cubicOut }} in:fly={{ y: 14, duration: d(300) }} out:fade={{ duration: d(180) }}>
         <div class="srv-top">
           <div class="srv-icon" class:primary={s.priority === minPrio && s.enabled}><Icon name="server" size={20} /></div>
@@ -125,46 +123,46 @@
             <div class="srv-name">
               {s.name || s.host}
               <span class="chip {s.priority === minPrio && s.enabled ? 'accent' : 'muted'}">
-                {s.priority === minPrio ? 'Principal' : `Respaldo · prioridad ${s.priority}`}
+                {s.priority === minPrio ? t('server.primary') : t('servers.backupPriority', { n: s.priority })}
               </span>
               {#if s.ssl}<span class="chip ok"><Icon name="lock" size={10} stroke={2.6} /> SSL</span>{/if}
             </div>
-            <div class="srv-sub">{s.host}:{s.port} · {s.username || 'sin usuario'} · {s.connections} conexiones{#if s.retentionDays} · {s.retentionDays} días de retención{/if}</div>
+            <div class="srv-sub">{s.host}:{s.port} · {s.username || t('servers.noUser')} · {tn('servers.connections', s.connections)}{#if s.retentionDays}{' · '}{tn('servers.retentionDays', s.retentionDays)}{/if}</div>
           </div>
           <div class="srv-actions">
-            <button class="icon-btn" title="Subir prioridad" onclick={() => shift(s, -1)} disabled={s.priority === 0}><Icon name="chevron-up" size={17} /></button>
-            <button class="icon-btn" title="Bajar prioridad" onclick={() => shift(s, 1)}><Icon name="chevron-down" size={17} /></button>
-            <button class="icon-btn" title="Probar conexión" onclick={() => test(s)}><Icon name="plug" size={16} /></button>
-            <button class="icon-btn" title="Editar" onclick={() => edit(s)}><Icon name="edit" size={16} /></button>
-            <button class="icon-btn danger" title="Eliminar" onclick={() => remove(s)}><Icon name="trash" size={16} /></button>
-            <Switch checked={s.enabled} onchange={(v) => toggle(s, v)} label="Activo" />
+            <button class="icon-btn" title={t('common.priorityUp')} onclick={() => shift(s, -1)} disabled={s.priority === 0}><Icon name="chevron-up" size={17} /></button>
+            <button class="icon-btn" title={t('common.priorityDown')} onclick={() => shift(s, 1)}><Icon name="chevron-down" size={17} /></button>
+            <button class="icon-btn" title={t('server.test')} onclick={() => test(s)}><Icon name="plug" size={16} /></button>
+            <button class="icon-btn" title={t('common.edit')} onclick={() => edit(s)}><Icon name="edit" size={16} /></button>
+            <button class="icon-btn danger" title={t('common.remove')} onclick={() => remove(s)}><Icon name="trash" size={16} /></button>
+            <Switch checked={s.enabled} onchange={(v) => toggle(s, v)} label={t('common.enabled')} />
           </div>
         </div>
         <div class="srv-stats">
           <div class="st"><span class="dot {stt.cls}"></span>{stt.text}</div>
           {#if rt}
-            <div class="st"><Icon name="plug" size={13} /> {rt.active}/{rt.maxConns} activas · {rt.connected} abiertas</div>
-            <div class="st"><Icon name="download" size={13} /> {f.bytes(rt.bytes)} en esta sesión</div>
-            <div class="st"><Icon name="check" size={13} /> {rt.articlesOk.toLocaleString('es-ES')} artículos</div>
-            {#if rt.articlesMissing}<div class="st warn"><Icon name="alert-triangle" size={13} /> {rt.articlesMissing.toLocaleString('es-ES')} no encontrados</div>{/if}
+            <div class="st"><Icon name="plug" size={13} /> {t('servers.connStats', { active: rt.active, max: rt.maxConns, open: rt.connected })}</div>
+            <div class="st"><Icon name="download" size={13} /> {t('servers.sessionBytes', { size: f.bytes(rt.bytes) })}</div>
+            <div class="st"><Icon name="check" size={13} /> {tn('servers.articles', rt.articlesOk)}</div>
+            {#if rt.articlesMissing}<div class="st warn"><Icon name="alert-triangle" size={13} /> {tn('servers.missing', rt.articlesMissing)}</div>{/if}
           {/if}
         </div>
         {#if rt?.lastError && s.enabled}
           <div class="alert err"><Icon name="x-circle" size={15} /><span class="selectable">{rt.lastError}</span></div>
         {/if}
-        {#if t}
-          <div class="alert {t.busy ? 'info' : t.ok ? 'ok' : 'err'}" in:fly={{ y: -6, duration: d(200) }}>
-            <Icon name={t.busy ? 'loader' : t.ok ? 'check-circle' : 'x-circle'} size={15} class={t.busy ? 'spin' : ''} />
-            <span class="selectable">{t.busy ? 'Probando conexión…' : `${t.message}${t.ok ? ` · ${t.latencyMs} ms` : ''}`}</span>
+        {#if tst}
+          <div class="alert {tst.busy ? 'info' : tst.ok ? 'ok' : 'err'}" in:fly={{ y: -6, duration: d(200) }}>
+            <Icon name={tst.busy ? 'loader' : tst.ok ? 'check-circle' : 'x-circle'} size={15} class={tst.busy ? 'spin' : ''} />
+            <span class="selectable">{tst.busy ? t('servers.testing') : `${tst.message}${tst.ok ? ` · ${tst.latencyMs} ms` : ''}`}</span>
           </div>
         {/if}
       </article>
     {:else}
       <div class="empty card" in:fade>
         <Icon name="server" size={36} stroke={1.6} />
-        <h3>Aún no hay servidores</h3>
-        <p>Añade las credenciales NNTP de tu proveedor Usenet para empezar a descargar.</p>
-        <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir servidor</button>
+        <h3>{t('servers.emptyTitle')}</h3>
+        <p>{t('servers.emptyText')}</p>
+        <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> {t('servers.add')}</button>
       </div>
     {/each}
   </div>
@@ -172,17 +170,17 @@
   {#if servers.length > 1}
     <div class="alert info tip">
       <Icon name="info" size={16} />
-      <span>Los servidores con la misma prioridad se reparten el trabajo. Si un artículo no está en el principal, se busca en los de respaldo por orden.</span>
+      <span>{t('servers.tip')}</span>
     </div>
   {/if}
 </div>
 
 {#if editing}
-  <Modal title={isNew ? 'Nuevo servidor' : 'Editar servidor'} subtitle="Credenciales NNTP de tu proveedor" icon="server" width={640} onclose={() => (editing = null)}>
+  <Modal title={isNew ? t('servers.new') : t('servers.edit')} subtitle={t('servers.modalSubtitle')} icon="server" width={640} onclose={() => (editing = null)}>
     <ServerForm bind:server={editing} />
     {#snippet footer()}
-      <button class="btn ghost" onclick={() => (editing = null)}>Cancelar</button>
-      <button class="btn primary" onclick={save}><Icon name="check" size={16} /> Guardar</button>
+      <button class="btn ghost" onclick={() => (editing = null)}>{t('common.cancel')}</button>
+      <button class="btn primary" onclick={save}><Icon name="check" size={16} /> {t('common.save')}</button>
     {/snippet}
   </Modal>
 {/if}

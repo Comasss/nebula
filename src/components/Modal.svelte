@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import Icon from './Icon.svelte';
@@ -49,7 +50,7 @@
           {#if subtitle}<p>{subtitle}</p>{/if}
         </div>
         {#if dismissable && onclose}
-          <button class="icon-btn" onclick={onclose} aria-label="Cerrar"><Icon name="x" size={18} /></button>
+          <button class="icon-btn" onclick={onclose} aria-label={t('common.close')}><Icon name="x" size={18} /></button>
         {/if}
       </header>
     {/if}

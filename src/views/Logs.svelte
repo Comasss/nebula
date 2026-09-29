@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { tick } from 'svelte';
   import Icon from '../components/Icon.svelte';
@@ -34,7 +35,7 @@
   async function copy() {
     const text = shown.map((l) => `${new Date(l.ts).toISOString()} [${l.level.toUpperCase()}] ${l.msg}`).join('\n');
     await navigator.clipboard.writeText(text);
-    toast('success', 'Registro copiado al portapapeles', 2000);
+    toast('success', t('logs.copied'), 2000);
   }
 
   async function clear() {
@@ -46,24 +47,24 @@
 <div class="view">
   <header class="head">
     <div>
-      <h1>Registro</h1>
-      <p class="subtitle">Actividad y errores detallados de conexiones, descargas y post-procesado.</p>
+      <h1>{t('nav.logs')}</h1>
+      <p class="subtitle">{t('logs.subtitle')}</p>
     </div>
     <div class="actions">
-      <button class="btn sm" onclick={copy}><Icon name="copy" size={14} /> Copiar</button>
-      <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="folder" size={14} /> Abrir carpeta</button>
-      <button class="btn ghost sm" onclick={clear}><Icon name="trash" size={14} /> Limpiar</button>
+      <button class="btn sm" onclick={copy}><Icon name="copy" size={14} /> {t('logs.copy')}</button>
+      <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="folder" size={14} /> {t('logs.openFolder')}</button>
+      <button class="btn ghost sm" onclick={clear}><Icon name="trash" size={14} /> {t('common.clear')}</button>
     </div>
   </header>
 
   <div class="toolbar">
-    {#each [['all', 'Todo'], ['info', 'Info'], ['warn', 'Avisos'], ['error', 'Errores']] as [k, label]}
+    {#each [['all', t('logs.all')], ['info', t('logs.info')], ['warn', t('logs.warnings')], ['error', t('logs.errors')]] as [k, label]}
       <button class="fchip {k}" class:sel={level === k} onclick={() => (level = k)}>{label} <span>{counts[k]}</span></button>
     {/each}
     <div class="spacer"></div>
     <div class="search">
       <Icon name="search" size={14} />
-      <input class="input" placeholder="Filtrar…" bind:value={search} />
+      <input class="input" placeholder={t('logs.filter')} bind:value={search} />
     </div>
   </div>
 
@@ -71,15 +72,15 @@
     {#each shown as l, i (l.ts + ':' + i)}
       <div class="line {l.level}">
         <span class="ts">{clock(l.ts)}</span>
-        <span class="lvl">{l.level === 'info' ? 'INFO' : l.level === 'warn' ? 'AVISO' : 'ERROR'}</span>
+        <span class="lvl">{t(`logs.level.${l.level}`)}</span>
         <span class="msg">{l.msg}</span>
       </div>
     {:else}
-      <div class="empty">Sin entradas.</div>
+      <div class="empty">{t('logs.empty')}</div>
     {/each}
   </div>
   {#if !follow}
-    <button class="btn sm jump" onclick={() => { follow = true; box.scrollTop = box.scrollHeight; }}><Icon name="arrow-down" size={14} /> Ir al final</button>
+    <button class="btn sm jump" onclick={() => { follow = true; box.scrollTop = box.scrollHeight; }}><Icon name="arrow-down" size={14} /> {t('logs.jump')}</button>
   {/if}
 </div>
 

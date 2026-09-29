@@ -76,7 +76,7 @@ pub fn maybe_gunzip(data: &[u8]) -> Result<Vec<u8>, String> {
         let mut out = Vec::new();
         flate2::read::GzDecoder::new(data)
             .read_to_end(&mut out)
-            .map_err(|e| format!("El NZB comprimido está dañado: {}", e))?;
+            .map_err(|e| t!("nzb.gzCorrupt", error = e))?;
         Ok(out)
     } else {
         Ok(data.to_vec())
@@ -94,10 +94,10 @@ pub fn parse(raw: &[u8]) -> Result<Nzb, String> {
     let text = decode_text(&data);
     let opts = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
     let doc = roxmltree::Document::parse_with_options(&text, opts)
-        .map_err(|e| format!("El archivo no es un XML válido: {}", e))?;
+        .map_err(|e| t!("nzb.invalidXml", error = e))?;
     let root = doc.root_element();
     if !root.tag_name().name().eq_ignore_ascii_case("nzb") {
-        return Err("El archivo no es un NZB (falta el elemento <nzb>).".into());
+        return Err(t!("nzb.notNzb"));
     }
     let mut nzb = Nzb::default();
     for node in root.children().filter(|n| n.is_element()) {
@@ -166,7 +166,7 @@ pub fn parse(raw: &[u8]) -> Result<Nzb, String> {
         }
     }
     if nzb.files.is_empty() {
-        return Err("El NZB no contiene ningún archivo descargable.".into());
+        return Err(t!("nzb.empty"));
     }
     // Nombres únicos
     let mut seen = HashSet::new();

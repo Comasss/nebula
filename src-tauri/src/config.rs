@@ -226,6 +226,8 @@ pub struct Settings {
     pub timeout_secs: u64,
     pub animations: bool,
     pub accent: String,
+    /// Idioma de la interfaz ("es", "en"…). Vacío = el del sistema.
+    pub language: String,
     pub confirm_delete: bool,
     pub add_paused: bool,
     pub history_limit: u32,
@@ -280,6 +282,7 @@ impl Default for Settings {
             timeout_secs: 30,
             animations: true,
             accent: "nebula".into(),
+            language: String::new(),
             confirm_delete: true,
             add_paused: false,
             history_limit: 300,
@@ -354,8 +357,8 @@ impl Settings {
 
 pub fn write_atomic(path: &std::path::Path, data: &[u8]) -> Result<(), String> {
     let tmp = path.with_extension("tmp");
-    std::fs::write(&tmp, data).map_err(|e| format!("No se pudo escribir {}: {}", tmp.display(), e))?;
-    std::fs::rename(&tmp, path).map_err(|e| format!("No se pudo guardar {}: {}", path.display(), e))
+    std::fs::write(&tmp, data).map_err(|e| t!("err.writeFile", path = tmp.display(), error = e))?;
+    std::fs::rename(&tmp, path).map_err(|e| t!("err.saveFile", path = path.display(), error = e))
 }
 
 // ---- DPAPI: cifra la contraseña ligada al usuario de Windows ----

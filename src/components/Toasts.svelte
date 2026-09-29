@@ -1,4 +1,5 @@
 <script>
+  import { t as tr } from '../lib/i18n.svelte.js';
   import { fly, fade } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
@@ -17,7 +18,7 @@
       out:fade={{ duration: d(180) }}>
       <Icon name={ICON[t.kind] ?? 'info'} size={18} />
       <div class="msg selectable">{t.message}</div>
-      <button class="icon-btn close" onclick={() => dismissToast(t.id)} aria-label="Cerrar"><Icon name="x" size={14} /></button>
+      <button class="icon-btn close" onclick={() => dismissToast(t.id)} aria-label={tr('common.close')}><Icon name="x" size={14} /></button>
     </div>
   {/each}
 </div>

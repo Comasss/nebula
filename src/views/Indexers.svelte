@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly, fade } from 'svelte/transition';
   import { flip } from 'svelte/animate';
@@ -30,7 +31,7 @@
     const item = $state.snapshot(editing);
     item.url = item.url.trim().replace(/\/+$/, '');
     if (!/^https?:\/\//i.test(item.url)) {
-      toast('error', 'La URL debe empezar por https:// o http://');
+      toast('error', t('indexers.urlInvalid'));
       return;
     }
     if (!item.name.trim()) item.name = item.url.replace(/^https?:\/\/(api\.)?/i, '').split(/[/.]/)[0];
@@ -39,13 +40,13 @@
     if (i >= 0) all[i] = item;
     else all.push(item);
     if (await saveSettings({ indexers: all })) {
-      toast('success', isNew ? 'Indexador añadido' : 'Indexador actualizado', 2500);
+      toast('success', isNew ? t('indexers.added') : t('indexers.updated'), 2500);
       editing = null;
     }
   }
 
   async function remove(ix) {
-    const r = await ask({ title: '¿Eliminar indexador?', message: `${ix.name || ix.url} dejará de usarse en las búsquedas.`, confirmLabel: 'Eliminar', danger: true, icon: 'trash' });
+    const r = await ask({ title: t('indexers.removeTitle'), message: t('indexers.removeMessage', { name: ix.name || ix.url }), confirmLabel: t('common.remove'), danger: true, icon: 'trash' });
     if (!r.ok) return;
     await saveSettings({ indexers: $state.snapshot(ui.settings.indexers).filter((x) => x.id !== ix.id) });
   }
@@ -83,48 +84,48 @@
 <div class="view">
   <header class="head">
     <div>
-      <h1>Indexadores</h1>
-      <p class="subtitle">Indexadores Newznab en los que buscar. El orden define cuál se prefiere cuando un release aparece en varios.</p>
+      <h1>{t('nav.indexers')}</h1>
+      <p class="subtitle">{t('indexers.subtitle')}</p>
     </div>
-    <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir indexador</button>
+    <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> {t('indexers.add')}</button>
   </header>
 
   <div class="list">
     {#each list as ix, i (ix.id)}
-      {@const t = testing[ix.id]}
+      {@const tst = testing[ix.id]}
       <article class="ix card" class:off={!ix.enabled} animate:flip={{ duration: d(350), easing: cubicOut }} in:fly={{ y: 14, duration: d(300) }} out:fade={{ duration: d(180) }}>
         <div class="ix-top">
           <div class="ix-icon" class:first={i === 0 && ix.enabled}><span>{(ix.name || host(ix.url)).slice(0, 2).toUpperCase()}</span></div>
           <div class="ix-main">
             <div class="ix-name">
               {ix.name || host(ix.url)}
-              {#if i === 0}<span class="chip accent">Preferido</span>{:else}<span class="chip muted">Prioridad {i + 1}</span>{/if}
-              {#if !ix.apiKey}<span class="chip warn">Sin API key</span>{/if}
+              {#if i === 0}<span class="chip accent">{t('common.preferred')}</span>{:else}<span class="chip muted">{t('common.priorityN', { n: i + 1 })}</span>{/if}
+              {#if !ix.apiKey}<span class="chip warn">{t('common.noApiKey')}</span>{/if}
             </div>
             <div class="ix-sub">{host(ix.url)}{ix.apiPath && ix.apiPath !== '/api' ? ` · ${ix.apiPath}` : ''}</div>
           </div>
           <div class="ix-actions">
-            <button class="icon-btn" title="Subir prioridad" onclick={() => move(i, -1)} disabled={i === 0}><Icon name="chevron-up" size={17} /></button>
-            <button class="icon-btn" title="Bajar prioridad" onclick={() => move(i, 1)} disabled={i === list.length - 1}><Icon name="chevron-down" size={17} /></button>
-            <button class="icon-btn" title="Probar" onclick={() => test(ix)}><Icon name="plug" size={16} /></button>
-            <button class="icon-btn" title="Editar" onclick={() => edit(ix)}><Icon name="edit" size={16} /></button>
-            <button class="icon-btn danger" title="Eliminar" onclick={() => remove(ix)}><Icon name="trash" size={16} /></button>
-            <Switch checked={ix.enabled} onchange={(v) => toggle(ix, v)} label="Activo" />
+            <button class="icon-btn" title={t('common.priorityUp')} onclick={() => move(i, -1)} disabled={i === 0}><Icon name="chevron-up" size={17} /></button>
+            <button class="icon-btn" title={t('common.priorityDown')} onclick={() => move(i, 1)} disabled={i === list.length - 1}><Icon name="chevron-down" size={17} /></button>
+            <button class="icon-btn" title={t('common.test')} onclick={() => test(ix)}><Icon name="plug" size={16} /></button>
+            <button class="icon-btn" title={t('common.edit')} onclick={() => edit(ix)}><Icon name="edit" size={16} /></button>
+            <button class="icon-btn danger" title={t('common.remove')} onclick={() => remove(ix)}><Icon name="trash" size={16} /></button>
+            <Switch checked={ix.enabled} onchange={(v) => toggle(ix, v)} label={t('common.enabled')} />
           </div>
         </div>
-        {#if t}
-          <div class="alert {t.busy ? 'info' : t.ok ? 'ok' : 'err'}" in:fly={{ y: -6, duration: d(200) }}>
-            <Icon name={t.busy ? 'loader' : t.ok ? 'check-circle' : 'x-circle'} size={15} class={t.busy ? 'spin' : ''} />
-            <span class="selectable">{t.busy ? 'Probando indexador…' : `${t.message}${t.ok ? ` · ${t.latencyMs} ms` : ''}`}</span>
+        {#if tst}
+          <div class="alert {tst.busy ? 'info' : tst.ok ? 'ok' : 'err'}" in:fly={{ y: -6, duration: d(200) }}>
+            <Icon name={tst.busy ? 'loader' : tst.ok ? 'check-circle' : 'x-circle'} size={15} class={tst.busy ? 'spin' : ''} />
+            <span class="selectable">{tst.busy ? t('indexers.testing') : `${tst.message}${tst.ok ? ` · ${tst.latencyMs} ms` : ''}`}</span>
           </div>
         {/if}
       </article>
     {:else}
       <div class="empty card" in:fade>
         <Icon name="layers" size={36} stroke={1.6} />
-        <h3>Aún no hay indexadores</h3>
-        <p>Añade la URL y la API key de tu indexador (NZBGeek, NZBFinder, DrunkenSlug…).</p>
-        <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir indexador</button>
+        <h3>{t('indexers.emptyTitle')}</h3>
+        <p>{t('indexers.emptyText')}</p>
+        <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> {t('indexers.add')}</button>
       </div>
     {/each}
   </div>
@@ -133,21 +134,19 @@
     <div class="alert info tip">
       <Icon name="info" size={16} />
       <span>
-        {ui.settings.searchDedup
-          ? 'La eliminación de duplicados está activada: si un release aparece en varios indexadores verás una sola fila, y al descargar se usará el primero de esta lista (si falla, el siguiente).'
-          : 'La eliminación de duplicados está desactivada: cada indexador muestra sus resultados por separado.'}
-        <button class="link" onclick={() => (ui.view = 'settings')}>Cambiar</button>
+        {ui.settings.searchDedup ? t('indexers.dedupOn') : t('indexers.dedupOff')}
+        <button class="link" onclick={() => (ui.view = 'settings')}>{t('common.change')}</button>
       </span>
     </div>
   {/if}
 </div>
 
 {#if editing}
-  <Modal title={isNew ? 'Nuevo indexador' : 'Editar indexador'} subtitle="Compatible con la API Newznab" icon="layers" width={640} onclose={() => (editing = null)}>
+  <Modal title={isNew ? t('indexers.new') : t('indexers.edit')} subtitle={t('indexers.modalSubtitle')} icon="layers" width={640} onclose={() => (editing = null)}>
     <IndexerForm bind:indexer={editing} />
     {#snippet footer()}
-      <button class="btn ghost" onclick={() => (editing = null)}>Cancelar</button>
-      <button class="btn primary" onclick={save}><Icon name="check" size={16} /> Guardar</button>
+      <button class="btn ghost" onclick={() => (editing = null)}>{t('common.cancel')}</button>
+      <button class="btn primary" onclick={save}><Icon name="check" size={16} /> {t('common.save')}</button>
     {/snippet}
   </Modal>
 {/if}

@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly } from 'svelte/transition';
   import Icon from './Icon.svelte';
@@ -18,7 +19,7 @@
 
   export async function test() {
     if (!server.host.trim()) {
-      result = { ok: false, message: 'Indica la dirección del servidor.' };
+      result = { ok: false, message: t('server.hostRequired') };
       return false;
     }
     testing = true;
@@ -37,66 +38,66 @@
 <div class="sf" class:compact>
   <div class="grid">
     <div class="field span2">
-      <label for="sf-host">Servidor (host)</label>
-      <input id="sf-host" class="input" placeholder="news.proveedor.com" bind:value={server.host} spellcheck="false" />
+      <label for="sf-host">{t('server.host')}</label>
+      <input id="sf-host" class="input" placeholder={t('server.hostPlaceholder')} bind:value={server.host} spellcheck="false" />
     </div>
     <div class="field">
-      <label for="sf-port">Puerto</label>
+      <label for="sf-port">{t('server.port')}</label>
       <input id="sf-port" class="input" type="number" min="1" max="65535" bind:value={server.port} />
     </div>
     <div class="field">
-      <label for="sf-user">Usuario</label>
+      <label for="sf-user">{t('server.username')}</label>
       <input id="sf-user" class="input" bind:value={server.username} autocomplete="off" spellcheck="false" />
     </div>
     <div class="field span2">
-      <label for="sf-pass">Contraseña</label>
+      <label for="sf-pass">{t('common.password')}</label>
       <div class="pw">
         <input id="sf-pass" class="input" type={showPw ? 'text' : 'password'} bind:value={server.password} autocomplete="new-password" />
-        <button class="icon-btn eye" onclick={() => (showPw = !showPw)} aria-label="Mostrar contraseña"><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
+        <button class="icon-btn eye" onclick={() => (showPw = !showPw)} aria-label={t('common.showPassword')}><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
       </div>
     </div>
     <div class="field span2">
-      <label for="sf-conns">Conexiones simultáneas <span class="val">{server.connections}</span></label>
+      <label for="sf-conns">{t('server.connections')} <span class="val">{server.connections}</span></label>
       <input id="sf-conns" class="range" type="range" min="1" max="100" bind:value={server.connections} style="--p:{(server.connections - 1) / 0.99}%" />
-      <span class="hint">Consulta el máximo que permite tu plan. Más conexiones no siempre es más rápido.</span>
+      <span class="hint">{t('server.connectionsHint')}</span>
     </div>
     <div class="field">
-      <label for="sf-name">Nombre (opcional)</label>
-      <input id="sf-name" class="input" placeholder={server.host || 'Mi servidor'} bind:value={server.name} />
+      <label for="sf-name">{t('common.name')} ({t('common.optional')})</label>
+      <input id="sf-name" class="input" placeholder={server.host || t('server.namePlaceholder')} bind:value={server.name} />
     </div>
     {#if !compact}
       <div class="field">
-        <label for="sf-prio">Prioridad</label>
+        <label for="sf-prio">{t('common.priority')}</label>
         <select id="sf-prio" class="select" bind:value={server.priority}>
-          <option value={0}>Principal</option>
-          {#each [1, 2, 3, 4, 5] as p}<option value={p}>Respaldo {p}</option>{/each}
+          <option value={0}>{t('server.primary')}</option>
+          {#each [1, 2, 3, 4, 5] as p}<option value={p}>{t('server.backupN', { n: p })}</option>{/each}
         </select>
       </div>
       <div class="field">
-        <label for="sf-ret">Retención (días)</label>
-        <input id="sf-ret" class="input" type="number" min="0" bind:value={server.retentionDays} placeholder="0 = desconocida" />
+        <label for="sf-ret">{t('server.retention')}</label>
+        <input id="sf-ret" class="input" type="number" min="0" bind:value={server.retentionDays} placeholder={t('server.retentionPlaceholder')} />
       </div>
     {/if}
   </div>
 
   <div class="toggles">
-    <label class="opt"><Switch checked={server.ssl} onchange={toggleSsl} /> <Icon name="lock" size={14} /> Conexión cifrada (SSL/TLS)</label>
+    <label class="opt"><Switch checked={server.ssl} onchange={toggleSsl} /> <Icon name="lock" size={14} /> {t('server.ssl')}</label>
     {#if server.ssl}
-      <label class="opt"><Switch checked={server.verifyCert} onchange={(v) => (server.verifyCert = v)} /> Verificar certificado</label>
+      <label class="opt"><Switch checked={server.verifyCert} onchange={(v) => (server.verifyCert = v)} /> {t('server.verifyCert')}</label>
     {/if}
     {#if !compact}
-      <label class="opt"><Switch checked={server.enabled} onchange={(v) => (server.enabled = v)} /> Servidor activo</label>
+      <label class="opt"><Switch checked={server.enabled} onchange={(v) => (server.enabled = v)} /> {t('server.enabled')}</label>
     {/if}
   </div>
 
   <div class="test-row">
     <button class="btn" onclick={test} disabled={testing}>
-      {#if testing}<Icon name="loader" size={15} class="spin" /> Probando…{:else}<Icon name="plug" size={15} /> Probar conexión{/if}
+      {#if testing}<Icon name="loader" size={15} class="spin" /> {t('common.testing')}{:else}<Icon name="plug" size={15} /> {t('server.test')}{/if}
     </button>
     {#if result}
       <div class="result {result.ok ? 'ok' : 'err'}" in:fly={{ x: -10, duration: d(250) }}>
         <Icon name={result.ok ? 'check-circle' : 'x-circle'} size={16} />
-        <span class="selectable">{result.message}{#if result.ok && result.latencyMs} · {result.latencyMs} ms{/if}</span>
+        <span class="selectable">{result.message}{#if result.ok && result.latencyMs}{' · '}{result.latencyMs} ms{/if}</span>
       </div>
     {/if}
   </div>

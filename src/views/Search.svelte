@@ -1,4 +1,5 @@
 <script>
+  import { t, tn, num } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { open } from '@tauri-apps/plugin-dialog';
   import { fly, fade, scale, slide } from 'svelte/transition';
@@ -44,12 +45,12 @@
   const hasMore = $derived(Object.values(perIndexer).some((r) => r.state === 'ok' && r.more));
   const pickerLabel = $derived(
     active.length === indexers.length
-      ? `Todos (${indexers.length})`
+      ? t('search.allCount', { n: indexers.length })
       : active.length === 1
-        ? active[0].name || 'Indexador'
+        ? active[0].name || t('indexer.indexer')
         : active.length === 0
-          ? 'Ninguno'
-          : `${active.length} de ${indexers.length}`
+          ? t('search.none')
+          : t('search.someOf', { n: active.length, total: indexers.length })
   );
 
   $effect(() => {
@@ -91,7 +92,7 @@
   function search(e) {
     e?.preventDefault();
     if (!active.length) {
-      toast('warn', 'Selecciona al menos un indexador');
+      toast('warn', t('search.selectOne'));
       return;
     }
     generation++;
@@ -150,7 +151,7 @@
             },
           });
           setAct(g, 'queued');
-          toast('success', `Añadido a la cola: ${g.title}`, 3000);
+          toast('success', t('add.queued', { name: g.title }), 3000);
         } else {
           setAct(g, null);
           queueAdd([{ kind: 'url', value: src.link, preview: { ...p, name: g.title } }]);
@@ -165,14 +166,14 @@
   async function saveNzb(g, sources = g.sources) {
     let dir = ui.settings.nzbSaveDir;
     if (ui.settings.nzbAskSaveDir || !dir) {
-      dir = await open({ directory: true, defaultPath: dir || undefined, title: '¿Dónde quieres guardar el .nzb?' });
+      dir = await open({ directory: true, defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
       if (!dir) return;
     }
     setAct(g, 'saving');
     try {
       const path = await tryEach(sources, (src) => invoke('save_nzb_url', { url: src.link, dir, name: g.title }));
       setAct(g, 'saved');
-      toast('success', `NZB guardado: ${path.split(/[\\/]/).pop()}`, 3500);
+      toast('success', t('common.nzbSaved', { name: path.split(/[\\/]/).pop() }), 3500);
     } catch (e) {
       setAct(g, 'error');
       toast('error', `${g.title}: ${e}`);
@@ -185,29 +186,29 @@
 <div class="view">
   <header class="head">
     <div>
-      <h1>Buscar</h1>
+      <h1>{t('nav.search')}</h1>
       <p class="subtitle">
         {#if indexers.length}
-          Busca en {indexers.length === 1 ? 'tu indexador' : `tus ${indexers.length} indexadores`} a la vez{nntp ? ' y descarga con un clic' : ' y guarda los .nzb en tu PC'}.
+          {nntp ? tn('search.subtitleDownload', indexers.length) : tn('search.subtitleSave', indexers.length)}
         {:else}
-          Añade un indexador Newznab para empezar a buscar.
+          {t('search.subtitleEmpty')}
         {/if}
       </p>
     </div>
-    <button class="btn" onclick={() => (ui.view = 'indexers')}><Icon name="layers" size={16} /> Indexadores</button>
+    <button class="btn" onclick={() => (ui.view = 'indexers')}><Icon name="layers" size={16} /> {t('nav.indexers')}</button>
   </header>
 
   {#if !indexers.length}
     <div class="empty card" in:fade={{ duration: d(250) }}>
       <div class="orb small"><Icon name="search" size={28} stroke={2} /></div>
-      <h3>Aún no hay indexadores</h3>
-      <p>Añade NZBGeek, NZBFinder, DrunkenSlug u otro indexador compatible con Newznab con su API key.</p>
-      <button class="btn primary" onclick={() => (ui.view = 'indexers')}><Icon name="plus" size={16} /> Añadir indexador</button>
+      <h3>{t('indexers.emptyTitle')}</h3>
+      <p>{t('search.emptyText')}</p>
+      <button class="btn primary" onclick={() => (ui.view = 'indexers')}><Icon name="plus" size={16} /> {t('indexers.add')}</button>
     </div>
   {:else}
     <form class="bar" onsubmit={search}>
       <Icon name="search" size={18} />
-      <input class="q" placeholder="Película, serie, release…  (vacío = últimas publicaciones)" bind:value={query} spellcheck="false" />
+      <input class="q" placeholder={t('search.placeholder')} bind:value={query} spellcheck="false" />
       <div class="picker-wrap">
         <button type="button" class="pill" class:partial={selected} onclick={(e) => { e.stopPropagation(); pickerOpen = !pickerOpen; }}>
           <Icon name="layers" size={14} /> {pickerLabel} <Icon name="chevron-down" size={13} />
@@ -215,8 +216,8 @@
         {#if pickerOpen}
           <div class="popover card" transition:scale={{ start: 0.95, duration: d(160), easing: cubicOut }} onclick={(e) => e.stopPropagation()} role="presentation">
             <div class="pop-head">
-              <span>Buscar en</span>
-              <button type="button" class="link" onclick={() => (selected = null)}>Todos</button>
+              <span>{t('search.searchIn')}</span>
+              <button type="button" class="link" onclick={() => (selected = null)}>{t('search.all')}</button>
             </div>
             {#each indexers as ix (ix.id)}
               {@const on = !selected || selected.includes(ix.id)}
@@ -228,11 +229,11 @@
           </div>
         {/if}
       </div>
-      <select class="select cat" bind:value={category} title="Categoría">
+      <select class="select cat" bind:value={category} title={t('search.category')}>
         {#each CATEGORIES as c}<option value={c.id}>{c.label}</option>{/each}
       </select>
       <button class="btn primary" type="submit" disabled={loading && !searched}>
-        {#if loading}<Icon name="loader" size={15} class="spin" />{:else}<Icon name="search" size={15} />{/if} Buscar
+        {#if loading}<Icon name="loader" size={15} class="spin" />{:else}<Icon name="search" size={15} />{/if} {t('nav.search')}
       </button>
     </form>
 
@@ -250,7 +251,7 @@
             {/if}
             <strong>{ix.name || ix.url}</strong>
             {#if r?.state === 'ok'}
-              <span class="muted">{r.items.length}{r.total != null && r.total > r.items.length ? ` de ${r.total.toLocaleString('es-ES')}` : ''} · {(r.ms / 1000).toFixed(1)} s</span>
+              <span class="muted">{r.total != null && r.total > r.items.length ? t('search.ofTotal', { n: num(r.items.length), total: num(r.total) }) : num(r.items.length)} · {t('time.s', { n: num(r.ms / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}</span>
             {:else if r?.state === 'error'}
               <span class="e truncate">{r.error}</span>
             {/if}
@@ -260,8 +261,8 @@
 
       <div class="toolbar">
         <span class="count">
-          {groups.length.toLocaleString('es-ES')} resultado{groups.length === 1 ? '' : 's'}
-          {#if ui.settings.searchDedup && merged > 0}<span class="chip accent" title="Releases repetidos en varios indexadores agrupados en una sola fila">{merged} duplicado{merged === 1 ? '' : 's'} agrupado{merged === 1 ? '' : 's'}</span>{/if}
+          {tn('search.results', groups.length)}
+          {#if ui.settings.searchDedup && merged > 0}<span class="chip accent" title={t('search.mergedTitle')}>{tn('search.merged', merged)}</span>{/if}
         </span>
         <select class="select sort" bind:value={sort}>
           {#each SORTS as s}<option value={s.id}>{s.label}</option>{/each}
@@ -279,8 +280,8 @@
                   {#if g.category}<span class="chip muted">{g.category}</span>{/if}
                   <span class="strong">{f.bytes(g.size)}</span>
                   {#if g.date}<span>· {f.ago(g.date)}</span>{/if}
-                  {#if g.grabs != null}<span>· {g.grabs.toLocaleString('es-ES')} descargas</span>{/if}
-                  {#if g.password}<span class="chip warn" title="El indexador indica que tiene contraseña"><Icon name="lock" size={10} stroke={2.6} /> Contraseña</span>{/if}
+                  {#if g.grabs != null}<span>· {tn('search.grabs', g.grabs)}</span>{/if}
+                  {#if g.password}<span class="chip warn" title={t('search.passwordTitle')}><Icon name="lock" size={10} stroke={2.6} /> {t('common.password')}</span>{/if}
                   <span class="ixs">
                     <span class="chip info">{g.indexers[0]}</span>
                     {#if g.indexers.length > 1}<span class="chip accent" title={g.indexers.join(', ')}>+{g.indexers.length - 1}</span>{/if}
@@ -290,18 +291,18 @@
               <div class="r-actions">
                 {#if nntp}
                   <button class="btn sm {a === 'queued' ? '' : 'primary'}" onclick={() => download(g)} disabled={a === 'working' || a === 'saving'}>
-                    {#if a === 'working'}<Icon name="loader" size={14} class="spin" /> Añadiendo…
-                    {:else if a === 'queued'}<Icon name="check" size={14} /> En cola
-                    {:else}<Icon name="download" size={14} /> Descargar{/if}
+                    {#if a === 'working'}<Icon name="loader" size={14} class="spin" /> {t('search.adding')}
+                    {:else if a === 'queued'}<Icon name="check" size={14} /> {t('status.queued')}
+                    {:else}<Icon name="download" size={14} /> {t('common.download')}{/if}
                   </button>
                 {/if}
-                <button class="btn sm {nntp ? 'ghost' : 'primary'}" onclick={() => saveNzb(g)} disabled={a === 'working' || a === 'saving'} title="Guardar el archivo .nzb en tu PC">
+                <button class="btn sm {nntp ? 'ghost' : 'primary'}" onclick={() => saveNzb(g)} disabled={a === 'working' || a === 'saving'} title={t('search.saveNzbTitle')}>
                   {#if a === 'saving'}<Icon name="loader" size={14} class="spin" />
                   {:else if a === 'saved'}<Icon name="check" size={14} />
                   {:else}<Icon name="file" size={14} />{/if}
-                  {nntp ? '.nzb' : a === 'saved' ? 'Guardado' : 'Guardar .nzb'}
+                  {nntp ? '.nzb' : a === 'saved' ? t('search.saved') : t('common.saveNzb')}
                 </button>
-                <button class="icon-btn chev" class:rot={expanded === g.key} onclick={() => (expanded = expanded === g.key ? null : g.key)} title="Detalles"><Icon name="chevron-down" size={16} /></button>
+                <button class="icon-btn chev" class:rot={expanded === g.key} onclick={() => (expanded = expanded === g.key ? null : g.key)} title={t('common.details')}><Icon name="chevron-down" size={16} /></button>
               </div>
             </div>
             {#if expanded === g.key}
@@ -312,11 +313,11 @@
                     <span class="truncate s-title" title={s.title}>{s.title}</span>
                     <span class="muted">{f.bytes(s.size)}</span>
                     <span class="muted">{s.date ? f.ago(s.date) : ''}</span>
-                    <span class="muted">{s.grabs != null ? `${s.grabs} desc.` : ''}</span>
+                    <span class="muted">{s.grabs != null ? t('search.grabsShort', { n: num(s.grabs) }) : ''}</span>
                     <span class="s-act">
-                      {#if s.details}<button class="icon-btn" title="Abrir en el indexador" onclick={() => invoke('open_url', { url: s.details })}><Icon name="external" size={14} /></button>{/if}
-                      {#if nntp}<button class="icon-btn" title="Descargar desde este indexador" onclick={() => download(g, [s])}><Icon name="download" size={14} /></button>{/if}
-                      <button class="icon-btn" title="Guardar .nzb de este indexador" onclick={() => saveNzb(g, [s])}><Icon name="file" size={14} /></button>
+                      {#if s.details}<button class="icon-btn" title={t('search.openInIndexer')} onclick={() => invoke('open_url', { url: s.details })}><Icon name="external" size={14} /></button>{/if}
+                      {#if nntp}<button class="icon-btn" title={t('search.downloadFrom')} onclick={() => download(g, [s])}><Icon name="download" size={14} /></button>{/if}
+                      <button class="icon-btn" title={t('search.saveFrom')} onclick={() => saveNzb(g, [s])}><Icon name="file" size={14} /></button>
                     </span>
                   </div>
                 {/each}
@@ -327,7 +328,7 @@
           {#if !loading}
             <div class="empty-inline" in:fade={{ duration: d(200) }}>
               <Icon name="search" size={30} stroke={1.6} />
-              <p>No hay resultados{lastQuery ? ` para «${lastQuery}»` : ''}.</p>
+              <p>{lastQuery ? t('search.noResultsFor', { query: lastQuery }) : t('search.noResults')}</p>
             </div>
           {:else}
             {#each Array(6) as _, i}
@@ -338,17 +339,17 @@
       </div>
 
       {#if hasMore && !loading}
-        <div class="more"><button class="btn" onclick={loadMore}><Icon name="chevron-down" size={15} /> Cargar más resultados</button></div>
+        <div class="more"><button class="btn" onclick={loadMore}><Icon name="chevron-down" size={15} /> {t('search.loadMore')}</button></div>
       {/if}
     {:else}
       <div class="hint" in:fade={{ duration: d(250) }}>
         <div class="orb"><div class="orb-ring"></div><Icon name="search" size={30} stroke={2} /></div>
-        <h3>¿Qué quieres encontrar?</h3>
+        <h3>{t('search.hintTitle')}</h3>
         <p>
-          La búsqueda se lanza en paralelo en {active.length === indexers.length ? 'todos tus indexadores' : `${active.length} indexador${active.length === 1 ? '' : 'es'}`}.
-          {#if ui.settings.searchDedup}Los releases repetidos entre indexadores se muestran una sola vez.{/if}
+          {active.length === indexers.length ? t('search.hintAll') : tn('search.hintSome', active.length)}
+          {#if ui.settings.searchDedup}{t('search.hintDedup')}{/if}
         </p>
-        <button class="btn" onclick={() => search()}><Icon name="sparkles" size={15} /> Ver últimas publicaciones</button>
+        <button class="btn" onclick={() => search()}><Icon name="sparkles" size={15} /> {t('search.latest')}</button>
       </div>
     {/if}
   {/if}

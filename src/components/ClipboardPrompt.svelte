@@ -1,4 +1,5 @@
 <script>
+  import { t, tn } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { open } from '@tauri-apps/plugin-dialog';
   import { fly, fade } from 'svelte/transition';
@@ -68,7 +69,7 @@
   async function saveOne() {
     let dir = ui.settings.nzbSaveDir;
     if (ui.settings.nzbAskSaveDir || !dir) {
-      dir = await open({ directory: true, defaultPath: dir || undefined, title: '¿Dónde quieres guardar el .nzb?' });
+      dir = await open({ directory: true, defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
       if (!dir) return;
     }
     const { url, st } = take();
@@ -77,7 +78,7 @@
         st?.status === 'ok'
           ? await invoke('save_pending_nzb', { token: st.preview.token, dir, name: st.preview.name })
           : await invoke('save_nzb_url', { url, dir, name: '' });
-      toast('success', `NZB guardado: ${path.split(/[\\/]/).pop()}`, 3500);
+      toast('success', t('common.nzbSaved', { name: path.split(/[\\/]/).pop() }), 3500);
     } catch (e) {
       toast('error', String(e));
     }
@@ -101,34 +102,34 @@
     </div>
     <div class="c-text">
       {#if cur?.status === 'loading'}
-        <div class="c-title">Analizando enlace del portapapeles…</div>
+        <div class="c-title">{t('clipboard.analyzing')}</div>
         <div class="c-sub truncate" title={first}>{host(first)}</div>
       {:else if cur?.status === 'ok'}
-        <div class="c-kicker">NZB detectado en el portapapeles</div>
+        <div class="c-kicker">{t('clipboard.detected')}</div>
         <div class="c-title truncate" title={cur.preview.name} in:fade={{ duration: d(200) }}>{cur.preview.name}</div>
         <div class="c-sub truncate">
-          {f.bytes(cur.preview.dataBytes)} · {cur.preview.fileCount} archivos{#if cur.preview.hasArchives} · comprimido{/if} · {host(first)}
+          {f.bytes(cur.preview.dataBytes)} · {tn('common.files', cur.preview.fileCount)}{#if cur.preview.hasArchives}{' · '}{t('clipboard.compressed')}{/if} · {host(first)}
         </div>
       {:else if cur?.status === 'error'}
-        <div class="c-kicker">El enlace copiado no parece un NZB descargable</div>
+        <div class="c-kicker">{t('clipboard.notNzb')}</div>
         <div class="c-sub err" title={cur.error}>{cur.error}</div>
         <div class="c-sub truncate muted" title={first}>{host(first)}</div>
       {:else}
-        <div class="c-title">Enlace NZB detectado en el portapapeles</div>
+        <div class="c-title">{t('clipboard.linkDetected')}</div>
         <div class="c-sub truncate" title={first}>{fallbackName(first) ?? host(first)}</div>
       {/if}
-      {#if more > 0}<div class="c-more">y {more} enlace{more > 1 ? 's' : ''} más</div>{/if}
+      {#if more > 0}<div class="c-more">{tn('clipboard.more', more)}</div>{/if}
     </div>
     <div class="c-actions">
-      <button class="btn ghost sm" onclick={ignore}>Ignorar</button>
+      <button class="btn ghost sm" onclick={ignore}>{t('clipboard.ignore')}</button>
       {#if cur?.status === 'error'}
-        <button class="btn sm" onclick={retry}><Icon name="refresh" size={14} /> Reintentar</button>
+        <button class="btn sm" onclick={retry}><Icon name="refresh" size={14} /> {t('common.retry')}</button>
       {:else}
         {#if nntp}
-          {#if more > 0}<button class="btn sm" onclick={addAll}>Añadir todos</button>{/if}
-          <button class="btn primary sm" onclick={addOne} disabled={cur?.status === 'loading'}><Icon name="plus" size={15} /> Añadir</button>
+          {#if more > 0}<button class="btn sm" onclick={addAll}>{t('clipboard.addAll')}</button>{/if}
+          <button class="btn primary sm" onclick={addOne} disabled={cur?.status === 'loading'}><Icon name="plus" size={15} /> {t('common.add')}</button>
         {:else}
-          <button class="btn primary sm" onclick={saveOne} disabled={cur?.status === 'loading'}><Icon name="file" size={15} /> Guardar .nzb</button>
+          <button class="btn primary sm" onclick={saveOne} disabled={cur?.status === 'loading'}><Icon name="file" size={15} /> {t('common.saveNzb')}</button>
         {/if}
       {/if}
     </div>

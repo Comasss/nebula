@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { t, setLanguage } from './i18n.svelte.js';
 
 export const ui = $state({
   ready: false,
@@ -58,8 +59,8 @@ export function ask(opts) {
     ui.dialog = {
       title: opts.title,
       message: opts.message ?? '',
-      confirmLabel: opts.confirmLabel ?? 'Aceptar',
-      cancelLabel: opts.cancelLabel ?? 'Cancelar',
+      confirmLabel: opts.confirmLabel ?? t('common.ok'),
+      cancelLabel: opts.cancelLabel ?? t('common.cancel'),
       danger: !!opts.danger,
       icon: opts.icon ?? (opts.danger ? 'alert-triangle' : 'info'),
       checkbox: opts.checkbox ?? null,
@@ -116,6 +117,7 @@ export async function init() {
     invoke('app_info'),
   ]);
   ui.settings = settings;
+  setLanguage(settings.language);
   ui.queue = queue;
   ui.history = history;
   ui.logs = logs;

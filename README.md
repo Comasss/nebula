@@ -7,6 +7,7 @@ Cliente Usenet (NZB) moderno para Windows: alternativa a SABnzbd con interfaz os
 - **Búsqueda en indexadores Newznab** (NZBGeek, NZBFinder, DrunkenSlug…): varios a la vez o solo los elegidos, con filtro de categoría, orden y agrupación opcional de duplicados (el mismo release resubido a varios indexadores aparece una vez y, si un indexador falla al descargar, se usa el siguiente). Descarga con un clic o guarda el `.nzb` en el PC.
 - **Descarga a través de servicios debrid** (TorBox Pro y Premiumize): Nebula les envía el NZB, ellos lo descargan (y reparan/extraen) en sus servidores y Nebula baja los archivos sueltos por HTTPS con varias conexiones por rangos, al mismo sitio y con el mismo formato que por NNTP (nunca un `.zip`). Se elige el método por defecto y, en cada NZB, NNTP o el servicio que quieras.
 - **Funciones a elegir** en el primer arranque (mínimo una): solo indexadores (guardar `.nzb`), indexadores + NNTP, o solo NNTP.
+- **12 idiomas**: español, inglés, chino simplificado, hindi, portugués (Brasil), francés, alemán, ruso, japonés, árabe, italiano y catalán. Al abrirse usa el idioma de Windows (o inglés si no está disponible) y se puede cambiar en **Configuración → Idioma**; también traduce el menú de la bandeja, las notificaciones y los mensajes de error.
 - **Interfaz Svelte 5**: asistente inicial de credenciales NNTP, pestañas Descargas / Historial / Servidores / Configuración / Registro, arrastrar `.nzb`, pegar enlaces, vigilancia configurable del portapapeles, icono en la bandeja y notificaciones.
 
 ## Descarga
@@ -27,6 +28,7 @@ Ambos necesitan WebView2, que viene de serie en Windows 11 (el instalador lo des
   - **Debrid**: se usa el primer servicio de la lista; si falla se prueba el siguiente y, si lo activas, NNTP como último recurso. Si no tienes servidores NNTP, se usa debrid automáticamente.
 
   Cada descarga pasa por tres fases: envío del NZB, descarga en el servicio (se ve su progreso y velocidad) y descarga al PC (por defecto 8 conexiones, fragmentos de 32 MB, reanudable tras cerrar Nebula). Después se verifica/extrae con el post-procesado habitual si hace falta y, opcionalmente, se borra del servicio. Al añadir un NZB, si TorBox ya lo tiene en caché se marca como instantáneo (⚡).
+- Traducciones: los textos de la interfaz están en `src/locales/<código>.json` y los del motor en `src-tauri/locales/<código>.json` (`es` es el original). Para añadir un idioma se crean ambos archivos y se añade a `LANGUAGES` en `src/lib/i18n.svelte.js` y a `LOCALES` en `src-tauri/src/i18n.rs`; `cargo test` comprueba que todas las traducciones tienen las mismas claves y variables.
 - Datos: `%APPDATA%\Nebula` (configuración, cola, historial, registros). Las contraseñas de servidor se cifran con DPAPI.
   La variable de entorno `NEBULA_DATA_DIR` permite usar otra carpeta (modo portable o pruebas).
 

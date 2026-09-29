@@ -1,3 +1,5 @@
+import { t } from './i18n.svelte.js';
+
 // Servicios debrid que descargan NZB por API (TorBox Pro, Premiumize).
 
 export const DEBRID_KINDS = [
@@ -5,14 +7,18 @@ export const DEBRID_KINDS = [
     id: 'torbox',
     name: 'TorBox',
     keyUrl: 'https://torbox.app/settings',
-    keyHelp: 'En torbox.app → Settings → API Key. La descarga de NZB requiere el plan Pro.',
+    get keyHelp() {
+      return t('debrid.keyHelpTorbox');
+    },
     cache: true,
   },
   {
     id: 'premiumize',
     name: 'Premiumize',
     keyUrl: 'https://www.premiumize.me/account',
-    keyHelp: 'En premiumize.me → Account → API Key. Necesita una cuenta premium.',
+    get keyHelp() {
+      return t('debrid.keyHelpPremiumize');
+    },
     cache: false,
   },
 ];

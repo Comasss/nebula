@@ -1,4 +1,5 @@
 <script>
+  import { t } from './lib/i18n.svelte.js';
   import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -51,7 +52,7 @@
     let unlistenDrop;
     init().catch((e) => {
       console.error(e);
-      toast('error', `Error al iniciar: ${e}`);
+      toast('error', t('app.startError', { error: e }));
     });
     getCurrentWebview()
       .onDragDropEvent((ev) => {
@@ -64,7 +65,7 @@
           ui.dragging = false;
           const nzbs = (p.paths ?? []).filter((x) => /\.nzb(\.gz)?$/i.test(x));
           if (nzbs.length) queueAdd(nzbs.map((value) => ({ kind: 'file', value })));
-          else toast('warn', 'Solo se pueden añadir archivos .nzb');
+          else toast('warn', t('app.onlyNzb'));
         }
       })
       .then((f) => (unlistenDrop = f));

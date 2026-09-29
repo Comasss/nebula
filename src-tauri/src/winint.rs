@@ -32,12 +32,12 @@ pub fn set_association(enable: bool) -> Result<(), String> {
         let (owp, _) = hkcu.create_subkey("Software\\Classes\\.nzb\\OpenWithProgids").map_err(e)?;
         owp.set_value(PROGID, &"").map_err(e)?;
         let (prog, _) = hkcu.create_subkey(format!("Software\\Classes\\{}", PROGID)).map_err(e)?;
-        prog.set_value("", &"Archivo NZB").map_err(e)?;
+        prog.set_value("", &t!("win.nzbFileType")).map_err(e)?;
         let (icon, _) = hkcu.create_subkey(format!("Software\\Classes\\{}\\DefaultIcon", PROGID)).map_err(e)?;
         icon.set_value("", &format!("\"{}\",0", exe)).map_err(e)?;
         let (cmd, _) = hkcu.create_subkey(format!("Software\\Classes\\{}\\shell\\open\\command", PROGID)).map_err(e)?;
         cmd.set_value("", &format!("\"{}\" \"%1\"", exe)).map_err(e)?;
-        linfo!("Archivos .nzb asociados a Nebula");
+        linfo!("{}", t!("log.win.associated"));
     } else {
         let _ = hkcu.delete_subkey_all(format!("Software\\Classes\\{}", PROGID));
         if let Ok(ext) = hkcu.open_subkey_with_flags("Software\\Classes\\.nzb", winreg::enums::KEY_ALL_ACCESS) {
@@ -49,7 +49,7 @@ pub fn set_association(enable: bool) -> Result<(), String> {
         if let Ok(owp) = hkcu.open_subkey_with_flags("Software\\Classes\\.nzb\\OpenWithProgids", winreg::enums::KEY_ALL_ACCESS) {
             let _ = owp.delete_value(PROGID);
         }
-        linfo!("Asociación de archivos .nzb eliminada");
+        linfo!("{}", t!("log.win.unassociated"));
     }
     notify_assoc_changed();
     Ok(())
@@ -132,7 +132,7 @@ pub fn toast(app: &tauri::AppHandle, tools_dir: &Path, title: &str, body: &str) 
             t = t.icon(&icon, tauri_winrt_notification::IconCrop::Square, "Nebula");
         }
         if let Err(e) = t.show() {
-            crate::lwarn!("No se pudo mostrar la notificación: {:?}", e);
+            crate::lwarn!("{}", t!("log.win.notifyFailed", error = format!("{:?}", e)));
         }
     });
 }
@@ -173,7 +173,7 @@ pub fn open_path(path: &str) -> Result<(), String> {
         while !q.exists() {
             match q.parent() {
                 Some(par) => q = par.to_path_buf(),
-                None => return Err("La carpeta ya no existe.".into()),
+                None => return Err(t!("err.folderGone")),
             }
         }
         q
@@ -250,7 +250,7 @@ pub fn start_clipboard_monitor(engine: Arc<Engine>) {
                 if seen.len() > 200 {
                     seen.drain(..100);
                 }
-                linfo!("Enlace NZB detectado en el portapapeles ({})", urls.len());
+                linfo!("{}", t!("log.win.clipboard", n = urls.len()));
                 let visible = engine
                     .app
                     .get_webview_window("main")
@@ -260,7 +260,7 @@ pub fn start_clipboard_monitor(engine: Arc<Engine>) {
                     if show {
                         engine.show_main();
                     } else {
-                        engine.notify_os("Enlace NZB detectado", "Abre Nebula para añadirlo a la cola.");
+                        engine.notify_os(&t!("notify.clipboardTitle"), &t!("notify.clipboardBody"));
                     }
                 }
                 if engine.ui_ready.load(Ordering::SeqCst) {
