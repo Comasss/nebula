@@ -36,11 +36,12 @@ Ambos necesitan WebView2, que viene de serie en Windows 11 (el instalador lo des
 
 - Ejecuta los tests del motor (`cargo test`) y compila la interfaz.
 - Genera el instalador y el portable y los sube como artefacto de la ejecución (pestaña **Actions** → la ejecución → **Artifacts**).
-- Al subir una etiqueta `vX.Y.Z` igual a la versión de `src-tauri/tauri.conf.json`, publica una **Release** con `Nebula_<versión>_x64-setup.exe` y `Nebula_<versión>_x64_portable.exe`:
+- En cada push a `main` publica la **Release** `vX.Y.Z` de la versión de `src-tauri/tauri.conf.json` con `Nebula_<versión>_x64-setup.exe`, `Nebula_<versión>_x64_portable.exe` y `SHA256SUMS.txt`:
+  - Si esa versión aún no tiene Release, la crea.
+  - Si la creó este mismo workflow, la actualiza con la nueva compilación (y mueve la etiqueta al último commit).
+  - Si la publicaste a mano, no la toca.
 
-```bash
-git tag v1.0.0 && git push origin v1.0.0
-```
+  Para publicar una versión nueva, sube el número en `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` y `package.json` (por ejemplo, `npm version 1.2.0 --no-git-tag-version` para `package.json`). También se puede publicar subiendo una etiqueta `vX.Y.Z` con esa misma versión.
 
 ## Compilar
 
