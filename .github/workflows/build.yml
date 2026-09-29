@@ -130,15 +130,15 @@ jobs:
           (cd release && sha256sum *.exe > SHA256SUMS.txt)
           cat > notes.md <<EOF
           <!-- nebula-autobuild -->
-          Compilación automática de **Nebula $v** desde el commit [\`$short\`](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA).
+          Automatic build of **Nebula $v** from commit [\`$short\`](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA).
 
-          | Archivo | Para qué |
+          | File | What it's for |
           |---|---|
-          | \`Nebula_${v}_x64-setup.exe\` | Instalador: acceso directo, desinstalador y asociación de archivos \`.nzb\`. |
-          | \`Nebula_${v}_x64_portable.exe\` | Un solo ejecutable, sin instalación. Guarda los datos en \`%APPDATA%\\Nebula\`. |
-          | \`SHA256SUMS.txt\` | Sumas SHA-256 para comprobar los archivos. |
+          | \`Nebula_${v}_x64-setup.exe\` | Installer: shortcut, uninstaller and \`.nzb\` file association. |
+          | \`Nebula_${v}_x64_portable.exe\` | A single executable, no installation. Stores its data in \`%APPDATA%\\Nebula\`. |
+          | \`SHA256SUMS.txt\` | SHA-256 checksums to verify the files. |
 
-          Requisitos: Windows 10/11 x64 con WebView2 (incluido en Windows 11; el instalador lo descarga si falta).
+          Requirements: Windows 10/11 x64 with WebView2 (included in Windows 11; the installer downloads it if missing).
           EOF
           if gh release view "$tag" --json body -q .body > current.md 2>/dev/null; then
             if ! grep -q "nebula-autobuild" current.md; then
