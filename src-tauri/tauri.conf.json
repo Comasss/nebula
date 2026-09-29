@@ -37,10 +37,10 @@
     "active": true,
     "targets": ["nsis"],
     "publisher": "Nebula",
-    "copyright": "Nebula. Incluye 7-Zip (LGPL) y par2cmdline-turbo (GPL).",
+    "copyright": "Nebula. Includes 7-Zip (LGPL) and par2cmdline-turbo (GPL).",
     "category": "Utility",
-    "shortDescription": "Cliente Usenet moderno",
-    "longDescription": "Nebula descarga archivos NZB desde servidores Usenet con verificación, reparación PAR2 y extracción automática.",
+    "shortDescription": "Modern Usenet client",
+    "longDescription": "Nebula downloads NZB files from Usenet servers with automatic verification, PAR2 repair and extraction.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -51,7 +51,7 @@
       {
         "ext": ["nzb"],
         "name": "Nebula.nzb",
-        "description": "Archivo NZB",
+        "description": "NZB file",
         "role": "Viewer"
       }
     ],

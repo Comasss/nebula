@@ -1,105 +1,105 @@
 # Nebula
 
-Cliente Usenet (NZB) moderno para Windows: alternativa a SABnzbd con interfaz oscura y animada.
+A modern Usenet (NZB) client for Windows: an alternative to SABnzbd with a dark, animated interface.
 
-- **Motor en Rust** (Tauri 2 + tokio): NNTP con TLS, multiconexión, servidores de respaldo por prioridad, decodificación yEnc con verificación CRC, escritura directa a disco y reanudación tras cerrar la app.
-- **Post-procesado integrado**: verificación y reparación PAR2 (par2cmdline-turbo) que descarga solo los bloques de recuperación necesarios, y extracción RAR/7z/ZIP (7-Zip), con barra de progreso, porcentaje y velocidad. Ambas herramientas van **dentro del .exe**.
-- **Búsqueda en indexadores Newznab** (NZBGeek, NZBFinder, DrunkenSlug…): varios a la vez o solo los elegidos, con filtro de categoría, orden y agrupación opcional de duplicados (el mismo release resubido a varios indexadores aparece una vez y, si un indexador falla al descargar, se usa el siguiente). Descarga con un clic o guarda el `.nzb` en el PC.
-- **Descarga a través de servicios debrid** (TorBox Pro y Premiumize): Nebula les envía el NZB, ellos lo descargan (y reparan/extraen) en sus servidores y Nebula baja los archivos sueltos por HTTPS con varias conexiones por rangos, al mismo sitio y con el mismo formato que por NNTP (nunca un `.zip`). Se elige el método por defecto y, en cada NZB, NNTP o el servicio que quieras.
-- **Funciones a elegir** en el primer arranque (mínimo una): solo indexadores (guardar `.nzb`), indexadores + NNTP, o solo NNTP.
-- **12 idiomas**: español, inglés, chino simplificado, hindi, portugués (Brasil), francés, alemán, ruso, japonés, árabe, italiano y catalán. Al abrirse usa el idioma de Windows (o inglés si no está disponible) y se puede cambiar en **Configuración → Idioma**; también traduce el menú de la bandeja, las notificaciones y los mensajes de error.
-- **Interfaz Svelte 5**: asistente inicial de credenciales NNTP, pestañas Descargas / Historial / Servidores / Configuración / Registro, arrastrar `.nzb`, pegar enlaces, vigilancia configurable del portapapeles, icono en la bandeja y notificaciones.
+- **Rust engine** (Tauri 2 + tokio): NNTP with TLS, multiple connections, backup servers by priority, yEnc decoding with CRC checks, direct-to-disk writes and resuming after the app is closed.
+- **Built-in post-processing**: PAR2 verification and repair (par2cmdline-turbo) that downloads only the recovery blocks it needs, and RAR/7z/ZIP extraction (7-Zip), with a progress bar, percentage and speed. Both tools ship **inside the .exe**.
+- **Newznab indexer search** (NZBGeek, NZBFinder, DrunkenSlug…): several at once or only the ones you pick, with category filter, sorting and optional grouping of duplicates (the same release reposted to several indexers shows up once and, if one indexer fails to download, the next one is used). Download with one click or save the `.nzb` to your PC.
+- **Downloads through debrid services** (TorBox Pro and Premiumize): Nebula sends them the NZB, they download it (and repair/extract it) on their servers, and Nebula fetches the loose files over HTTPS with several ranged connections, to the same place and in the same layout as over NNTP (never a `.zip`). You choose the default method and, for each NZB, NNTP or the service you want.
+- **Pick your features** on first launch (at least one): indexers only (save `.nzb` files), indexers + NNTP, or NNTP only.
+- **12 languages**: English, Spanish, Simplified Chinese, Hindi, Portuguese (Brazil), French, German, Russian, Japanese, Arabic, Italian and Catalan. On startup it uses the Windows language (or English if it isn't available), and you can change it in **Settings → Language**; the tray menu, notifications and error messages are translated too.
+- **Svelte 5 interface**: first-run NNTP credentials wizard, Downloads / History / Servers / Settings / Log tabs, `.nzb` drag and drop, link pasting, configurable clipboard watching, tray icon and notifications.
 
-## Descarga
+## Download
 
-En [Releases](../../releases) hay dos opciones para Windows 10/11 x64:
+[Releases](../../releases) has two options for Windows 10/11 x64:
 
-- `Nebula_<versión>_x64-setup.exe`: instalador (acceso directo, desinstalador y asociación de `.nzb`).
-- `Nebula_<versión>_x64_portable.exe`: un solo ejecutable, sin instalación.
+- `Nebula_<version>_x64-setup.exe`: installer (shortcut, uninstaller and `.nzb` file association).
+- `Nebula_<version>_x64_portable.exe`: a single executable, no installation.
 
-Ambos necesitan WebView2, que viene de serie en Windows 11 (el instalador lo descarga si falta).
+Both need WebView2, which comes with Windows 11 (the installer downloads it if missing).
 
-## Uso
+## Usage
 
-- Añadir un NZB: botón **Añadir NZB**, arrastrarlo a la ventana, doble clic en un `.nzb` (si la asociación está activada) o pegar un enlace en la barra superior. Nebula descarga el NZB, lo analiza y pregunta dónde guardarlo.
-- Contraseñas de archivos: se leen del NZB (`<meta type="password">`) o del nombre (`Nombre {{clave}}`). Si faltan, el historial ofrece **Reintentar extracción**.
-- Descargas debrid: en la pestaña **Debrid** añade tu API key de TorBox (la descarga de NZB requiere el plan Pro) o de Premiumize (cuenta premium) y pulsa **Probar**. En **Configuración → NNTP / Debrid** eliges el método por defecto:
-  - **Usenet (NNTP)**: tus servidores. Al añadir un NZB puedes elegir igualmente un servicio debrid en «Descargar con».
-  - **Debrid**: se usa el primer servicio de la lista; si falla se prueba el siguiente y, si lo activas, NNTP como último recurso. Si no tienes servidores NNTP, se usa debrid automáticamente.
+- Add an NZB: the **Add NZB** button, drag it onto the window, double-click a `.nzb` (if the association is enabled) or paste a link into the top bar. Nebula downloads the NZB, parses it and asks where to save it.
+- Archive passwords: read from the NZB (`<meta type="password">`) or from the name (`Name {{password}}`). If they're missing, History offers **Retry extraction**.
+- Debrid downloads: in the **Debrid** tab add your TorBox API key (NZB downloads need the Pro plan) or your Premiumize one (premium account) and press **Test**. In **Settings → NNTP / Debrid** you choose the default method:
+  - **Usenet (NNTP)**: your servers. When adding an NZB you can still pick a debrid service under "Download with".
+  - **Debrid**: the first service in the list is used; if it fails the next one is tried and, if you enable it, NNTP as a last resort. If you have no NNTP servers, debrid is used automatically.
 
-  Cada descarga pasa por tres fases: envío del NZB, descarga en el servicio (se ve su progreso y velocidad) y descarga al PC (por defecto 8 conexiones, fragmentos de 32 MB, reanudable tras cerrar Nebula). Después se verifica/extrae con el post-procesado habitual si hace falta y, opcionalmente, se borra del servicio. Al añadir un NZB, si TorBox ya lo tiene en caché se marca como instantáneo (⚡).
-- Traducciones: los textos de la interfaz están en `src/locales/<código>.json` y los del motor en `src-tauri/locales/<código>.json` (`es` es el original). Para añadir un idioma se crean ambos archivos y se añade a `LANGUAGES` en `src/lib/i18n.svelte.js` y a `LOCALES` en `src-tauri/src/i18n.rs`; `cargo test` comprueba que todas las traducciones tienen las mismas claves y variables.
-- Datos: `%APPDATA%\Nebula` (configuración, cola, historial, registros). Las contraseñas de servidor se cifran con DPAPI.
-  La variable de entorno `NEBULA_DATA_DIR` permite usar otra carpeta (modo portable o pruebas).
+  Each download goes through three stages: sending the NZB, downloading on the service (its progress and speed are shown) and downloading to the PC (8 connections and 32 MB chunks by default, resumable after closing Nebula). Afterwards it is verified/extracted by the usual post-processing if needed and, optionally, removed from the service. When adding an NZB, if TorBox already has it cached it is marked as instant (⚡).
+- Translations: UI strings live in `src/locales/<code>.json` and engine strings in `src-tauri/locales/<code>.json` (`es` is the original). To add a language, create both files and add it to `LANGUAGES` in `src/lib/i18n.svelte.js` and to `LOCALES` in `src-tauri/src/i18n.rs`; `cargo test` checks that every translation has the same keys and variables.
+- Data: `%APPDATA%\Nebula` (settings, queue, history, logs). Server passwords are encrypted with DPAPI.
+  The `NEBULA_DATA_DIR` environment variable lets you use another folder (portable mode or testing).
 
-## Compilación automática (GitHub Actions)
+## Automatic builds (GitHub Actions)
 
-`.github/workflows/build.yml` compila Nebula en `windows-latest` en cada push y pull request:
+`.github/workflows/build.yml` builds Nebula on `windows-latest` on every push and pull request:
 
-- Ejecuta los tests del motor (`cargo test`) y compila la interfaz.
-- Genera el instalador y el portable y los sube como artefacto de la ejecución (pestaña **Actions** → la ejecución → **Artifacts**).
-- En cada push a `main` publica la **Release** `vX.Y.Z` de la versión de `src-tauri/tauri.conf.json` con `Nebula_<versión>_x64-setup.exe`, `Nebula_<versión>_x64_portable.exe` y `SHA256SUMS.txt`:
-  - Si esa versión aún no tiene Release, la crea.
-  - Si la creó este mismo workflow, la actualiza con la nueva compilación (y mueve la etiqueta al último commit).
-  - Si la publicaste a mano, no la toca.
+- Runs the engine tests (`cargo test`) and builds the interface.
+- Produces the installer and the portable exe and uploads them as a run artifact (**Actions** tab → the run → **Artifacts**).
+- On every push to `main` it publishes the **Release** `vX.Y.Z` for the version in `src-tauri/tauri.conf.json` with `Nebula_<version>_x64-setup.exe`, `Nebula_<version>_x64_portable.exe` and `SHA256SUMS.txt`:
+  - If that version has no Release yet, it creates it.
+  - If this same workflow created it, it updates it with the new build (and moves the tag to the latest commit).
+  - If you published it by hand, it leaves it alone.
 
-  Para publicar una versión nueva, sube el número en `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` y `package.json` (por ejemplo, `npm version 1.2.0 --no-git-tag-version` para `package.json`). También se puede publicar subiendo una etiqueta `vX.Y.Z` con esa misma versión.
+  To publish a new version, bump the number in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `package.json` (for example, `npm version 1.3.0 --no-git-tag-version` for `package.json`). You can also publish by pushing a `vX.Y.Z` tag with that same version.
 
-## Compilar
+## Building
 
-Requisitos: Rust (MSVC), Node.js y WebView2 (incluido en Windows 11).
+Requirements: Rust (MSVC), Node.js and WebView2 (included in Windows 11).
 
 ```bash
 npm install
 npx tauri build
 ```
 
-Genera `src-tauri/target/release/nebula.exe` (portable) y el instalador en `src-tauri/target/release/bundle/nsis/`.
+This produces `src-tauri/target/release/nebula.exe` (portable) and the installer in `src-tauri/target/release/bundle/nsis/`.
 
-Desarrollo con recarga en caliente:
+Development with hot reload:
 
 ```bash
 npx tauri dev
 ```
 
-## Pruebas
+## Testing
 
 ```bash
 cd src-tauri && cargo test
 ```
 
-`dev/mock_nntp.py` es un servidor NNTP simulado que publica una carpeta como artículos yEnc, genera el `.nzb` y lo sirve por HTTP. Puede simular artículos ausentes (`--missing`), límite de conexiones (`--max-conns`) y velocidad (`--kbps`):
+`dev/mock_nntp.py` is a mock NNTP server that publishes a folder as yEnc articles, generates the `.nzb` and serves it over HTTP. It can simulate missing articles (`--missing`), a connection limit (`--max-conns`) and speed (`--kbps`):
 
 ```bash
-python dev/mock_nntp.py --src carpeta_a_publicar --nzb prueba.nzb --missing 3 --kbps 1500
+python dev/mock_nntp.py --src folder_to_publish --nzb test.nzb --missing 3 --kbps 1500
 ```
 
-La API simulada también expone un indexador Newznab en `http://127.0.0.1:8119/api` (API key `--indexer-key`, por defecto `testkey`). Test del cliente de indexadores contra ella o contra uno real:
+The mock API also exposes a Newznab indexer at `http://127.0.0.1:8119/api` (API key `--indexer-key`, `testkey` by default). Test the indexer client against it or against a real one:
 
 ```bash
 cd src-tauri && NEBULA_NEWZNAB=http://127.0.0.1:8119 NEBULA_NEWZNAB_KEY=testkey cargo test live_indexer -- --ignored --nocapture
 ```
 
-El mismo servidor simula las API de **TorBox** y **Premiumize** (reciben el NZB, «descargan» durante `--debrid-secs` segundos y sirven los archivos de `--src` con rangos). Para probar la descarga debrid sin cuenta, arranca Nebula apuntando a ellas y usa la API key `--debrid-key` (por defecto `debridkey`); `--debrid-kbps` limita la velocidad y `--debrid-fail` simula una descarga fallida:
+The same server mocks the **TorBox** and **Premiumize** APIs (they receive the NZB, "download" for `--debrid-secs` seconds and serve the files from `--src` with ranges). To test debrid downloads without an account, start Nebula pointed at them and use the API key `--debrid-key` (`debridkey` by default); `--debrid-kbps` limits the speed and `--debrid-fail` simulates a failed download:
 
 ```powershell
 $env:NEBULA_TORBOX_URL = "http://127.0.0.1:8119/torbox/v1/api"
 $env:NEBULA_PREMIUMIZE_URL = "http://127.0.0.1:8119/premiumize/api"
-$env:NEBULA_DATA_DIR = "$env:TEMP\nebula-pruebas"
+$env:NEBULA_DATA_DIR = "$env:TEMP\nebula-test"
 npx tauri dev
 ```
 
-`dev/preview.html` muestra la interfaz en el navegador con la API de Tauri simulada (`npm run dev` y abrir `http://localhost:1420/dev/preview.html`; admite `?setup`, `?feat`, `?idxonly`, `?add`, `?clipboard`, `?nodebrid`, `?via=debrid`).
+`dev/preview.html` shows the interface in the browser with a mocked Tauri API (`npm run dev` and open `http://localhost:1420/dev/preview.html`; it accepts `?setup`, `?feat`, `?idxonly`, `?add`, `?clipboard`, `?nodebrid`, `?via=debrid` and `?lang=<code>`).
 
-Para comprobar la conexión con un servidor real sin credenciales (TCP + TLS + saludo):
+To check the connection to a real server without credentials (TCP + TLS + greeting):
 
 ```bash
-cd src-tauri && NEBULA_PROBE=news.servidor.com:563:ssl cargo test probe -- --ignored --nocapture
+cd src-tauri && NEBULA_PROBE=news.server.com:563:ssl cargo test probe -- --ignored --nocapture
 ```
 
-## Licencias de terceros
+## Third-party licenses
 
-- 7-Zip © Igor Pavlov — GNU LGPL + restricción unRAR (`src-tauri/bin/7zip-License.txt`).
+- 7-Zip © Igor Pavlov — GNU LGPL + unRAR restriction (`src-tauri/bin/7zip-License.txt`).
 - par2cmdline-turbo — GNU GPL v2 (https://github.com/animetosho/par2cmdline-turbo).
 
-Se ejecutan como programas independientes; se extraen a `%LOCALAPPDATA%\Nebula\tools` la primera vez.
+They run as separate programs and are extracted to `%LOCALAPPDATA%\Nebula\tools` the first time.
