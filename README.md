@@ -8,6 +8,15 @@ Cliente Usenet (NZB) moderno para Windows: alternativa a SABnzbd con interfaz os
 - **Funciones a elegir** en el primer arranque (mínimo una): solo indexadores (guardar `.nzb`), indexadores + NNTP, o solo NNTP.
 - **Interfaz Svelte 5**: asistente inicial de credenciales NNTP, pestañas Descargas / Historial / Servidores / Configuración / Registro, arrastrar `.nzb`, pegar enlaces, vigilancia configurable del portapapeles, icono en la bandeja y notificaciones.
 
+## Descarga
+
+En [Releases](../../releases) hay dos opciones para Windows 10/11 x64:
+
+- `Nebula_<versión>_x64-setup.exe`: instalador (acceso directo, desinstalador y asociación de `.nzb`).
+- `Nebula_<versión>_x64_portable.exe`: un solo ejecutable, sin instalación.
+
+Ambos necesitan WebView2, que viene de serie en Windows 11 (el instalador lo descarga si falta).
+
 ## Uso
 
 - Añadir un NZB: botón **Añadir NZB**, arrastrarlo a la ventana, doble clic en un `.nzb` (si la asociación está activada) o pegar un enlace en la barra superior. Nebula descarga el NZB, lo analiza y pregunta dónde guardarlo.
