@@ -1,0 +1,47 @@
+[package]
+name = "nebula"
+version = "1.0.0"
+description = "Nebula — cliente Usenet (NZB) moderno para Windows"
+authors = ["Genis"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-dialog = "2"
+tauri-winrt-notification = "0.8"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-native-tls = "0.3"
+native-tls = "0.2"
+reqwest = { version = "0.12", default-features = false, features = ["native-tls", "gzip"] }
+roxmltree = "0.20"
+crc32fast = "1"
+parking_lot = "0.12"
+regex = "1"
+uuid = { version = "1", features = ["v4"] }
+dirs = "6"
+flate2 = "1"
+base64 = "0.22"
+winreg = "0.55"
+clipboard-win = "5"
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Cryptography",
+    "Win32_System_DataExchange",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+    "Win32_Storage_FileSystem",
+    "Win32_UI_Shell",
+] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

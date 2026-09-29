@@ -1,0 +1,8 @@
+par2.exe — par2cmdline-turbo v1.5.0 (win-x64), sin modificar.
+
+Licencia: GNU General Public License v2 (o posterior).
+Código fuente: https://github.com/animetosho/par2cmdline-turbo/tree/v1.5.0
+Binario original: https://github.com/animetosho/par2cmdline-turbo/releases/tag/v1.5.0
+
+Nebula lo incluye dentro de su ejecutable y lo ejecuta como un programa independiente
+para verificar y reparar descargas con archivos PAR2.

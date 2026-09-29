@@ -1,0 +1,343 @@
+use base64::Engine as _;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+
+#[derive(Clone)]
+pub struct AppPaths {
+    pub data: PathBuf,
+    pub nzb: PathBuf,
+    pub logs: PathBuf,
+    pub tools: PathBuf,
+}
+
+impl AppPaths {
+    pub fn init() -> Self {
+        // NEBULA_DATA_DIR permite una carpeta de datos alternativa (modo portable / pruebas).
+        let data = std::env::var_os("NEBULA_DATA_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("Nebula"));
+        let local = dirs::data_local_dir().unwrap_or_else(|| data.clone()).join("Nebula");
+        let p = Self {
+            nzb: data.join("nzb"),
+            logs: data.join("logs"),
+            tools: local.join("tools").join(env!("CARGO_PKG_VERSION")),
+            data,
+        };
+        for d in [&p.data, &p.nzb, &p.logs, &p.tools] {
+            let _ = std::fs::create_dir_all(d);
+        }
+        p
+    }
+    pub fn config_file(&self) -> PathBuf {
+        self.data.join("config.json")
+    }
+    pub fn queue_file(&self) -> PathBuf {
+        self.data.join("queue.json")
+    }
+    pub fn history_file(&self) -> PathBuf {
+        self.data.join("history.json")
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct ServerConfig {
+    pub id: String,
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub ssl: bool,
+    pub verify_cert: bool,
+    pub username: String,
+    pub password: String,
+    /// Contraseña cifrada con DPAPI (solo en disco).
+    pub password_enc: String,
+    pub connections: u32,
+    /// 0 = máxima prioridad (principal). Los números mayores son servidores de respaldo.
+    pub priority: u32,
+    pub enabled: bool,
+    /// Días de retención del servidor (0 = desconocido/ilimitado).
+    pub retention_days: u32,
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            id: crate::util::new_id(),
+            name: String::new(),
+            host: String::new(),
+            port: 563,
+            ssl: true,
+            verify_cert: true,
+            username: String::new(),
+            password: String::new(),
+            password_enc: String::new(),
+            connections: 10,
+            priority: 0,
+            enabled: true,
+            retention_days: 0,
+        }
+    }
+}
+
+impl ServerConfig {
+    pub fn label(&self) -> String {
+        if self.name.trim().is_empty() {
+            self.host.clone()
+        } else {
+            self.name.clone()
+        }
+    }
+}
+
+/// Indexador Newznab (NZBGeek, NZBFinder, DrunkenSlug…).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct IndexerConfig {
+    pub id: String,
+    pub name: String,
+    pub url: String,
+    pub api_key: String,
+    /// API key cifrada con DPAPI (solo en disco).
+    pub api_key_enc: String,
+    pub api_path: String,
+    pub enabled: bool,
+}
+
+impl Default for IndexerConfig {
+    fn default() -> Self {
+        Self {
+            id: crate::util::new_id(),
+            name: String::new(),
+            url: String::new(),
+            api_key: String::new(),
+            api_key_enc: String::new(),
+            api_path: "/api".into(),
+            enabled: true,
+        }
+    }
+}
+
+impl IndexerConfig {
+    pub fn label(&self) -> String {
+        if self.name.trim().is_empty() {
+            self.url.trim().trim_start_matches("https://").trim_start_matches("http://").trim_end_matches('/').to_string()
+        } else {
+            self.name.clone()
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Settings {
+    /// Funciones activas: descargas Usenet (NNTP) y/o búsqueda en indexadores.
+    pub feature_nntp: bool,
+    pub feature_indexers: bool,
+    /// El usuario ya eligió las funciones en el asistente.
+    pub features_chosen: bool,
+    pub indexers: Vec<IndexerConfig>,
+    /// Agrupar resultados repetidos entre indexadores.
+    pub search_dedup: bool,
+    /// Resultados por indexador y búsqueda.
+    pub search_limit: u32,
+    /// Añadir a la cola con un clic desde la búsqueda (sin diálogo).
+    pub search_quick_add: bool,
+    /// Carpeta donde guardar los .nzb descargados desde la búsqueda.
+    pub nzb_save_dir: String,
+    pub nzb_ask_save_dir: bool,
+    pub servers: Vec<ServerConfig>,
+    pub download_dir: String,
+    /// Carpeta temporal. Vacío = subcarpeta "_incompleto" dentro del destino.
+    pub incomplete_dir: String,
+    pub ask_destination: bool,
+    pub create_job_folder: bool,
+    pub par2_enabled: bool,
+    pub extract_enabled: bool,
+    pub delete_archives: bool,
+    pub delete_par2: bool,
+    pub abort_hopeless: bool,
+    pub clipboard_monitor: bool,
+    pub clipboard_patterns: Vec<String>,
+    pub clipboard_show_window: bool,
+    /// Descargar y analizar el NZB al detectarlo para mostrar su nombre y tamaño.
+    pub clipboard_inspect: bool,
+    pub notify_complete: bool,
+    pub notify_failed: bool,
+    pub minimize_to_tray: bool,
+    pub close_to_tray: bool,
+    pub start_minimized: bool,
+    pub start_with_windows: bool,
+    pub associate_nzb: bool,
+    /// KB/s, 0 = sin límite.
+    pub speed_limit_kbps: u64,
+    pub max_retries: u32,
+    pub timeout_secs: u64,
+    pub animations: bool,
+    pub accent: String,
+    pub confirm_delete: bool,
+    pub add_paused: bool,
+    pub history_limit: u32,
+    pub first_run_done: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        let dl = dirs::download_dir()
+            .or_else(dirs::home_dir)
+            .unwrap_or_else(|| PathBuf::from("C:\\"))
+            .join("Nebula");
+        let nzb_dir = dirs::download_dir().or_else(dirs::home_dir).unwrap_or_else(|| PathBuf::from("C:\\"));
+        Self {
+            feature_nntp: true,
+            feature_indexers: false,
+            features_chosen: false,
+            indexers: Vec::new(),
+            search_dedup: true,
+            search_limit: 100,
+            search_quick_add: true,
+            nzb_save_dir: nzb_dir.to_string_lossy().to_string(),
+            nzb_ask_save_dir: false,
+            servers: Vec::new(),
+            download_dir: dl.to_string_lossy().to_string(),
+            incomplete_dir: String::new(),
+            ask_destination: true,
+            create_job_folder: true,
+            par2_enabled: true,
+            extract_enabled: true,
+            delete_archives: true,
+            delete_par2: true,
+            abort_hopeless: true,
+            clipboard_monitor: true,
+            clipboard_patterns: default_patterns(),
+            clipboard_show_window: true,
+            clipboard_inspect: true,
+            notify_complete: true,
+            notify_failed: true,
+            minimize_to_tray: false,
+            close_to_tray: true,
+            start_minimized: false,
+            start_with_windows: false,
+            associate_nzb: false,
+            speed_limit_kbps: 0,
+            max_retries: 3,
+            timeout_secs: 30,
+            animations: true,
+            accent: "nebula".into(),
+            confirm_delete: true,
+            add_paused: false,
+            history_limit: 300,
+            first_run_done: false,
+        }
+    }
+}
+
+pub fn default_patterns() -> Vec<String> {
+    vec!["getnzb".into(), "/api?t=get".into(), "&t=get&".into(), "/nzb/".into()]
+}
+
+impl Settings {
+    pub fn load(paths: &AppPaths) -> Self {
+        let mut s: Settings = std::fs::read_to_string(paths.config_file())
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_default();
+        for srv in &mut s.servers {
+            if !srv.password_enc.is_empty() {
+                if let Some(p) = unprotect(&srv.password_enc) {
+                    srv.password = p;
+                }
+            }
+            srv.password_enc.clear();
+        }
+        for ix in &mut s.indexers {
+            if !ix.api_key_enc.is_empty() {
+                if let Some(k) = unprotect(&ix.api_key_enc) {
+                    ix.api_key = k;
+                }
+            }
+            ix.api_key_enc.clear();
+        }
+        // Siempre debe quedar al menos una función activa.
+        if !s.feature_nntp && !s.feature_indexers {
+            s.feature_nntp = true;
+        }
+        s
+    }
+
+    pub fn save(&self, paths: &AppPaths) -> Result<(), String> {
+        let mut disk = self.clone();
+        for srv in &mut disk.servers {
+            srv.password_enc = if srv.password.is_empty() {
+                String::new()
+            } else {
+                protect(&srv.password).unwrap_or_default()
+            };
+            srv.password.clear();
+        }
+        for ix in &mut disk.indexers {
+            ix.api_key_enc = if ix.api_key.is_empty() { String::new() } else { protect(&ix.api_key).unwrap_or_default() };
+            ix.api_key.clear();
+        }
+        let json = serde_json::to_string_pretty(&disk).map_err(|e| e.to_string())?;
+        write_atomic(&paths.config_file(), json.as_bytes())
+    }
+}
+
+pub fn write_atomic(path: &std::path::Path, data: &[u8]) -> Result<(), String> {
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, data).map_err(|e| format!("No se pudo escribir {}: {}", tmp.display(), e))?;
+    std::fs::rename(&tmp, path).map_err(|e| format!("No se pudo guardar {}: {}", path.display(), e))
+}
+
+// ---- DPAPI: cifra la contraseña ligada al usuario de Windows ----
+
+fn protect(plain: &str) -> Option<String> {
+    use windows_sys::Win32::Foundation::LocalFree;
+    use windows_sys::Win32::Security::Cryptography::{CryptProtectData, CRYPT_INTEGER_BLOB};
+    let data = plain.as_bytes();
+    unsafe {
+        let input = CRYPT_INTEGER_BLOB { cbData: data.len() as u32, pbData: data.as_ptr() as *mut u8 };
+        let mut output = CRYPT_INTEGER_BLOB { cbData: 0, pbData: std::ptr::null_mut() };
+        let ok = CryptProtectData(
+            &input,
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            &mut output,
+        );
+        if ok == 0 {
+            return None;
+        }
+        let v = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
+        LocalFree(output.pbData as _);
+        Some(base64::engine::general_purpose::STANDARD.encode(v))
+    }
+}
+
+fn unprotect(enc: &str) -> Option<String> {
+    use windows_sys::Win32::Foundation::LocalFree;
+    use windows_sys::Win32::Security::Cryptography::{CryptUnprotectData, CRYPT_INTEGER_BLOB};
+    let data = base64::engine::general_purpose::STANDARD.decode(enc).ok()?;
+    unsafe {
+        let input = CRYPT_INTEGER_BLOB { cbData: data.len() as u32, pbData: data.as_ptr() as *mut u8 };
+        let mut output = CRYPT_INTEGER_BLOB { cbData: 0, pbData: std::ptr::null_mut() };
+        let ok = CryptUnprotectData(
+            &input,
+            std::ptr::null_mut(),
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            &mut output,
+        );
+        if ok == 0 {
+            return None;
+        }
+        let v = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
+        LocalFree(output.pbData as _);
+        String::from_utf8(v).ok()
+    }
+}

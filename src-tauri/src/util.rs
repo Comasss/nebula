@@ -1,0 +1,186 @@
+use std::collections::VecDeque;
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
+pub fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+pub fn now_secs() -> u64 {
+    now_ms() / 1000
+}
+
+pub fn new_id() -> String {
+    uuid::Uuid::new_v4().simple().to_string()
+}
+
+/// Limpia un nombre para que sea un nombre de archivo válido en Windows.
+pub fn sanitize_filename(name: &str) -> String {
+    let mut out: String = name
+        .chars()
+        .map(|c| match c {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+            c if (c as u32) < 32 => '_',
+            c => c,
+        })
+        .collect();
+    out = out.trim().trim_end_matches(['.', ' ']).to_string();
+    if out.is_empty() {
+        out = "descarga".into();
+    }
+    const RESERVED: [&str; 22] = [
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+        "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ];
+    let stem = out.split('.').next().unwrap_or("").to_ascii_uppercase();
+    if RESERVED.contains(&stem.as_str()) {
+        out.insert(0, '_');
+    }
+    if out.chars().count() > 180 {
+        out = out.chars().take(180).collect();
+    }
+    out
+}
+
+/// Velocímetro: calcula la velocidad media de un contador acumulado en una ventana deslizante.
+pub struct Speedo {
+    samples: VecDeque<(Instant, u64)>,
+    window_ms: u128,
+}
+
+impl Speedo {
+    pub fn new(window_ms: u128) -> Self {
+        Self { samples: VecDeque::new(), window_ms }
+    }
+
+    pub fn push(&mut self, total: u64) {
+        let now = Instant::now();
+        self.samples.push_back((now, total));
+        while let Some((t, _)) = self.samples.front() {
+            if now.duration_since(*t).as_millis() > self.window_ms && self.samples.len() > 2 {
+                self.samples.pop_front();
+            } else {
+                break;
+            }
+        }
+    }
+
+    pub fn rate(&self) -> u64 {
+        let (Some(a), Some(b)) = (self.samples.front(), self.samples.back()) else {
+            return 0;
+        };
+        let dt = b.0.duration_since(a.0).as_secs_f64();
+        if dt < 0.2 || b.1 < a.1 {
+            return 0;
+        }
+        ((b.1 - a.1) as f64 / dt) as u64
+    }
+
+    pub fn reset(&mut self) {
+        self.samples.clear();
+    }
+}
+
+impl Default for Speedo {
+    fn default() -> Self {
+        Self::new(3000)
+    }
+}
+
+pub fn fmt_bytes(b: u64) -> String {
+    const U: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
+    let mut v = b as f64;
+    let mut i = 0;
+    while v >= 1024.0 && i < U.len() - 1 {
+        v /= 1024.0;
+        i += 1;
+    }
+    if i == 0 {
+        format!("{} {}", b, U[0])
+    } else {
+        format!("{:.1} {}", v, U[i])
+    }
+}
+
+/// Mueve un archivo; si está en otra unidad, copia y borra.
+pub fn move_file(src: &Path, dst: &Path) -> io::Result<()> {
+    if let Some(parent) = dst.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    if dst.exists() {
+        let _ = fs::remove_file(dst);
+    }
+    match fs::rename(src, dst) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            fs::copy(src, dst)?;
+            fs::remove_file(src)
+        }
+    }
+}
+
+/// Mueve un directorio completo (recursivo) combinando con el destino.
+pub fn move_tree(src: &Path, dst: &Path) -> io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let p = entry.path();
+        let target = dst.join(entry.file_name());
+        if p.is_dir() {
+            move_tree(&p, &target)?;
+            let _ = fs::remove_dir(&p);
+        } else {
+            move_file(&p, &target)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn list_files(dir: &Path) -> Vec<(PathBuf, u64)> {
+    let mut out = Vec::new();
+    if let Ok(rd) = fs::read_dir(dir) {
+        for e in rd.flatten() {
+            if let Ok(md) = e.metadata() {
+                if md.is_file() {
+                    out.push((e.path(), md.len()));
+                }
+            }
+        }
+    }
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
+}
+
+pub fn file_name(p: &Path) -> String {
+    p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default()
+}
+
+/// Borra un directorio con reintentos (Windows puede tardar en liberar handles).
+pub fn remove_dir_retry(dir: &Path) {
+    for i in 0..5 {
+        match fs::remove_dir_all(dir) {
+            Ok(()) => return,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return,
+            Err(_) => std::thread::sleep(std::time::Duration::from_millis(200 * (i + 1))),
+        }
+    }
+}
+
+/// Extrae una contraseña con la convención "Nombre {{password}}".
+pub fn split_password(name: &str) -> (String, Option<String>) {
+    if let (Some(a), Some(b)) = (name.find("{{"), name.rfind("}}")) {
+        if b > a + 2 {
+            let pw = name[a + 2..b].trim().to_string();
+            let clean = format!("{}{}", &name[..a], &name[b + 2..]).trim().to_string();
+            if !pw.is_empty() {
+                return (clean, Some(pw));
+            }
+        }
+    }
+    (name.to_string(), None)
+}

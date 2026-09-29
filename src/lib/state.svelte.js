@@ -1,0 +1,147 @@
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+
+export const ui = $state({
+  ready: false,
+  view: 'downloads',
+  settings: null,
+  info: null,
+  queue: {
+    paused: false,
+    speed: 0,
+    remaining: 0,
+    eta: 0,
+    speedLimit: 0,
+    activeConns: 0,
+    jobs: [],
+    servers: [],
+    noServers: true,
+  },
+  history: [],
+  logs: [],
+  speedHistory: Array(120).fill(0),
+  toasts: [],
+  addItems: [],
+  clipboard: [],
+  setupOpen: false,
+  dragging: false,
+  dialog: null,
+});
+
+/** Duración de animaciones respetando la preferencia del usuario. */
+export function d(ms) {
+  return ui.settings && ui.settings.animations === false ? 0 : ms;
+}
+
+let toastSeq = 0;
+export function toast(kind, message, timeout = 5500) {
+  const id = ++toastSeq;
+  ui.toasts.push({ id, kind, message });
+  if (ui.toasts.length > 5) ui.toasts.splice(0, ui.toasts.length - 5);
+  if (timeout) setTimeout(() => dismissToast(id), timeout);
+}
+
+export function dismissToast(id) {
+  const i = ui.toasts.findIndex((t) => t.id === id);
+  if (i >= 0) ui.toasts.splice(i, 1);
+}
+
+export function queueAdd(items) {
+  for (const it of items) {
+    if (!ui.addItems.some((x) => x.value === it.value)) ui.addItems.push(it);
+  }
+}
+
+/** Diálogo modal genérico. Devuelve {ok, checked, value}. */
+export function ask(opts) {
+  return new Promise((resolve) => {
+    ui.dialog = {
+      title: opts.title,
+      message: opts.message ?? '',
+      confirmLabel: opts.confirmLabel ?? 'Aceptar',
+      cancelLabel: opts.cancelLabel ?? 'Cancelar',
+      danger: !!opts.danger,
+      icon: opts.icon ?? (opts.danger ? 'alert-triangle' : 'info'),
+      checkbox: opts.checkbox ?? null,
+      checked: opts.checkedDefault ?? false,
+      input: opts.input ?? null,
+      value: opts.value ?? '',
+      resolve,
+    };
+  });
+}
+
+export function closeDialog(result) {
+  const dlg = ui.dialog;
+  ui.dialog = null;
+  dlg?.resolve(result);
+}
+
+export async function saveSettings(patch) {
+  const next = { ...$state.snapshot(ui.settings), ...patch };
+  const prev = ui.settings;
+  ui.settings = next;
+  try {
+    await invoke('save_settings', { settings: next });
+    return true;
+  } catch (e) {
+    ui.settings = prev;
+    toast('error', String(e));
+    return false;
+  }
+}
+
+export async function refreshHistory() {
+  ui.history = await invoke('get_history');
+}
+
+function handleOpenItems(items) {
+  const adds = [];
+  for (const it of items) {
+    if (it.kind === 'clipboard') {
+      if (!ui.clipboard.includes(it.value)) ui.clipboard.push(it.value);
+    } else {
+      adds.push({ kind: it.kind, value: it.value });
+    }
+  }
+  queueAdd(adds);
+}
+
+export async function init() {
+  const [settings, queue, history, logs, info] = await Promise.all([
+    invoke('get_settings'),
+    invoke('get_queue'),
+    invoke('get_history'),
+    invoke('get_logs'),
+    invoke('app_info'),
+  ]);
+  ui.settings = settings;
+  ui.queue = queue;
+  ui.history = history;
+  ui.logs = logs;
+  ui.info = info;
+
+  await listen('queue', (e) => {
+    ui.queue = e.payload;
+  });
+  await listen('history', () => refreshHistory());
+  await listen('log', (e) => {
+    ui.logs.push(e.payload);
+    if (ui.logs.length > 2000) ui.logs.splice(0, ui.logs.length - 2000);
+  });
+  await listen('toast', (e) => toast(e.payload.kind, e.payload.message));
+  await listen('open-items', (e) => handleOpenItems(e.payload));
+  await listen('clipboard-nzb', (e) => {
+    for (const u of e.payload) if (!ui.clipboard.includes(u)) ui.clipboard.push(u);
+  });
+
+  setInterval(() => {
+    ui.speedHistory.push(ui.queue.paused ? 0 : ui.queue.speed);
+    if (ui.speedHistory.length > 120) ui.speedHistory.shift();
+  }, 500);
+
+  ui.view = settings.featureNntp ? 'downloads' : 'search';
+  if (!settings.firstRunDone || !settings.featuresChosen) ui.setupOpen = true;
+  ui.ready = true;
+  await invoke('app_ready');
+}

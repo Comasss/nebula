@@ -1,0 +1,67 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Nebula",
+  "version": "1.0.0",
+  "identifier": "com.nebula.downloader",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Nebula",
+        "width": 1200,
+        "height": 780,
+        "minWidth": 940,
+        "minHeight": 620,
+        "center": true,
+        "decorations": false,
+        "shadow": true,
+        "visible": false,
+        "resizable": true,
+        "dragDropEnabled": true,
+        "backgroundColor": "#0a0b10",
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Nebula",
+    "copyright": "Nebula. Incluye 7-Zip (LGPL) y par2cmdline-turbo (GPL).",
+    "category": "Utility",
+    "shortDescription": "Cliente Usenet moderno",
+    "longDescription": "Nebula descarga archivos NZB desde servidores Usenet con verificación, reparación PAR2 y extracción automática.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["nzb"],
+        "name": "Nebula.nzb",
+        "description": "Archivo NZB",
+        "role": "Viewer"
+      }
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Spanish", "English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

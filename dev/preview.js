@@ -1,0 +1,214 @@
+// Vista previa de la interfaz en un navegador normal, con la API de Tauri simulada.
+// Uso: npm run dev  →  http://localhost:1420/dev/preview.html  (?setup=1 muestra el asistente)
+import { mockIPC, mockWindows } from '@tauri-apps/api/mocks';
+import { emit } from '@tauri-apps/api/event';
+
+const params = new URLSearchParams(location.search);
+const now = () => Math.floor(Date.now() / 1000);
+const GB = 1024 ** 3;
+const MB = 1024 ** 2;
+
+const settings = {
+  featureNntp: !params.has('idxonly'),
+  featureIndexers: true,
+  featuresChosen: !params.has('feat'),
+  indexers: [
+    { id: 'i1', name: 'NZBGeek', url: 'https://api.nzbgeek.info', apiKey: 'x', apiKeyEnc: '', apiPath: '/api', enabled: true },
+    { id: 'i2', name: 'NZBFinder', url: 'https://nzbfinder.ws', apiKey: 'x', apiKeyEnc: '', apiPath: '/api', enabled: true },
+    { id: 'i3', name: 'DrunkenSlug', url: 'https://drunkenslug.com', apiKey: 'x', apiKeyEnc: '', apiPath: '/api', enabled: true },
+  ],
+  searchDedup: true,
+  searchLimit: 100,
+  searchQuickAdd: true,
+  nzbSaveDir: 'D:\Descargas\NZB',
+  nzbAskSaveDir: false,
+  servers: [
+    { id: 's1', name: 'Eweka', host: 'news.eweka.nl', port: 563, ssl: true, verifyCert: true, username: 'usuario', password: 'x', passwordEnc: '', connections: 40, priority: 0, enabled: true, retentionDays: 5800 },
+    { id: 's2', name: 'Blocknews (bloque)', host: 'eu.blocknews.net', port: 563, ssl: true, verifyCert: true, username: 'usuario2', password: 'x', passwordEnc: '', connections: 10, priority: 1, enabled: true, retentionDays: 5500 },
+  ],
+  downloadDir: 'D:\\Descargas\\Nebula',
+  incompleteDir: '',
+  askDestination: true,
+  createJobFolder: true,
+  par2Enabled: true,
+  extractEnabled: true,
+  deleteArchives: true,
+  deletePar2: true,
+  abortHopeless: true,
+  clipboardMonitor: true,
+  clipboardPatterns: ['getnzb', '/api?t=get', '&t=get&', '/nzb/'],
+  clipboardShowWindow: true,
+  clipboardInspect: true,
+  notifyComplete: true,
+  notifyFailed: true,
+  minimizeToTray: false,
+  closeToTray: true,
+  startMinimized: false,
+  startWithWindows: false,
+  associateNzb: true,
+  speedLimitKbps: 0,
+  maxRetries: 3,
+  timeoutSecs: 30,
+  animations: true,
+  accent: params.get('accent') || 'nebula',
+  confirmDelete: true,
+  addPaused: false,
+  historyLimit: 300,
+  firstRunDone: !params.has('setup'),
+};
+if (params.has('setup')) settings.servers = [];
+
+const jobs = [
+  { id: 'j1', name: 'The.Expanse.S06E01.2160p.WEB-DL.DDP5.1.HDR.HEVC', status: 'downloading', total: 7.4 * GB, done: 3.1 * GB, failed: 12 * MB, failedArticles: 16, percent: 0, speed: 0, eta: 0, files: 78, filesDone: 31, heldPar2: 6, dest: 'D:\\Descargas\\Nebula', error: null, warning: null, post: null, addedAt: now() - 600 },
+  { id: 'j2', name: 'Ubuntu.24.04.LTS.Desktop.amd64.ISO', status: 'extracting', total: 5.8 * GB, done: 5.8 * GB, failed: 0, failedArticles: 0, percent: 100, speed: 0, eta: 0, files: 62, filesDone: 62, heldPar2: 0, dest: 'D:\\Descargas\\Nebula', error: null, warning: null, post: { stage: 'Extrayendo', percent: 38, speed: 312 * MB, detail: 'ubuntu-24.04.part01.rar' }, addedAt: now() - 1800 },
+  { id: 'j3', name: 'Blender.Open.Movie.Collection.1080p', status: 'queued', total: 12.2 * GB, done: 0, failed: 0, failedArticles: 0, percent: 0, speed: 0, eta: 0, files: 131, filesDone: 0, heldPar2: 9, dest: 'E:\\Peliculas', error: null, warning: null, post: null, addedAt: now() - 120 },
+  { id: 'j4', name: 'Podcast.Archivo.2025.FLAC', status: 'paused', total: 2.1 * GB, done: 0.4 * GB, failed: 0, failedArticles: 0, percent: 19, speed: 0, eta: 0, files: 24, filesDone: 4, heldPar2: 3, dest: 'D:\\Descargas\\Nebula', error: 'Error de escritura en disco: acceso denegado (os error 5)', warning: null, post: null, addedAt: now() - 90 },
+];
+
+function snapshot() {
+  const j1 = jobs[0];
+  const speed = paused ? 0 : 88 * MB + Math.sin(Date.now() / 1300) * 22 * MB + Math.random() * 8 * MB;
+  if (!paused && j1.status === 'downloading') {
+    j1.done = Math.min(j1.total, j1.done + speed * 0.5);
+    j1.speed = speed;
+    j1.percent = ((j1.done + j1.failed) / j1.total) * 100;
+    j1.eta = (j1.total - j1.done) / speed;
+  } else {
+    j1.speed = 0;
+  }
+  const j2 = jobs[1];
+  if (j2.post) {
+    j2.post.percent = (j2.post.percent + 0.6) % 100;
+    j2.post.speed = 280 * MB + Math.random() * 60 * MB;
+  }
+  const remaining = jobs.filter((j) => ['queued', 'downloading'].includes(j.status)).reduce((a, j) => a + j.total - j.done, 0);
+  return {
+    paused,
+    speed: paused ? 0 : speed,
+    remaining,
+    eta: speed ? remaining / speed : 0,
+    speedLimit: settings.speedLimitKbps,
+    activeConns: paused ? 0 : 38,
+    noServers: settings.servers.length === 0,
+    jobs: structuredClone(jobs),
+    servers: settings.servers.map((s, i) => ({
+      id: s.id, name: s.name, priority: s.priority, connected: i ? 2 : 40, active: paused ? 0 : i ? 1 : 37, maxConns: s.connections,
+      state: paused ? 'idle' : 'active', lastError: null, articlesOk: i ? 16 : 48213, articlesMissing: i ? 0 : 16, bytes: i ? 11 * MB : 34.6 * GB,
+    })),
+  };
+}
+let paused = false;
+
+const history = [
+  { id: 'h1', name: 'Arch.Linux.2026.09.01.x86_64', status: 'completed', size: 1.2 * GB, dest: 'D:\\Descargas\\Nebula\\Arch.Linux.2026.09.01.x86_64', destDir: 'D:\\Descargas\\Nebula', workDir: '', nzbPath: '', error: null, warning: null, failedStage: null, canRetryExtract: false, password: null, options: {}, addedAt: now() - 7200, completedAt: now() - 6900, downloadSecs: 21, avgSpeed: 58 * MB },
+  { id: 'h2', name: 'Documental.Cosmos.S01.1080p.BluRay', status: 'completed', size: 38.4 * GB, dest: 'E:\\Series\\Cosmos', destDir: 'E:\\Series', workDir: '', nzbPath: '', error: null, warning: 'Faltan 3 artículos y se repararon con PAR2.', failedStage: null, canRetryExtract: false, password: null, options: {}, addedAt: now() - 90000, completedAt: now() - 86000, downloadSecs: 402, avgSpeed: 97 * MB },
+  { id: 'h3', name: 'Coleccion.Privada.Protegida', status: 'failed', size: 4.4 * GB, dest: '', destDir: 'D:\\Descargas\\Nebula', workDir: 'D:\\Descargas\\Nebula\\_incompleto\\Coleccion.Privada.Protegida', nzbPath: '', error: 'El archivo está protegido con contraseña. Introdúcela y reintenta la extracción.', warning: null, failedStage: 'extract', canRetryExtract: true, password: null, options: {}, addedAt: now() - 20000, completedAt: now() - 19000, downloadSecs: 80, avgSpeed: 55 * MB },
+  { id: 'h4', name: 'Vieja.Publicacion.2009.DVDRip', status: 'failed', size: 0.7 * GB, dest: '', destDir: '', workDir: '', nzbPath: '', error: 'Faltan demasiados artículos en el servidor y los archivos PAR2 no bastan para repararlo. Se ha cancelado para no gastar ancho de banda.', warning: null, failedStage: 'download', canRetryExtract: false, password: null, options: {}, addedAt: now() - 300000, completedAt: now() - 299000, downloadSecs: 30, avgSpeed: 20 * MB },
+];
+
+const logs = [
+  ['info', 'Nebula 1.0.0 iniciado'],
+  ['info', 'Añadido a la cola: The.Expanse.S06E01.2160p.WEB-DL.DDP5.1.HDR.HEVC'],
+  ['warn', 'Blocknews (bloque): Error de conexión: el servidor cerró la conexión'],
+  ['info', 'Conexión restablecida con Blocknews (bloque)'],
+  ['info', '«Ubuntu.24.04.LTS.Desktop.amd64.ISO»: verificación correcta'],
+  ['error', 'Falló «Coleccion.Privada.Protegida»: El archivo está protegido con contraseña.'],
+].map(([level, msg], i) => ({ ts: Date.now() - (60 - i) * 1000, level, msg }));
+
+const files = Array.from({ length: 14 }, (_, i) => ({
+  name: i === 0 ? 'The.Expanse.S06E01.par2' : i > 11 ? `The.Expanse.S06E01.vol${String((i - 12) * 32).padStart(3, '0')}+32.par2` : `The.Expanse.S06E01.part${String(i).padStart(2, '0')}.rar`,
+  bytes: i === 0 ? 40 * 1024 : 100 * MB,
+  done: i < 5 ? 100 * MB : i === 5 ? 43 * MB : 0,
+  failed: i === 3 ? 1.5 * MB : 0,
+  segments: 140,
+  failedSegs: i === 3 ? 2 : 0,
+  held: i > 11,
+  par2: i === 0 || i > 11,
+  complete: i < 5,
+}));
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+mockWindows('main');
+mockIPC(
+  async (cmd, args) => {
+    switch (cmd) {
+      case 'get_settings': return structuredClone(settings);
+      case 'save_settings': Object.assign(settings, args.settings); return null;
+      case 'get_queue': return snapshot();
+      case 'get_history': return structuredClone(history);
+      case 'get_logs': return logs;
+      case 'app_info': return { version: '1.0.0', dataDir: 'C:\\Users\\demo\\AppData\\Roaming\\Nebula', toolsDir: '', logDir: '' };
+      case 'get_job_files': return files;
+      case 'set_paused': paused = args.paused; return null;
+      case 'set_speed_limit': settings.speedLimitKbps = args.kbps; return null;
+      case 'disk_free': return 812 * GB;
+      case 'default_patterns': return ['getnzb', '/api?t=get', '&t=get&', '/nzb/'];
+      case 'test_server':
+        await sleep(900);
+        return args.server.host.includes('mal')
+          ? { ok: false, message: 'Autenticación rechazada (481 Authentication failed). Revisa usuario y contraseña.', latencyMs: 120 }
+          : { ok: true, message: 'Conexión correcta: 200 Welcome to the news server', latencyMs: 34 };
+      case 'inspect_nzb_url':
+      case 'inspect_nzb_file':
+        await sleep(900);
+        if ((args.url ?? '').includes('login')) throw 'El enlace devuelve una página web, no un NZB. Puede que requiera iniciar sesión o que no sea un enlace directo.';
+        return {
+          token: 't1', name: (args.url ?? '').includes('nzbgeek') ? 'Breaking.Bad.2008.S01E01.Pilot.2160p.NF.WEB-DL.DUAL.DDP5.1.H.265-FUZEER' : 'Nasa.Earth.From.Space.2160p.HDR', source: args.url ?? args.path, password: null,
+          totalBytes: 9.1 * GB, dataBytes: 8.6 * GB, par2Bytes: 0.5 * GB, par2Blocks: 380, fileCount: 96, segmentCount: 12000,
+          hasArchives: true, groups: ['alt.binaries.hdtv'], oldestPost: now() - 86400 * 3,
+          files: Array.from({ length: 12 }, (_, i) => ({ name: `nasa.earth.part${String(i + 1).padStart(2, '0')}.rar`, bytes: 100 * MB, par2: false })),
+          defaultDir: settings.downloadDir, retentionWarning: null,
+        };
+      case 'add_job': return 'new';
+      case 'search_indexer': {
+        await sleep({ i1: 700, i2: 1300, i3: 1900 }[args.id] ?? 800);
+        if (args.id === 'i3') throw 'Límite de peticiones a la API alcanzado; inténtalo más tarde';
+        const q = args.query || 'Breaking Bad';
+        const base = [
+          ['Breaking.Bad.S01E01.Pilot.2160p.NF.WEB-DL.DDP5.1.H.265-FUZEER', 8.6, 3, 1204, [5000, 5045]],
+          ['Breaking.Bad.S01E02.Cats.in.the.Bag.2160p.NF.WEB-DL.DDP5.1.H.265-FUZEER', 7.9, 3, 980, [5000, 5045]],
+          ['Breaking.Bad.S01.1080p.BluRay.x264-ROVERS', 26.4, 400, 3120, [5000, 5040]],
+          ['Breaking.Bad.The.Movie.El.Camino.2019.2160p.WEB-DL.DDP5.1.HDR.HEVC-GRP', 19.2, 40, 2205, [2000, 2045]],
+          ['Breaking.Bad.Complete.Series.720p.WEB-DL-MIXED', 68.1, 900, 77, [5000, 5040]],
+        ];
+        const items = base
+          .filter((_, k) => args.id === 'i1' || k % 2 === 0)
+          .map(([title, gb, days, grabs, cats], k) => ({
+            title: args.id === 'i2' && k === 0 ? title + '-Obfuscated' : title,
+            link: `https://${args.id}.example/getnzb/${k}?apikey=x`,
+            details: `https://${args.id}.example/details/${k}`,
+            size: Math.round(gb * GB * (args.id === 'i2' ? 1.004 : 1)),
+            date: now() - days * 86400,
+            grabs: args.id === 'i2' ? Math.round(grabs / 3) : grabs,
+            files: 80,
+            category: 'TV > UHD',
+            categoryIds: cats,
+            password: k === 3 && args.id === 'i1' ? 1 : 0,
+            indexerId: args.id,
+            indexerName: settings.indexers.find((i) => i.id === args.id).name,
+          }));
+        return { items: q ? items : items, total: items.length, offset: 0, ms: { i1: 640, i2: 1210 }[args.id] };
+      }
+      case 'test_indexer':
+        await sleep(800);
+        return { ok: true, message: `Conectado a ${args.indexer.name || 'indexador'} · hasta 100 resultados por búsqueda`, latencyMs: 212 };
+      case 'save_nzb_url':
+      case 'save_pending_nzb':
+        await sleep(500);
+        return args.dir + '\\' + args.name + '.nzb';
+      case 'plugin:window|is_maximized': return false;
+      default: return null;
+    }
+  },
+  { shouldMockEvents: true }
+);
+
+await import('../src/main.js');
+
+setInterval(() => emit('queue', snapshot()), 500);
+if (params.has('clipboard')) setTimeout(() => emit('clipboard-nzb', ['https://api.nzbgeek.info/api?t=get&id=8f2a91c&apikey=demo']), 1500);
+if (params.has('clipbad')) setTimeout(() => emit('clipboard-nzb', ['https://indexador.example/login?next=/nzb/1']), 1500);
+if (params.has('add')) setTimeout(() => emit('open-items', [{ kind: 'url', value: 'https://indexador.example/nzb/nasa-earth.nzb' }]), 1200);
+if (params.has('toast')) setTimeout(() => emit('toast', { kind: 'success', message: 'Completado: Arch.Linux.2026.09.01.x86_64' }), 1000);
+window.__nebulaPreview = { emit, snapshot, jobs };

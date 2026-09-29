@@ -1,0 +1,176 @@
+<script>
+  import { invoke } from '@tauri-apps/api/core';
+  import { fly, fade } from 'svelte/transition';
+  import { flip } from 'svelte/animate';
+  import { cubicOut } from 'svelte/easing';
+  import Icon from '../components/Icon.svelte';
+  import Modal from '../components/Modal.svelte';
+  import IndexerForm from '../components/IndexerForm.svelte';
+  import Switch from '../components/Switch.svelte';
+  import { ui, saveSettings, ask, toast, d } from '../lib/state.svelte.js';
+  import { blankIndexer } from '../lib/search.js';
+
+  let editing = $state(null);
+  let isNew = $state(false);
+  let testing = $state({});
+
+  const list = $derived(ui.settings?.indexers ?? []);
+
+  function add() {
+    editing = blankIndexer();
+    isNew = true;
+  }
+
+  function edit(ix) {
+    editing = structuredClone($state.snapshot(ix));
+    isNew = false;
+  }
+
+  async function save() {
+    const item = $state.snapshot(editing);
+    item.url = item.url.trim().replace(/\/+$/, '');
+    if (!/^https?:\/\//i.test(item.url)) {
+      toast('error', 'La URL debe empezar por https:// o http://');
+      return;
+    }
+    if (!item.name.trim()) item.name = item.url.replace(/^https?:\/\/(api\.)?/i, '').split(/[/.]/)[0];
+    const all = $state.snapshot(ui.settings.indexers);
+    const i = all.findIndex((x) => x.id === item.id);
+    if (i >= 0) all[i] = item;
+    else all.push(item);
+    if (await saveSettings({ indexers: all })) {
+      toast('success', isNew ? 'Indexador añadido' : 'Indexador actualizado', 2500);
+      editing = null;
+    }
+  }
+
+  async function remove(ix) {
+    const r = await ask({ title: '¿Eliminar indexador?', message: `${ix.name || ix.url} dejará de usarse en las búsquedas.`, confirmLabel: 'Eliminar', danger: true, icon: 'trash' });
+    if (!r.ok) return;
+    await saveSettings({ indexers: $state.snapshot(ui.settings.indexers).filter((x) => x.id !== ix.id) });
+  }
+
+  async function toggle(ix, v) {
+    await saveSettings({ indexers: $state.snapshot(ui.settings.indexers).map((x) => (x.id === ix.id ? { ...x, enabled: v } : x)) });
+  }
+
+  async function move(i, delta) {
+    const all = $state.snapshot(ui.settings.indexers);
+    const j = i + delta;
+    if (j < 0 || j >= all.length) return;
+    [all[i], all[j]] = [all[j], all[i]];
+    await saveSettings({ indexers: all });
+  }
+
+  async function test(ix) {
+    testing[ix.id] = { busy: true };
+    try {
+      testing[ix.id] = await invoke('test_indexer', { indexer: $state.snapshot(ix) });
+    } catch (e) {
+      testing[ix.id] = { ok: false, message: String(e) };
+    }
+  }
+
+  function host(url) {
+    try {
+      return new URL(url).host;
+    } catch {
+      return url;
+    }
+  }
+</script>
+
+<div class="view">
+  <header class="head">
+    <div>
+      <h1>Indexadores</h1>
+      <p class="subtitle">Indexadores Newznab en los que buscar. El orden define cuál se prefiere cuando un release aparece en varios.</p>
+    </div>
+    <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir indexador</button>
+  </header>
+
+  <div class="list">
+    {#each list as ix, i (ix.id)}
+      {@const t = testing[ix.id]}
+      <article class="ix card" class:off={!ix.enabled} animate:flip={{ duration: d(350), easing: cubicOut }} in:fly={{ y: 14, duration: d(300) }} out:fade={{ duration: d(180) }}>
+        <div class="ix-top">
+          <div class="ix-icon" class:first={i === 0 && ix.enabled}><span>{(ix.name || host(ix.url)).slice(0, 2).toUpperCase()}</span></div>
+          <div class="ix-main">
+            <div class="ix-name">
+              {ix.name || host(ix.url)}
+              {#if i === 0}<span class="chip accent">Preferido</span>{:else}<span class="chip muted">Prioridad {i + 1}</span>{/if}
+              {#if !ix.apiKey}<span class="chip warn">Sin API key</span>{/if}
+            </div>
+            <div class="ix-sub">{host(ix.url)}{ix.apiPath && ix.apiPath !== '/api' ? ` · ${ix.apiPath}` : ''}</div>
+          </div>
+          <div class="ix-actions">
+            <button class="icon-btn" title="Subir prioridad" onclick={() => move(i, -1)} disabled={i === 0}><Icon name="chevron-up" size={17} /></button>
+            <button class="icon-btn" title="Bajar prioridad" onclick={() => move(i, 1)} disabled={i === list.length - 1}><Icon name="chevron-down" size={17} /></button>
+            <button class="icon-btn" title="Probar" onclick={() => test(ix)}><Icon name="plug" size={16} /></button>
+            <button class="icon-btn" title="Editar" onclick={() => edit(ix)}><Icon name="edit" size={16} /></button>
+            <button class="icon-btn danger" title="Eliminar" onclick={() => remove(ix)}><Icon name="trash" size={16} /></button>
+            <Switch checked={ix.enabled} onchange={(v) => toggle(ix, v)} label="Activo" />
+          </div>
+        </div>
+        {#if t}
+          <div class="alert {t.busy ? 'info' : t.ok ? 'ok' : 'err'}" in:fly={{ y: -6, duration: d(200) }}>
+            <Icon name={t.busy ? 'loader' : t.ok ? 'check-circle' : 'x-circle'} size={15} class={t.busy ? 'spin' : ''} />
+            <span class="selectable">{t.busy ? 'Probando indexador…' : `${t.message}${t.ok ? ` · ${t.latencyMs} ms` : ''}`}</span>
+          </div>
+        {/if}
+      </article>
+    {:else}
+      <div class="empty card" in:fade>
+        <Icon name="layers" size={36} stroke={1.6} />
+        <h3>Aún no hay indexadores</h3>
+        <p>Añade la URL y la API key de tu indexador (NZBGeek, NZBFinder, DrunkenSlug…).</p>
+        <button class="btn primary" onclick={add}><Icon name="plus" size={16} /> Añadir indexador</button>
+      </div>
+    {/each}
+  </div>
+
+  {#if list.length}
+    <div class="alert info tip">
+      <Icon name="info" size={16} />
+      <span>
+        {ui.settings.searchDedup
+          ? 'La eliminación de duplicados está activada: si un release aparece en varios indexadores verás una sola fila, y al descargar se usará el primero de esta lista (si falla, el siguiente).'
+          : 'La eliminación de duplicados está desactivada: cada indexador muestra sus resultados por separado.'}
+        <button class="link" onclick={() => (ui.view = 'settings')}>Cambiar</button>
+      </span>
+    </div>
+  {/if}
+</div>
+
+{#if editing}
+  <Modal title={isNew ? 'Nuevo indexador' : 'Editar indexador'} subtitle="Compatible con la API Newznab" icon="layers" width={640} onclose={() => (editing = null)}>
+    <IndexerForm bind:indexer={editing} />
+    {#snippet footer()}
+      <button class="btn ghost" onclick={() => (editing = null)}>Cancelar</button>
+      <button class="btn primary" onclick={save}><Icon name="check" size={16} /> Guardar</button>
+    {/snippet}
+  </Modal>
+{/if}
+
+<style>
+  .view { padding: 26px 30px 40px; max-width: 1100px; margin: 0 auto; }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+  h1 { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 700; }
+  .subtitle { margin: 4px 0 0; color: var(--text-2); }
+  .list { display: flex; flex-direction: column; gap: 12px; margin-top: 22px; }
+  .ix { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; transition: opacity 0.3s; }
+  .ix.off { opacity: 0.6; }
+  .ix-top { display: flex; align-items: center; gap: 14px; }
+  .ix-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--panel-3); color: var(--text-2); font-weight: 750; font-size: 14px; flex-shrink: 0; letter-spacing: 0.02em; }
+  .ix-icon.first { background: var(--grad-diag); color: #fff; box-shadow: 0 8px 22px -10px rgba(var(--accent-rgb), 0.9); }
+  .ix-main { flex: 1; min-width: 0; }
+  .ix-name { display: flex; align-items: center; gap: 8px; font-weight: 620; font-size: 15px; flex-wrap: wrap; }
+  .ix-sub { color: var(--text-2); font-size: 12.5px; margin-top: 3px; }
+  .ix-actions { display: flex; align-items: center; gap: 2px; }
+  .ix-actions :global(.switch) { margin-left: 8px; }
+  .empty { padding: 48px 20px; text-align: center; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .empty h3 { margin: 8px 0 0; color: var(--text); font-family: var(--font-display); }
+  .empty p { margin: 0 0 12px; }
+  .tip { margin-top: 16px; }
+  .link { border: none; background: none; color: var(--accent-2); cursor: pointer; font-weight: 600; padding: 0; margin-left: 4px; }
+</style>
