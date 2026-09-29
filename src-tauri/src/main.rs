@@ -2,6 +2,8 @@
 
 mod commands;
 mod config;
+mod debrid;
+mod debrid_job;
 mod engine;
 mod fetch;
 mod indexer;
@@ -188,6 +190,8 @@ fn main() {
             commands::save_nzb_url,
             commands::save_pending_nzb,
             commands::open_url,
+            commands::test_debrid,
+            commands::debrid_cached,
         ])
         .build(tauri::generate_context!())
         .expect("no se pudo iniciar Nebula");

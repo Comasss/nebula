@@ -1,5 +1,5 @@
 // Vista previa de la interfaz en un navegador normal, con la API de Tauri simulada.
-// Uso: npm run dev  →  http://localhost:1420/dev/preview.html  (?setup=1 muestra el asistente)
+// Uso: npm run dev  →  http://localhost:1420/dev/preview.html  (?setup=1 muestra el asistente, ?nodebrid sin servicios debrid)
 import { mockIPC, mockWindows } from '@tauri-apps/api/mocks';
 import { emit } from '@tauri-apps/api/event';
 
@@ -26,6 +26,16 @@ const settings = {
     { id: 's1', name: 'Eweka', host: 'news.eweka.nl', port: 563, ssl: true, verifyCert: true, username: 'usuario', password: 'x', passwordEnc: '', connections: 40, priority: 0, enabled: true, retentionDays: 5800 },
     { id: 's2', name: 'Blocknews (bloque)', host: 'eu.blocknews.net', port: 563, ssl: true, verifyCert: true, username: 'usuario2', password: 'x', passwordEnc: '', connections: 10, priority: 1, enabled: true, retentionDays: 5500 },
   ],
+  debrid: params.has('nodebrid')
+    ? []
+    : [
+        { id: 'd1', kind: 'torbox', name: '', apiKey: 'tb-1234567890abcdef', apiKeyEnc: '', enabled: true },
+        { id: 'd2', kind: 'premiumize', name: '', apiKey: 'pm-abcdef1234567890', apiKeyEnc: '', enabled: true },
+      ],
+  downloadVia: params.get('via') || 'nntp',
+  debridFallbackNntp: true,
+  debridConnections: 8,
+  debridDeleteAfter: true,
   downloadDir: 'D:\\Descargas\\Nebula',
   incompleteDir: '',
   askDestination: true,
@@ -62,6 +72,8 @@ const jobs = [
   { id: 'j1', name: 'The.Expanse.S06E01.2160p.WEB-DL.DDP5.1.HDR.HEVC', status: 'downloading', total: 7.4 * GB, done: 3.1 * GB, failed: 12 * MB, failedArticles: 16, percent: 0, speed: 0, eta: 0, files: 78, filesDone: 31, heldPar2: 6, dest: 'D:\\Descargas\\Nebula', error: null, warning: null, post: null, addedAt: now() - 600 },
   { id: 'j2', name: 'Ubuntu.24.04.LTS.Desktop.amd64.ISO', status: 'extracting', total: 5.8 * GB, done: 5.8 * GB, failed: 0, failedArticles: 0, percent: 100, speed: 0, eta: 0, files: 62, filesDone: 62, heldPar2: 0, dest: 'D:\\Descargas\\Nebula', error: null, warning: null, post: { stage: 'Extrayendo', percent: 38, speed: 312 * MB, detail: 'ubuntu-24.04.part01.rar' }, addedAt: now() - 1800 },
   { id: 'j3', name: 'Blender.Open.Movie.Collection.1080p', status: 'queued', total: 12.2 * GB, done: 0, failed: 0, failedArticles: 0, percent: 0, speed: 0, eta: 0, files: 131, filesDone: 0, heldPar2: 9, dest: 'E:\\Peliculas', error: null, warning: null, post: null, addedAt: now() - 120 },
+  { id: 'j5', name: 'Planet.Earth.III.S01.2160p.UHD.BluRay.x265-DEBRID', status: 'downloading', total: 41.2 * GB, done: 30.1 * GB, failed: 0, failedArticles: 0, percent: 73, speed: 780 * MB, eta: 14, files: 0, filesDone: 0, heldPar2: 0, dest: 'E:\\Series', error: null, warning: null, post: null, addedAt: now() - 300, debrid: { provider: 'TorBox', kind: 'torbox', phase: 'remote', state: 'Descargando en TorBox' } },
+  { id: 'j6', name: 'Dune.Part.Two.2024.2160p.WEB-DL.DV.HDR10.DDP5.1.Atmos', status: 'downloading', total: 22.8 * GB, done: 9.4 * GB, failed: 0, failedArticles: 0, percent: 41, speed: 0, eta: 0, files: 3, filesDone: 1, heldPar2: 0, dest: 'E:\\Peliculas', error: null, warning: null, post: null, addedAt: now() - 900, debrid: { provider: 'Premiumize', kind: 'premiumize', phase: 'fetch', state: 'Bajando desde Premiumize' } },
   { id: 'j4', name: 'Podcast.Archivo.2025.FLAC', status: 'paused', total: 2.1 * GB, done: 0.4 * GB, failed: 0, failedArticles: 0, percent: 19, speed: 0, eta: 0, files: 24, filesDone: 4, heldPar2: 3, dest: 'D:\\Descargas\\Nebula', error: 'Error de escritura en disco: acceso denegado (os error 5)', warning: null, post: null, addedAt: now() - 90 },
 ];
 
@@ -75,6 +87,14 @@ function snapshot() {
     j1.eta = (j1.total - j1.done) / speed;
   } else {
     j1.speed = 0;
+  }
+  const j6 = jobs.find((j) => j.id === 'j6');
+  if (!paused && j6) {
+    const sp = 240 * MB + Math.random() * 40 * MB;
+    j6.speed = sp;
+    j6.done = Math.min(j6.total, j6.done + sp * 0.5);
+    j6.percent = (j6.done / j6.total) * 100;
+    j6.eta = (j6.total - j6.done) / sp;
   }
   const j2 = jobs[1];
   if (j2.post) {
@@ -101,6 +121,7 @@ let paused = false;
 
 const history = [
   { id: 'h1', name: 'Arch.Linux.2026.09.01.x86_64', status: 'completed', size: 1.2 * GB, dest: 'D:\\Descargas\\Nebula\\Arch.Linux.2026.09.01.x86_64', destDir: 'D:\\Descargas\\Nebula', workDir: '', nzbPath: '', error: null, warning: null, failedStage: null, canRetryExtract: false, password: null, options: {}, addedAt: now() - 7200, completedAt: now() - 6900, downloadSecs: 21, avgSpeed: 58 * MB },
+  { id: 'h5', name: 'Oppenheimer.2023.2160p.UHD.BluRay.REMUX.HDR.HEVC.Atmos', status: 'completed', size: 71.3 * GB, dest: 'E:\\Peliculas\\Oppenheimer', destDir: 'E:\\Peliculas', workDir: '', nzbPath: '', error: null, warning: null, failedStage: null, canRetryExtract: false, password: null, options: {}, addedAt: now() - 5400, completedAt: now() - 4700, downloadSecs: 610, avgSpeed: 120 * MB, via: 'd1', viaName: 'TorBox' },
   { id: 'h2', name: 'Documental.Cosmos.S01.1080p.BluRay', status: 'completed', size: 38.4 * GB, dest: 'E:\\Series\\Cosmos', destDir: 'E:\\Series', workDir: '', nzbPath: '', error: null, warning: 'Faltan 3 artículos y se repararon con PAR2.', failedStage: null, canRetryExtract: false, password: null, options: {}, addedAt: now() - 90000, completedAt: now() - 86000, downloadSecs: 402, avgSpeed: 97 * MB },
   { id: 'h3', name: 'Coleccion.Privada.Protegida', status: 'failed', size: 4.4 * GB, dest: '', destDir: 'D:\\Descargas\\Nebula', workDir: 'D:\\Descargas\\Nebula\\_incompleto\\Coleccion.Privada.Protegida', nzbPath: '', error: 'El archivo está protegido con contraseña. Introdúcela y reintenta la extracción.', warning: null, failedStage: 'extract', canRetryExtract: true, password: null, options: {}, addedAt: now() - 20000, completedAt: now() - 19000, downloadSecs: 80, avgSpeed: 55 * MB },
   { id: 'h4', name: 'Vieja.Publicacion.2009.DVDRip', status: 'failed', size: 0.7 * GB, dest: '', destDir: '', workDir: '', nzbPath: '', error: 'Faltan demasiados artículos en el servidor y los archivos PAR2 no bastan para repararlo. Se ha cancelado para no gastar ancho de banda.', warning: null, failedStage: 'download', canRetryExtract: false, password: null, options: {}, addedAt: now() - 300000, completedAt: now() - 299000, downloadSecs: 30, avgSpeed: 20 * MB },
@@ -161,6 +182,12 @@ mockIPC(
           defaultDir: settings.downloadDir, retentionWarning: null,
         };
       case 'add_job': return 'new';
+      case 'debrid_cached': await sleep(600); return ['d1'];
+      case 'test_debrid':
+        await sleep(800);
+        return args.provider.kind === 'torbox'
+          ? { ok: true, message: 'Conectado como demo@correo.com · plan Pro hasta 12/03/2027', warning: null, latencyMs: 180 }
+          : { ok: true, message: 'Conectado · premium hasta 01/02/2027 · 12 % del límite usado', warning: null, latencyMs: 240 };
       case 'search_indexer': {
         await sleep({ i1: 700, i2: 1300, i3: 1900 }[args.id] ?? 800);
         if (args.id === 'i3') throw 'Límite de peticiones a la API alcanzado; inténtalo más tarde';

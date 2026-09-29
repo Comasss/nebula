@@ -18,11 +18,12 @@
   import Logs from './views/Logs.svelte';
   import Search from './views/Search.svelte';
   import Indexers from './views/Indexers.svelte';
+  import Debrid from './views/Debrid.svelte';
   import { ui, init, queueAdd, toast, d } from './lib/state.svelte.js';
 
-  const VIEWS = { search: Search, downloads: Downloads, history: History, indexers: Indexers, servers: Servers, settings: Settings, logs: Logs };
-  const ORDER = ['search', 'downloads', 'history', 'indexers', 'servers', 'settings', 'logs'];
-  const NEEDS = { search: 'featureIndexers', indexers: 'featureIndexers', downloads: 'featureNntp', history: 'featureNntp', servers: 'featureNntp' };
+  const VIEWS = { search: Search, downloads: Downloads, history: History, indexers: Indexers, servers: Servers, debrid: Debrid, settings: Settings, logs: Logs };
+  const ORDER = ['search', 'downloads', 'history', 'indexers', 'servers', 'debrid', 'settings', 'logs'];
+  const NEEDS = { search: 'featureIndexers', indexers: 'featureIndexers', downloads: 'featureNntp', history: 'featureNntp', servers: 'featureNntp', debrid: 'featureNntp' };
 
   // Si se desactiva la función de la vista actual, se salta a la primera disponible.
   $effect(() => {

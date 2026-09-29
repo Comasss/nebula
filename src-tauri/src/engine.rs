@@ -1,4 +1,5 @@
 use crate::config::{write_atomic, AppPaths, ServerConfig, Settings};
+use crate::debrid_job::{DebridJob, DebridPhase, DebridView, SavedDebrid};
 use crate::nntp::{NntpConn, NntpError};
 use crate::nzb::{self, Nzb};
 use crate::util::{self, Speedo};
@@ -72,6 +73,8 @@ pub struct JobFile {
     pub complete: bool,
     pub yenc_name: Option<String>,
     pub handle: Option<Arc<File>>,
+    /// Id del archivo en el servicio debrid (descargas debrid).
+    pub remote: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -148,10 +151,15 @@ pub struct Job {
     pub speedo: Speedo,
     pub cancel: Arc<Cancel>,
     pub pp_only: bool,
+    /// Descarga a través de un servicio debrid en lugar de NNTP.
+    pub debrid: Option<DebridJob>,
+    /// Bytes recibidos de fragmentos debrid aún incompletos.
+    pub live_bytes: u64,
 }
 
 impl Job {
-    fn build(
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn build(
         id: String,
         name: String,
         nzb_path: PathBuf,
@@ -195,6 +203,7 @@ impl Job {
                     complete: false,
                     yenc_name: None,
                     handle: None,
+                    remote: None,
                 }
             })
             .collect();
@@ -230,6 +239,53 @@ impl Job {
             speedo: Speedo::default(),
             cancel: Arc::new(Cancel::default()),
             pp_only: false,
+            debrid: None,
+            live_bytes: 0,
+        };
+        job.recount();
+        job
+    }
+
+    /// Trabajo que descargará un servicio debrid. Los archivos se conocen cuando el servicio termina.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn new_debrid(
+        id: String,
+        name: String,
+        nzb_path: PathBuf,
+        dest_dir: PathBuf,
+        work_dir: PathBuf,
+        password: Option<String>,
+        options: JobOptions,
+        debrid: DebridJob,
+    ) -> Job {
+        let mut job = Job {
+            id,
+            name,
+            nzb_path,
+            dest_dir,
+            work_dir,
+            password,
+            options,
+            files: Vec::new(),
+            status: JobStatus::Queued,
+            total_bytes: 0,
+            done_bytes: 0,
+            failed_bytes: 0,
+            failed_segs: 0,
+            remaining: 0,
+            fresh: VecDeque::new(),
+            retry: Vec::new(),
+            added_at: util::now_secs(),
+            started_at: None,
+            error: None,
+            warning: None,
+            post: None,
+            speed: 0,
+            speedo: Speedo::default(),
+            cancel: Arc::new(Cancel::default()),
+            pp_only: false,
+            debrid: Some(debrid),
+            live_bytes: 0,
         };
         job.recount();
         job
@@ -262,11 +318,14 @@ impl Job {
             speedo: Speedo::default(),
             cancel: Arc::new(Cancel::default()),
             pp_only: true,
+            debrid: None,
+            live_bytes: 0,
         }
     }
 
     /// Recalcula contadores y la cola de segmentos a partir del estado de cada segmento.
-    fn recount(&mut self) {
+    pub(crate) fn recount(&mut self) {
+        self.live_bytes = 0;
         self.total_bytes = 0;
         self.done_bytes = 0;
         self.failed_bytes = 0;
@@ -304,6 +363,16 @@ impl Job {
                 self.remaining += f.remaining;
             }
         }
+        if self.files.is_empty() {
+            if let Some(d) = &self.debrid {
+                self.total_bytes = d.estimate;
+            }
+        }
+    }
+
+    /// Ya no queda nada por descargar (en debrid, solo cuando los archivos del servicio están en el PC).
+    pub(crate) fn download_done(&self) -> bool {
+        self.remaining == 0 && self.debrid.as_ref().map_or(true, |d| d.phase == DebridPhase::Fetch && !self.files.is_empty())
     }
 
     fn take(&mut self, fi: u32, si: u32) -> Task {
@@ -324,7 +393,7 @@ impl Job {
         }
     }
 
-    fn seg_done(&mut self, fi: usize, bytes: u64) {
+    pub(crate) fn seg_done(&mut self, fi: usize, bytes: u64) {
         let f = &mut self.files[fi];
         f.done_bytes += bytes;
         f.remaining = f.remaining.saturating_sub(1);
@@ -381,32 +450,54 @@ impl Job {
     }
 
     fn view(&self) -> JobView {
-        let processed = self.done_bytes + self.failed_bytes;
-        let percent = if self.total_bytes > 0 {
+        let processed = self.done_bytes + self.failed_bytes + self.live_bytes;
+        let downloading = self.status == JobStatus::Downloading;
+        let mut percent = if self.total_bytes > 0 {
             (processed as f64 / self.total_bytes as f64 * 100.0).min(100.0)
         } else {
             100.0
         };
         let left = self.total_bytes.saturating_sub(processed);
+        let mut done = self.done_bytes + self.live_bytes;
+        let mut speed = if downloading { self.speed } else { 0 };
+        let mut eta = if self.speed > 0 && downloading { left / self.speed } else { 0 };
+        let mut warning = self.warning.clone();
+        let debrid = self.debrid.as_ref().map(|d| {
+            // Mientras el servicio lo descarga, se muestra su progreso y su velocidad.
+            if d.phase != DebridPhase::Fetch {
+                percent = d.remote_percent;
+                done = (self.total_bytes as f64 * percent / 100.0) as u64;
+                speed = if downloading { d.remote_speed } else { 0 };
+                eta = if downloading { d.remote_eta } else { 0 };
+            }
+            if let Some(n) = &d.notice {
+                warning = Some(match &warning {
+                    Some(w) => format!("{} {}", w, n),
+                    None => n.clone(),
+                });
+            }
+            d.view()
+        });
         JobView {
             id: self.id.clone(),
             name: self.name.clone(),
             status: self.status,
             total: self.total_bytes,
-            done: self.done_bytes,
+            done,
             failed: self.failed_bytes,
             failed_articles: self.failed_segs,
             percent,
-            speed: if self.status == JobStatus::Downloading { self.speed } else { 0 },
-            eta: if self.speed > 0 && self.status == JobStatus::Downloading { left / self.speed } else { 0 },
+            speed,
+            eta,
             files: self.files.iter().filter(|f| !f.held).count(),
             files_done: self.files.iter().filter(|f| !f.held && f.complete).count(),
             held_par2: self.files.iter().filter(|f| f.held).count(),
             dest: self.dest_dir.to_string_lossy().to_string(),
             error: self.error.clone(),
-            warning: self.warning.clone(),
+            warning,
             post: self.post.clone(),
             added_at: self.added_at,
+            debrid,
         }
     }
 
@@ -483,6 +574,10 @@ pub struct HistoryEntry {
     pub completed_at: u64,
     pub download_secs: u64,
     pub avg_speed: u64,
+    /// Método usado: "nntp" o el id del servicio debrid.
+    pub via: Option<String>,
+    /// Nombre del servicio debrid, si se usó.
+    pub via_name: Option<String>,
 }
 
 impl Default for HistoryEntry {
@@ -506,6 +601,8 @@ impl Default for HistoryEntry {
             completed_at: 0,
             download_secs: 0,
             avg_speed: 0,
+            via: None,
+            via_name: None,
         }
     }
 }
@@ -540,6 +637,7 @@ pub struct JobView {
     pub warning: Option<String>,
     pub post: Option<PostInfo>,
     pub added_at: u64,
+    pub debrid: Option<DebridView>,
 }
 
 #[derive(Serialize, Clone, PartialEq)]
@@ -625,6 +723,9 @@ pub struct AddRequest {
     pub paused: bool,
     pub top: bool,
     pub options: JobOptions,
+    /// "nntp", "debrid", id de un servicio debrid o nada (método por defecto).
+    #[serde(default)]
+    pub via: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -660,6 +761,8 @@ struct SavedJob {
     #[serde(default)]
     total: u64,
     files: Vec<SavedFile>,
+    #[serde(default)]
+    debrid: Option<SavedDebrid>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -668,6 +771,10 @@ struct SavedFile {
     held: bool,
     done: String,
     failed: String,
+    #[serde(default)]
+    remote: Option<String>,
+    #[serde(default)]
+    bytes: u64,
 }
 
 fn bits_to_hex(bits: impl Iterator<Item = bool>) -> String {
@@ -761,6 +868,10 @@ pub struct Engine {
     pub rx_bytes: AtomicU64,
     pub limiter: RateLimiter,
     pub pp_sem: Semaphore,
+    /// Descargas debrid bajando archivos a la vez (una: se termina antes cada trabajo).
+    pub debrid_fetch: Semaphore,
+    /// Serializa las peticiones de enlaces de descarga debrid.
+    pub debrid_links: tokio::sync::Mutex<()>,
     pub dirty: AtomicBool,
     pub ui_ready: AtomicBool,
     pub pending_open: Mutex<Vec<OpenItem>>,
@@ -804,7 +915,7 @@ fn eligibility(servers: &[ServerRt], s: usize) -> Option<(u64, u64, bool)> {
     Some((avail, higher, me.priority == min_prio))
 }
 
-fn write_all_at(f: &File, mut buf: &[u8], mut off: u64) -> std::io::Result<()> {
+pub(crate) fn write_all_at(f: &File, mut buf: &[u8], mut off: u64) -> std::io::Result<()> {
     use std::os::windows::fs::FileExt;
     while !buf.is_empty() {
         let n = f.seek_write(buf, off)?;
@@ -840,6 +951,8 @@ impl Engine {
             rx_bytes: AtomicU64::new(0),
             limiter,
             pp_sem: Semaphore::new(1),
+            debrid_fetch: Semaphore::new(1),
+            debrid_links: tokio::sync::Mutex::new(()),
             dirty: AtomicBool::new(false),
             ui_ready: AtomicBool::new(false),
             pending_open: Mutex::new(Vec::new()),
@@ -942,7 +1055,7 @@ impl Engine {
         let (_avail, higher, top) = eligibility(&st.servers, s)?;
         let bit = 1u64 << s;
         for job in st.jobs.iter_mut() {
-            if !job.status.is_download() {
+            if !job.status.is_download() || job.debrid.is_some() {
                 continue;
             }
             let mut i = 0;
@@ -1338,11 +1451,19 @@ impl Engine {
         let name = if req.name.trim().is_empty() { pending.name.clone() } else { util::sanitize_filename(req.name.trim()) };
         let work_dir = self.work_dir_for(&dest, &name, &id);
         let password = req.password.filter(|p| !p.trim().is_empty());
-        let mut job = Job::build(id.clone(), name.clone(), nzb_path, dest, work_dir, password, req.options, &pending.nzb);
+        let via = crate::debrid_job::resolve(&self.settings.read(), req.via.as_deref());
+        let via_label = via.as_ref().map(|(c, _)| format!(" (vía {})", c.label())).unwrap_or_default();
+        let mut job = match via {
+            Some((cfg, auto)) => {
+                let estimate = pending.nzb.files.iter().filter(|f| !f.is_par2()).map(|f| f.bytes).sum();
+                Job::new_debrid(id.clone(), name.clone(), nzb_path, dest, work_dir, password, req.options, DebridJob::new(&cfg, auto, estimate))
+            }
+            None => Job::build(id.clone(), name.clone(), nzb_path, dest, work_dir, password, req.options, &pending.nzb),
+        };
         if req.paused {
             job.status = JobStatus::Paused;
         }
-        let empty = job.remaining == 0;
+        let empty = job.download_done();
         {
             let mut st = self.st.lock();
             if req.top {
@@ -1352,9 +1473,10 @@ impl Engine {
                 st.jobs.push(job);
             }
         }
-        linfo!("Añadido a la cola: {}", name);
+        linfo!("Añadido a la cola: {}{}", name, via_label);
         self.save_queue();
         self.work.notify_waiters();
+        self.debrid_schedule();
         if empty && !req.paused {
             self.start_pp(id.clone());
         }
@@ -1389,7 +1511,7 @@ impl Engine {
             if let Some(j) = st.jobs.iter_mut().find(|j| j.id == id) {
                 if j.status == JobStatus::Paused {
                     j.error = None;
-                    if j.remaining == 0 {
+                    if j.download_done() {
                         j.status = JobStatus::Verifying;
                         start = true;
                     } else {
@@ -1400,6 +1522,7 @@ impl Engine {
         }
         self.dirty.store(true, Ordering::Relaxed);
         self.work.notify_waiters();
+        self.debrid_schedule();
         if start {
             self.start_pp(id.to_string());
         }
@@ -1412,6 +1535,9 @@ impl Engine {
             st.jobs.remove(pos)
         };
         job.cancel.cancel();
+        if let Some(d) = &job.debrid {
+            self.debrid_forget(d);
+        }
         linfo!("Eliminado de la cola: {}", job.name);
         let work = job.work_dir.clone();
         let nzb = job.nzb_path.clone();
@@ -1581,6 +1707,8 @@ impl Engine {
             completed_at: now,
             download_secs: secs,
             avg_speed: if secs > 0 { job.done_bytes / secs } else { 0 },
+            via: Some(job.debrid.as_ref().map(|d| d.provider.clone()).unwrap_or_else(|| "nntp".into())),
+            via_name: job.debrid.as_ref().map(|d| d.label.clone()),
         }
     }
 
@@ -1681,16 +1809,29 @@ impl Engine {
         let raw = std::fs::read(&entry.nzb_path).map_err(|_| "Ya no se conserva el NZB original de esta descarga.".to_string())?;
         let nzb = nzb::parse(&raw)?;
         let new_id = util::new_id();
-        let mut job = Job::build(
-            new_id.clone(),
-            entry.name.clone(),
-            PathBuf::from(&entry.nzb_path),
-            PathBuf::from(&entry.dest_dir),
-            PathBuf::from(&entry.work_dir),
-            entry.password.clone(),
-            entry.options.clone(),
-            &nzb,
-        );
+        let via = crate::debrid_job::resolve(&self.settings.read(), entry.via.as_deref());
+        let mut job = match via {
+            Some((cfg, auto)) => Job::new_debrid(
+                new_id.clone(),
+                entry.name.clone(),
+                PathBuf::from(&entry.nzb_path),
+                PathBuf::from(&entry.dest_dir),
+                PathBuf::from(&entry.work_dir),
+                entry.password.clone(),
+                entry.options.clone(),
+                DebridJob::new(&cfg, auto, nzb.files.iter().filter(|f| !f.is_par2()).map(|f| f.bytes).sum()),
+            ),
+            None => Job::build(
+                new_id.clone(),
+                entry.name.clone(),
+                PathBuf::from(&entry.nzb_path),
+                PathBuf::from(&entry.dest_dir),
+                PathBuf::from(&entry.work_dir),
+                entry.password.clone(),
+                entry.options.clone(),
+                &nzb,
+            ),
+        };
         job.added_at = util::now_secs();
         {
             let mut st = self.st.lock();
@@ -1701,6 +1842,7 @@ impl Engine {
         self.save_history();
         self.save_queue();
         self.work.notify_waiters();
+        self.debrid_schedule();
         Ok(new_id)
     }
 
@@ -1738,7 +1880,7 @@ impl Engine {
         let paused = st.paused;
         for j in st.jobs.iter_mut() {
             if j.status == JobStatus::Downloading && !paused {
-                j.speedo.push(j.done_bytes + j.failed_bytes);
+                j.speedo.push(j.done_bytes + j.failed_bytes + j.live_bytes);
                 j.speed = j.speedo.rate();
             } else {
                 j.speedo.reset();
@@ -1749,7 +1891,7 @@ impl Engine {
             .jobs
             .iter()
             .filter(|j| j.status.is_download())
-            .map(|j| j.total_bytes.saturating_sub(j.done_bytes + j.failed_bytes))
+            .map(|j| j.total_bytes.saturating_sub(j.done_bytes + j.failed_bytes + j.live_bytes))
             .sum();
         let speed = if paused { 0 } else { st.speed };
         let now = Instant::now();
@@ -1815,7 +1957,7 @@ impl Engine {
             if avail == 0 {
                 return;
             }
-            for job in st.jobs.iter_mut().filter(|j| j.status.is_download()) {
+            for job in st.jobs.iter_mut().filter(|j| j.status.is_download() && j.debrid.is_none()) {
                 let mut i = 0;
                 while i < job.retry.len() {
                     let (fi, si) = job.retry[i];
@@ -1863,6 +2005,7 @@ impl Engine {
             if changed {
                 let _ = self.app.emit("queue", &snap);
             }
+            self.debrid_schedule();
             if tick % 4 == 0 {
                 let active = snap.jobs.iter().filter(|j| j.status.is_download() || j.status.is_pp()).count();
                 let tip = if snap.paused {
@@ -1906,6 +2049,7 @@ impl Engine {
                         started_at: j.started_at,
                         pp_only: j.pp_only,
                         total: j.total_bytes,
+                        debrid: j.debrid.as_ref().map(|d| d.saved()),
                         files: j
                             .files
                             .iter()
@@ -1914,6 +2058,8 @@ impl Engine {
                                 held: f.held,
                                 done: bits_to_hex(f.segments.iter().map(|s| s.state == SegState::Done)),
                                 failed: bits_to_hex(f.segments.iter().map(|s| s.state == SegState::Failed)),
+                                remote: f.remote.clone(),
+                                bytes: f.bytes,
                             })
                             .collect(),
                     })
@@ -1957,6 +2103,47 @@ impl Engine {
                 jobs.push(job);
                 continue;
             }
+            if let Some(sd) = sj.debrid {
+                let fetch = sd.phase == DebridPhase::Fetch;
+                let mut job = Job::new_debrid(
+                    sj.id.clone(),
+                    sj.name.clone(),
+                    PathBuf::from(&sj.nzb_path),
+                    PathBuf::from(&sj.dest_dir),
+                    PathBuf::from(&sj.work_dir),
+                    sj.password.clone(),
+                    sj.options.clone(),
+                    DebridJob::from_saved(sd),
+                );
+                job.added_at = sj.added_at;
+                job.started_at = sj.started_at;
+                if fetch {
+                    job.files = sj
+                        .files
+                        .iter()
+                        .map(|sf| {
+                            let mut f = crate::debrid_job::job_file(sf.name.clone(), sf.bytes, sf.remote.clone().unwrap_or_default());
+                            let n = f.segments.len();
+                            let done = hex_to_bits(&sf.done, n);
+                            for (i, s) in f.segments.iter_mut().enumerate() {
+                                if done[i] {
+                                    s.state = SegState::Done;
+                                }
+                            }
+                            f
+                        })
+                        .collect();
+                }
+                job.recount();
+                if sj.status.is_pp() || (job.download_done() && sj.status != JobStatus::Paused) {
+                    job.status = JobStatus::Verifying;
+                    pp.push(job.id.clone());
+                } else if sj.status == JobStatus::Paused {
+                    job.status = JobStatus::Paused;
+                }
+                jobs.push(job);
+                continue;
+            }
             let nzb = match std::fs::read(&sj.nzb_path).map_err(|e| e.to_string()).and_then(|r| nzb::parse(&r)) {
                 Ok(n) => n,
                 Err(e) => {
@@ -1993,7 +2180,7 @@ impl Engine {
                 }
                 job.recount();
             }
-            if sj.status.is_pp() || (job.remaining == 0 && sj.status != JobStatus::Paused) {
+            if sj.status.is_pp() || (job.download_done() && sj.status != JobStatus::Paused) {
                 job.status = JobStatus::Verifying;
                 pp.push(job.id.clone());
             } else if sj.status == JobStatus::Paused {

@@ -126,6 +126,7 @@
               <span>·</span>
               <span title={f.dateTime(h.completedAt)}>{f.ago(h.completedAt)}</span>
               {#if ok && h.avgSpeed}<span>·</span><span>media {f.speed(h.avgSpeed)}</span>{/if}
+              {#if h.viaName}<span class="chip info" title="Descargado a través de {h.viaName}"><Icon name="cloud" size={10} stroke={2.6} /> {h.viaName}</span>{/if}
               {#if h.warning}<span class="chip warn"><Icon name="alert-triangle" size={10} stroke={2.6} /> Aviso</span>{/if}
               {#if !ok}<span class="chip err">Falló en {f.STAGES[h.failedStage] ?? h.failedStage}</span>{/if}
             </div>

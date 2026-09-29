@@ -128,6 +128,47 @@ impl IndexerConfig {
     }
 }
 
+/// Servicio debrid que descarga NZB en sus servidores (TorBox Pro, Premiumize).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct DebridConfig {
+    pub id: String,
+    /// "torbox" o "premiumize".
+    pub kind: String,
+    pub name: String,
+    pub api_key: String,
+    /// API key cifrada con DPAPI (solo en disco).
+    pub api_key_enc: String,
+    pub enabled: bool,
+}
+
+impl Default for DebridConfig {
+    fn default() -> Self {
+        Self {
+            id: crate::util::new_id(),
+            kind: "torbox".into(),
+            name: String::new(),
+            api_key: String::new(),
+            api_key_enc: String::new(),
+            enabled: true,
+        }
+    }
+}
+
+impl DebridConfig {
+    pub fn label(&self) -> String {
+        if self.name.trim().is_empty() {
+            crate::debrid::kind_label(&self.kind).to_string()
+        } else {
+            self.name.clone()
+        }
+    }
+    /// Activo y con API key: se puede usar para descargar.
+    pub fn usable(&self) -> bool {
+        self.enabled && !self.api_key.trim().is_empty() && crate::debrid::is_known(&self.kind)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
@@ -147,6 +188,16 @@ pub struct Settings {
     pub nzb_save_dir: String,
     pub nzb_ask_save_dir: bool,
     pub servers: Vec<ServerConfig>,
+    /// Servicios debrid en orden de preferencia.
+    pub debrid: Vec<DebridConfig>,
+    /// Método por defecto para descargar un NZB: "nntp" o "debrid" (el primer servicio disponible).
+    pub download_via: String,
+    /// Si el servicio debrid falla (y no quedan otros), se descarga por NNTP.
+    pub debrid_fallback_nntp: bool,
+    /// Conexiones HTTP simultáneas al bajar los archivos del servicio debrid.
+    pub debrid_connections: u32,
+    /// Borrar la descarga del servicio debrid cuando ya está en el PC.
+    pub debrid_delete_after: bool,
     pub download_dir: String,
     /// Carpeta temporal. Vacío = subcarpeta "_incompleto" dentro del destino.
     pub incomplete_dir: String,
@@ -199,6 +250,11 @@ impl Default for Settings {
             nzb_save_dir: nzb_dir.to_string_lossy().to_string(),
             nzb_ask_save_dir: false,
             servers: Vec::new(),
+            debrid: Vec::new(),
+            download_via: "nntp".into(),
+            debrid_fallback_nntp: true,
+            debrid_connections: 8,
+            debrid_delete_after: true,
             download_dir: dl.to_string_lossy().to_string(),
             incomplete_dir: String::new(),
             ask_destination: true,
@@ -258,6 +314,14 @@ impl Settings {
             }
             ix.api_key_enc.clear();
         }
+        for d in &mut s.debrid {
+            if !d.api_key_enc.is_empty() {
+                if let Some(k) = unprotect(&d.api_key_enc) {
+                    d.api_key = k;
+                }
+            }
+            d.api_key_enc.clear();
+        }
         // Siempre debe quedar al menos una función activa.
         if !s.feature_nntp && !s.feature_indexers {
             s.feature_nntp = true;
@@ -278,6 +342,10 @@ impl Settings {
         for ix in &mut disk.indexers {
             ix.api_key_enc = if ix.api_key.is_empty() { String::new() } else { protect(&ix.api_key).unwrap_or_default() };
             ix.api_key.clear();
+        }
+        for d in &mut disk.debrid {
+            d.api_key_enc = if d.api_key.is_empty() { String::new() } else { protect(&d.api_key).unwrap_or_default() };
+            d.api_key.clear();
         }
         let json = serde_json::to_string_pretty(&disk).map_err(|e| e.to_string())?;
         write_atomic(&paths.config_file(), json.as_bytes())

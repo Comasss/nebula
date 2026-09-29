@@ -14,8 +14,12 @@
   const pp = $derived(['verifying', 'repairing', 'extracting', 'moving'].includes(job.status));
   const percent = $derived(pp && job.post ? job.post.percent : job.percent);
   const rate = $derived(pp ? job.post?.speed ?? 0 : job.speed);
+  // Descarga debrid mientras el servicio aún la tiene (antes de bajar los archivos al PC).
+  const remote = $derived(!!job.debrid && job.debrid.phase !== 'fetch' && !pp);
   const barKind = $derived(
-    { downloading: 'accent', queued: 'muted', paused: 'paused', verifying: 'info', repairing: 'warn', extracting: 'teal', moving: 'teal' }[job.status] ?? 'accent'
+    remote && job.status === 'downloading'
+      ? 'info'
+      : ({ downloading: 'accent', queued: 'muted', paused: 'paused', verifying: 'info', repairing: 'warn', extracting: 'teal', moving: 'teal' }[job.status] ?? 'accent')
   );
   const waiting = $derived(pp && job.post?.stage === 'En espera');
 
@@ -67,6 +71,7 @@
     if (pp) {
       return job.post?.detail ? `${job.post.stage} · ${job.post.detail}` : job.post?.stage ?? st.label;
     }
+    if (remote) return job.status === 'paused' ? `En pausa · ${job.debrid.state}` : job.debrid.state;
     const parts = [`${f.bytes(job.done + job.failed)} de ${f.bytes(job.total)}`];
     parts.push(`${job.filesDone}/${job.files} archivos`);
     return parts.join(' · ');
@@ -86,6 +91,9 @@
       <div class="name truncate" title={job.name}>{job.name}</div>
       <div class="meta">
         <span class="chip {st.kind}">{waiting ? 'En espera' : st.label}</span>
+        {#if job.debrid}
+          <span class="chip info" title="Se descarga a través de {job.debrid.provider}"><Icon name="cloud" size={11} stroke={2.4} /> {job.debrid.provider}</span>
+        {/if}
         <span class="sub truncate">{subline()}</span>
         {#if job.heldPar2 > 0 && ['queued', 'downloading', 'paused'].includes(job.status)}
           <span class="chip muted" title="Los volúmenes de recuperación PAR2 ({job.heldPar2}) solo se descargarán si la verificación encuentra archivos dañados.">
@@ -103,10 +111,12 @@
 
     <div class="stats">
       {#if rate > 0}
-        <div class="rate">{f.speed(rate)}</div>
+        <div class="rate" title={remote ? `Velocidad de descarga en ${job.debrid.provider}` : ''}>{f.speed(rate)}</div>
       {/if}
       {#if job.status === 'downloading' && job.eta > 0}
         <div class="eta"><Icon name="clock" size={12} /> {f.duration(job.eta)}</div>
+      {:else if remote && job.status === 'downloading'}
+        <div class="eta"><Icon name="cloud" size={12} /> en {job.debrid.provider}</div>
       {:else if job.status === 'queued'}
         <div class="eta">#{index + 1} en cola</div>
       {/if}
@@ -138,7 +148,7 @@
   {#if job.warning}
     <div class="alert warn" transition:slide={{ duration: d(200) }}><Icon name="alert-triangle" size={16} /><span class="selectable">{job.warning}</span></div>
   {/if}
-  {#if job.status === 'downloading' && ui.queue.noServers}
+  {#if job.status === 'downloading' && ui.queue.noServers && !job.debrid}
     <div class="alert warn" transition:slide={{ duration: d(200) }}>
       <Icon name="wifi" size={16} /><span>Esperando conexión con algún servidor… Revisa la pestaña Servidores.</span>
     </div>
@@ -150,6 +160,9 @@
         <div><span class="k">Destino</span><span class="v truncate selectable" title={job.dest}>{job.dest}</span></div>
         <div><span class="k">Tamaño</span><span class="v">{f.bytes(job.total)}</span></div>
         <div><span class="k">Añadido</span><span class="v">{f.ago(job.addedAt)}</span></div>
+        {#if job.debrid}
+          <div><span class="k">Método</span><span class="v">{job.debrid.provider} (debrid)</span></div>
+        {/if}
         {#if job.heldPar2 > 0}
           <div><span class="k">PAR2 en reserva</span><span class="v">{job.heldPar2} volúmenes (solo si hacen falta)</span></div>
         {/if}
