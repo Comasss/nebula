@@ -10,6 +10,7 @@
   import { cubicOut } from 'svelte/easing';
   import Icon from '../components/Icon.svelte';
   import IndexerStats from '../components/IndexerStats.svelte';
+  import DateRangePicker from '../components/DateRangePicker.svelte';
   import { ui, d } from '../lib/state.svelte.js';
   import { debridLabel } from '../lib/debrid.js';
   import * as f from '../lib/format.js';
@@ -185,15 +186,8 @@
       {/each}
     </div>
     {#if sel.range === 'custom'}
-      <div class="dates" in:fly={{ x: -8, duration: d(220) }}>
-        <label class="date">
-          <span>{t('stats.from')}</span>
-          <input class="input" type="date" bind:value={sel.from} max={sel.to || undefined} />
-        </label>
-        <label class="date">
-          <span>{t('stats.to')}</span>
-          <input class="input" type="date" bind:value={sel.to} min={sel.from || undefined} />
-        </label>
+      <div in:fly={{ x: -8, duration: d(220) }}>
+        <DateRangePicker bind:from={sel.from} bind:to={sel.to} />
       </div>
     {/if}
   </div>
@@ -334,9 +328,6 @@
     border-color: rgba(var(--accent-rgb), 0.35);
   }
   .seg-btn.sel :global(svg) { color: var(--accent-2); }
-  .dates { display: flex; gap: 10px; }
-  .date { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
-  .date .input { width: 150px; height: 36px; }
 
   .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
   .kpi { padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }

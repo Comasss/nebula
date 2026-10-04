@@ -577,7 +577,6 @@
     "debrid": "Debrid サービス",
     "downloaded": "{size} ダウンロード済み",
     "failed": "失敗",
-    "from": "開始",
     "ix": {
       "avgResults": "検索あたりの平均結果数",
       "avgTime": "平均応答時間",
@@ -603,6 +602,8 @@
     "noData": "この期間に完了したダウンロードはありません。",
     "noServerDetail": "このバージョンより前のダウンロードは使用サーバーを記録していないため、全体の成功率にのみ含まれます。",
     "ofTotal": "{total} 件中 {n} 件",
+    "pickEnd": "次に終了日を選択",
+    "pickStart": "開始日を選択",
     "range": {
       "all": "すべて",
       "custom": "カスタム",
@@ -621,7 +622,6 @@
       "downloads": "ダウンロード",
       "indexers": "インデクサー"
     },
-    "to": "終了",
     "total": "完了した NZB"
   },
   "status": {

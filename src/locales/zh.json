@@ -577,7 +577,6 @@
     "debrid": "Debrid 服务",
     "downloaded": "已下载 {size}",
     "failed": "失败",
-    "from": "从",
     "ix": {
       "avgResults": "每次搜索的平均结果数",
       "avgTime": "平均响应时间",
@@ -603,6 +602,8 @@
     "noData": "此期间没有已结束的下载。",
     "noServerDetail": "此版本之前的下载没有记录所用服务器，因此只计入总体成功率。",
     "ofTotal": "{total} 个中的 {n} 个",
+    "pickEnd": "再选择结束日期",
+    "pickStart": "选择开始日期",
     "range": {
       "all": "全部",
       "custom": "自定义",
@@ -621,7 +622,6 @@
       "downloads": "下载",
       "indexers": "索引器"
     },
-    "to": "到",
     "total": "已结束的 NZB"
   },
   "status": {

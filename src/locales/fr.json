@@ -597,7 +597,6 @@
     "debrid": "Services debrid",
     "downloaded": "{size} téléchargés",
     "failed": "Échoués",
-    "from": "Du",
     "ix": {
       "avgResults": "Résultats moyens par recherche",
       "avgTime": "Temps de réponse moyen",
@@ -623,6 +622,8 @@
     "noData": "Aucun téléchargement terminé sur cette période.",
     "noServerDetail": "Les téléchargements antérieurs à cette version n'enregistraient pas le serveur utilisé : ils ne comptent que dans le taux global.",
     "ofTotal": "{n} sur {total}",
+    "pickEnd": "Choisissez maintenant le jour de fin",
+    "pickStart": "Choisissez le jour de début",
     "range": {
       "all": "Tout",
       "custom": "Personnalisé",
@@ -641,7 +642,6 @@
       "downloads": "Téléchargements",
       "indexers": "Indexeurs"
     },
-    "to": "Au",
     "total": "NZB terminés"
   },
   "status": {

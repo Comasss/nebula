@@ -597,7 +597,6 @@
     "debrid": "Servizi debrid",
     "downloaded": "{size} scaricati",
     "failed": "Falliti",
-    "from": "Dal",
     "ix": {
       "avgResults": "Risultati medi per ricerca",
       "avgTime": "Tempo medio di risposta",
@@ -623,6 +622,8 @@
     "noData": "Nessun download terminato in questo periodo.",
     "noServerDetail": "I download precedenti a questa versione non registravano il server usato, quindi contano solo nella percentuale generale.",
     "ofTotal": "{n} su {total}",
+    "pickEnd": "Ora scegli il giorno di fine",
+    "pickStart": "Scegli il giorno di inizio",
     "range": {
       "all": "Tutto",
       "custom": "Personalizzato",
@@ -641,7 +642,6 @@
       "downloads": "Download",
       "indexers": "Indicizzatori"
     },
-    "to": "Al",
     "total": "NZB terminati"
   },
   "status": {

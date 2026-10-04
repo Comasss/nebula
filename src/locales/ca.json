@@ -597,7 +597,6 @@
     "debrid": "Serveis debrid",
     "downloaded": "{size} descarregats",
     "failed": "Fallits",
-    "from": "Des de",
     "ix": {
       "avgResults": "Resultats mitjans per cerca",
       "avgTime": "Temps mitjà de resposta",
@@ -623,6 +622,8 @@
     "noData": "No hi ha descàrregues acabades en aquest període.",
     "noServerDetail": "Les descàrregues anteriors a aquesta versió no guardaven quin servidor s'havia fet servir, així que només compten en la taxa general.",
     "ofTotal": "{n} de {total}",
+    "pickEnd": "Ara tria el dia final",
+    "pickStart": "Tria el dia d'inici",
     "range": {
       "all": "Tot",
       "custom": "Personalitzat",
@@ -641,7 +642,6 @@
       "downloads": "Descàrregues",
       "indexers": "Indexadors"
     },
-    "to": "Fins a",
     "total": "NZB acabats"
   },
   "status": {
