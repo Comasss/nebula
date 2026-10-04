@@ -597,7 +597,6 @@
     "debrid": "Debrid services",
     "downloaded": "{size} downloaded",
     "failed": "Failed",
-    "from": "From",
     "ix": {
       "avgResults": "Average results per search",
       "avgTime": "Average response time",
@@ -623,6 +622,8 @@
     "noData": "No finished downloads in this period.",
     "noServerDetail": "Downloads from before this version didn't record which server was used, so they only count toward the overall rate.",
     "ofTotal": "{n} of {total}",
+    "pickEnd": "Now pick the end day",
+    "pickStart": "Pick the start day",
     "range": {
       "all": "All time",
       "custom": "Custom",
@@ -641,7 +642,6 @@
       "downloads": "Downloads",
       "indexers": "Indexers"
     },
-    "to": "To",
     "total": "Finished NZBs"
   },
   "status": {
