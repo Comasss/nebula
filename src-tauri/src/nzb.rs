@@ -40,7 +40,16 @@ impl NzbFile {
     pub fn vol_blocks(&self) -> Option<u32> {
         RE_VOL.captures(&self.filename).and_then(|c| c[1].parse().ok())
     }
+    /// ¿Es un volumen de recuperación? Además de los `name.volNN+MM.par2`, cuenta como volumen
+    /// cualquier `.par2` grande: los NZB ofuscados nombran los volúmenes como `hash.par2`, y el
+    /// índice (solo sumas de control) casi nunca pasa de unos cientos de KB.
+    pub fn is_recovery_vol(&self) -> bool {
+        self.is_par2() && (self.vol_blocks().is_some() || self.bytes > PAR2_INDEX_MAX)
+    }
 }
+
+/// Tamaño máximo que se espera de un PAR2 índice; por encima se trata como volumen.
+pub const PAR2_INDEX_MAX: u64 = 2 * 1024 * 1024;
 
 pub fn vol_blocks_of(name: &str) -> Option<u32> {
     RE_VOL.captures(name).and_then(|c| c[1].parse().ok())
@@ -182,12 +191,10 @@ pub fn parse(raw: &[u8]) -> Result<Nzb, String> {
     // Orden: par2 principal primero, después datos por nombre, volúmenes par2 al final
     nzb.files.sort_by(|a, b| {
         let class = |f: &NzbFile| {
-            if f.is_par2() {
-                if f.vol_blocks().is_some() {
-                    2
-                } else {
-                    0
-                }
+            if f.is_recovery_vol() {
+                2
+            } else if f.is_par2() {
+                0
             } else {
                 1
             }
@@ -233,5 +240,24 @@ mod tests {
         assert_eq!(n.files[0].filename, "test.par2");
         assert_eq!(n.files[1].segments[0].message_id, "a@x");
         assert_eq!(n.files[1].bytes, 300);
+    }
+
+    #[test]
+    fn obfuscated_par2_volumes_go_last() {
+        let file = |name: &str, bytes: u64| NzbFile {
+            filename: name.into(),
+            date: 0,
+            groups: vec![],
+            segments: vec![],
+            bytes,
+        };
+        let idx = file("a6a50c.par2", 5_000);
+        let vol = file("af0627.par2", 118_000_000);
+        let named = file("x.vol07+08.par2", 4_000);
+        let data = file("movie.mkv", 3_000_000_000);
+        assert!(!idx.is_recovery_vol());
+        assert!(vol.is_recovery_vol());
+        assert!(named.is_recovery_vol());
+        assert!(!data.is_recovery_vol());
     }
 }

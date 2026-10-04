@@ -86,8 +86,8 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
                 match result {
                     Par2Result::AllCorrect => linfo!("{}", t!("log.pp.verified", name = c.name)),
                     Par2Result::RepairPossible => need_repair = true,
-                    Par2Result::NeedBlocks(n) => {
-                        if engine.unhold_vols(&c.id, n) {
+                    Par2Result::NeedBlocks(n, bs) => {
+                        if engine.unhold_vols(&c.id, n, bs) {
                             return Ok(Flow::Redownload);
                         }
                         return Err(PpError::new(
@@ -113,8 +113,8 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
                             linfo!("{}", t!("log.pp.repaired", name = c.name));
                             cleanup_par2_backups(&c.work_dir, &before);
                         }
-                        Par2Result::NeedBlocks(n) => {
-                            if engine.unhold_vols(&c.id, n) {
+                        Par2Result::NeedBlocks(n, bs) => {
+                            if engine.unhold_vols(&c.id, n, bs) {
                                 return Ok(Flow::Redownload);
                             }
                             return Err(PpError::new("repair", t!("pp.needBlocks", n = n)));
@@ -309,12 +309,14 @@ async fn pump<F: FnMut(&str)>(
 enum Par2Result {
     AllCorrect,
     RepairPossible,
-    NeedBlocks(u32),
+    /// Bloques que faltan y tamaño de bloque del juego PAR2, si par2 lo indicó.
+    NeedBlocks(u32, Option<u64>),
     Repaired,
     Failed(String),
 }
 
 static RE_NEED: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"You need (\d+) more recovery blocks").unwrap());
+static RE_BLOCK: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"block size used was (\d+) bytes").unwrap());
 static RE_TOTAL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"total size of the data files is (\d+) bytes").unwrap());
 static RE_PROGRESS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^([A-Za-z ]+):\s*([\d.]+)%").unwrap());
 
@@ -433,7 +435,10 @@ async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> R
     let result = match (mode, code) {
         ("v", 0) => Par2Result::AllCorrect,
         ("v", 1) => Par2Result::RepairPossible,
-        (_, 2) if need.is_some() => Par2Result::NeedBlocks(need.unwrap_or(0)),
+        (_, 2) if need.is_some() => {
+            let block = RE_BLOCK.captures(&all).and_then(|c| c[1].parse::<u64>().ok());
+            Par2Result::NeedBlocks(need.unwrap_or(0), block)
+        }
         ("r", 0) => {
             if all.contains("All files are correct") {
                 Par2Result::AllCorrect
