@@ -311,7 +311,8 @@
     "logs": "Journal",
     "search": "Recherche",
     "servers": "Serveurs",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "stats": "Statistiques"
   },
   "search": {
     "adding": "Ajout…",
@@ -581,6 +582,41 @@
     "repairing": "Réparation",
     "verifying": "Vérification",
     "waiting": "En attente"
+  },
+  "stats": {
+    "articlesTip": "Articles disponibles sur le serveur : {ok} trouvés, {missing} manquants",
+    "col": {
+      "server": "Serveur",
+      "service": "Service",
+      "nzbs": "NZB",
+      "rate": "Taux de réussite",
+      "articles": "Articles",
+      "data": "Téléchargé"
+    },
+    "completed": "Réussis",
+    "debrid": "Services debrid",
+    "downloaded": "{size} téléchargés",
+    "failed": "Échoués",
+    "from": "Du",
+    "noData": "Aucun téléchargement terminé sur cette période.",
+    "noServerDetail": "Les téléchargements antérieurs à cette version n'enregistraient pas le serveur utilisé : ils ne comptent que dans le taux global.",
+    "ofTotal": "{n} sur {total}",
+    "range": {
+      "d7": "7 jours",
+      "d30": "30 jours",
+      "d90": "90 jours",
+      "year": "Dernière année",
+      "all": "Tout",
+      "custom": "Personnalisé"
+    },
+    "removed": "supprimé",
+    "servers": "Serveurs NNTP",
+    "serversHint": "NZB auxquels chaque serveur a participé et combien se sont terminés correctement.",
+    "showing": "Données du {from} au {to}",
+    "subtitle": "Taux de réussite de vos téléchargements NZB.",
+    "successRate": "Taux de réussite global",
+    "to": "Au",
+    "total": "NZB terminés"
   },
   "status": {
     "completed": "Terminé",

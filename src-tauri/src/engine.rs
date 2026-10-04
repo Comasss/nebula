@@ -2,6 +2,7 @@ use crate::config::{write_atomic, AppPaths, ServerConfig, Settings};
 use crate::debrid_job::{DebridJob, DebridPhase, DebridView, SavedDebrid};
 use crate::nntp::{NntpConn, NntpError};
 use crate::nzb::{self, Nzb};
+use crate::stats::{self, ServerUse, StatRecord};
 use crate::util::{self, Speedo};
 use crate::yenc::YencDecoder;
 use crate::{lerror, linfo, lwarn};
@@ -155,6 +156,10 @@ pub struct Job {
     pub debrid: Option<DebridJob>,
     /// Bytes recibidos de fragmentos debrid aún incompletos.
     pub live_bytes: u64,
+    /// Registro de estadísticas al que cuenta (el del primer intento si es un reintento).
+    pub stats_id: String,
+    /// Artículos servidos por cada servidor NNTP en este trabajo.
+    pub server_use: Vec<ServerUse>,
 }
 
 impl Job {
@@ -214,6 +219,8 @@ impl Job {
             }
         }
         let mut job = Job {
+            stats_id: id.clone(),
+            server_use: Vec::new(),
             id,
             name,
             nzb_path,
@@ -259,6 +266,8 @@ impl Job {
         debrid: DebridJob,
     ) -> Job {
         let mut job = Job {
+            stats_id: id.clone(),
+            server_use: Vec::new(),
             id,
             name,
             nzb_path,
@@ -320,6 +329,8 @@ impl Job {
             pp_only: true,
             debrid: None,
             live_bytes: 0,
+            stats_id: e.stats_id.clone().unwrap_or_else(|| e.id.clone()),
+            server_use: Vec::new(),
         }
     }
 
@@ -578,6 +589,8 @@ pub struct HistoryEntry {
     pub via: Option<String>,
     /// Nombre del servicio debrid, si se usó.
     pub via_name: Option<String>,
+    /// Registro de estadísticas de este NZB.
+    pub stats_id: Option<String>,
 }
 
 impl Default for HistoryEntry {
@@ -603,6 +616,7 @@ impl Default for HistoryEntry {
             avg_speed: 0,
             via: None,
             via_name: None,
+            stats_id: None,
         }
     }
 }
@@ -763,6 +777,10 @@ struct SavedJob {
     files: Vec<SavedFile>,
     #[serde(default)]
     debrid: Option<SavedDebrid>,
+    #[serde(default)]
+    stats_id: Option<String>,
+    #[serde(default)]
+    servers: Vec<ServerUse>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -875,6 +893,7 @@ pub struct Engine {
     pub dirty: AtomicBool,
     pub ui_ready: AtomicBool,
     pub pending_open: Mutex<Vec<OpenItem>>,
+    pub stats: Mutex<Vec<StatRecord>>,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -956,11 +975,14 @@ impl Engine {
             dirty: AtomicBool::new(false),
             ui_ready: AtomicBool::new(false),
             pending_open: Mutex::new(Vec::new()),
+            stats: Mutex::new(Vec::new()),
         })
     }
 
     pub fn start(self: &Arc<Self>) {
         self.load_history();
+        let stats = stats::load(&self.paths, &self.st.lock().history);
+        *self.stats.lock() = stats;
         let pp = self.load_queue();
         self.restart_workers();
         for id in pp {
@@ -1100,20 +1122,28 @@ impl Engine {
         {
             let mut guard = self.st.lock();
             let st = &mut *guard;
+            let mut counted = None;
             if !stale {
                 if let Some(r) = st.servers.get_mut(s) {
                     match outcome {
                         Outcome::Ok { .. } => {
                             r.articles_ok += 1;
                             r.bytes += t.bytes;
+                            counted = Some(true);
                         }
-                        Outcome::Missing => r.articles_missing += 1,
+                        Outcome::Missing => {
+                            r.articles_missing += 1;
+                            counted = Some(false);
+                        }
                         _ => {}
                     }
                 }
             }
             let avail = avail_mask(&st.servers);
             let Some(job) = st.jobs.iter_mut().find(|j| j.id == t.job_id) else { return };
+            if let (Some(ok), Some(r)) = (counted, st.servers.get(s)) {
+                stats::count(&mut job.server_use, &r.id, &r.name, ok, t.bytes);
+            }
             let fi = t.file as usize;
             let si = t.seg as usize;
             let bit = if s < 64 { 1u64 << s } else { 0 };
@@ -1702,6 +1732,7 @@ impl Engine {
             avg_speed: if secs > 0 { job.done_bytes / secs } else { 0 },
             via: Some(job.debrid.as_ref().map(|d| d.provider.clone()).unwrap_or_else(|| "nntp".into())),
             via_name: job.debrid.as_ref().map(|d| d.label.clone()),
+            stats_id: Some(job.stats_id.clone()),
         }
     }
 
@@ -1736,6 +1767,7 @@ impl Engine {
             self.notify_os(&t!("notify.completed"), &job.name);
         }
         self.toast("success", t!("log.completed", name = job.name));
+        self.record_stats(&job, &entry);
         self.push_history(entry);
         self.save_queue();
     }
@@ -1756,8 +1788,22 @@ impl Engine {
             self.notify_os(&t!("notify.failed"), &format!("{}: {}", job.name, error));
         }
         self.toast("error", format!("{}: {}", job.name, error));
+        self.record_stats(&job, &entry);
         self.push_history(entry);
         self.save_queue();
+    }
+
+    // ---- Estadísticas ----
+
+    fn record_stats(&self, job: &Job, entry: &HistoryEntry) {
+        let rec = StatRecord::from_history(entry, job.server_use.clone());
+        let mut list = self.stats.lock();
+        stats::upsert(&mut list, rec);
+        stats::save(&self.paths, &list);
+    }
+
+    pub fn stats(&self) -> Vec<StatRecord> {
+        self.stats.lock().clone()
     }
 
     // ---- Historial ----
@@ -1826,6 +1872,7 @@ impl Engine {
             ),
         };
         job.added_at = util::now_secs();
+        job.stats_id = entry.stats_id.clone().unwrap_or_else(|| entry.id.clone());
         {
             let mut st = self.st.lock();
             st.history.retain(|h| h.id != id);
@@ -2043,6 +2090,8 @@ impl Engine {
                         pp_only: j.pp_only,
                         total: j.total_bytes,
                         debrid: j.debrid.as_ref().map(|d| d.saved()),
+                        stats_id: Some(j.stats_id.clone()),
+                        servers: j.server_use.clone(),
                         files: j
                             .files
                             .iter()
@@ -2088,6 +2137,7 @@ impl Engine {
                     nzb_path: sj.nzb_path.clone(),
                     options: sj.options.clone(),
                     added_at: sj.added_at,
+                    stats_id: sj.stats_id.clone(),
                     ..Default::default()
                 };
                 let mut job = Job::pp_only_job(&entry, sj.password.clone());
@@ -2110,6 +2160,8 @@ impl Engine {
                 );
                 job.added_at = sj.added_at;
                 job.started_at = sj.started_at;
+                job.stats_id = sj.stats_id.clone().unwrap_or_else(|| sj.id.clone());
+                job.server_use = sj.servers.clone();
                 if fetch {
                     job.files = sj
                         .files
@@ -2156,6 +2208,8 @@ impl Engine {
             );
             job.added_at = sj.added_at;
             job.started_at = sj.started_at;
+            job.stats_id = sj.stats_id.clone().unwrap_or_else(|| sj.id.clone());
+            job.server_use = sj.servers.clone();
             if sj.files.len() == job.files.len() {
                 for (f, sf) in job.files.iter_mut().zip(sj.files.iter()) {
                     let n = f.segments.len();

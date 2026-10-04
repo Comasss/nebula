@@ -1,6 +1,7 @@
 use crate::config::{DebridConfig, IndexerConfig, ServerConfig, Settings};
 use crate::engine::{AddRequest, Engine, FileView, HistoryEntry, NzbPreview, Snapshot, TestResult};
 use crate::logger::LogEntry;
+use crate::stats::StatRecord;
 use crate::{debrid, fetch, indexer, logger, nzb, winint};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
@@ -69,6 +70,11 @@ pub fn discard_pending(e: Eng, token: String) {
 #[tauri::command]
 pub fn add_job(e: Eng, req: AddRequest) -> Result<String, String> {
     e.inner().add_job(req)
+}
+
+#[tauri::command]
+pub fn get_stats(e: Eng) -> Vec<StatRecord> {
+    e.stats()
 }
 
 #[tauri::command]

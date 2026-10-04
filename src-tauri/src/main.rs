@@ -13,6 +13,7 @@ mod logger;
 mod nntp;
 mod nzb;
 mod postproc;
+mod stats;
 mod tools;
 mod util;
 mod winint;
@@ -193,6 +194,7 @@ fn main() {
             commands::set_paused,
             commands::set_speed_limit,
             commands::get_history,
+            commands::get_stats,
             commands::remove_history,
             commands::clear_history,
             commands::retry_history,

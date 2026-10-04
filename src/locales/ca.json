@@ -311,7 +311,8 @@
     "logs": "Registre",
     "search": "Cerca",
     "servers": "Servidors",
-    "settings": "Configuració"
+    "settings": "Configuració",
+    "stats": "Estadístiques"
   },
   "search": {
     "adding": "S'està afegint…",
@@ -581,6 +582,41 @@
     "repairing": "Reparant",
     "verifying": "Verificant",
     "waiting": "En espera"
+  },
+  "stats": {
+    "articlesTip": "Articles que tenia el servidor: {ok} trobats, {missing} no disponibles",
+    "col": {
+      "server": "Servidor",
+      "service": "Servei",
+      "nzbs": "NZB",
+      "rate": "Taxa d'èxit",
+      "articles": "Articles",
+      "data": "Descarregat"
+    },
+    "completed": "Correctes",
+    "debrid": "Serveis debrid",
+    "downloaded": "{size} descarregats",
+    "failed": "Fallits",
+    "from": "Des de",
+    "noData": "No hi ha descàrregues acabades en aquest període.",
+    "noServerDetail": "Les descàrregues anteriors a aquesta versió no guardaven quin servidor s'havia fet servir, així que només compten en la taxa general.",
+    "ofTotal": "{n} de {total}",
+    "range": {
+      "d7": "7 dies",
+      "d30": "30 dies",
+      "d90": "90 dies",
+      "year": "Últim any",
+      "all": "Tot",
+      "custom": "Personalitzat"
+    },
+    "removed": "eliminat",
+    "servers": "Servidors NNTP",
+    "serversHint": "NZB en què ha participat cada servidor i quants han acabat bé.",
+    "showing": "Dades del {from} al {to}",
+    "subtitle": "Taxa d'èxit de les teves descàrregues de NZB.",
+    "successRate": "Taxa d'èxit general",
+    "to": "Fins a",
+    "total": "NZB acabats"
   },
   "status": {
     "completed": "Completada",

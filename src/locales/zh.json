@@ -303,7 +303,8 @@
     "logs": "日志",
     "search": "搜索",
     "servers": "服务器",
-    "settings": "设置"
+    "settings": "设置",
+    "stats": "统计"
   },
   "search": {
     "adding": "正在添加…",
@@ -561,6 +562,41 @@
     "repairing": "正在修复",
     "verifying": "正在校验",
     "waiting": "等待中"
+  },
+  "stats": {
+    "articlesTip": "服务器上的文章：找到 {ok} 篇，缺失 {missing} 篇",
+    "col": {
+      "server": "服务器",
+      "service": "服务",
+      "nzbs": "NZB",
+      "rate": "成功率",
+      "articles": "文章",
+      "data": "已下载"
+    },
+    "completed": "成功",
+    "debrid": "Debrid 服务",
+    "downloaded": "已下载 {size}",
+    "failed": "失败",
+    "from": "从",
+    "noData": "此期间没有已结束的下载。",
+    "noServerDetail": "此版本之前的下载没有记录所用服务器，因此只计入总体成功率。",
+    "ofTotal": "{total} 个中的 {n} 个",
+    "range": {
+      "d7": "7 天",
+      "d30": "30 天",
+      "d90": "90 天",
+      "year": "过去一年",
+      "all": "全部",
+      "custom": "自定义"
+    },
+    "removed": "已删除",
+    "servers": "NNTP 服务器",
+    "serversHint": "每台服务器参与的 NZB 以及其中成功完成的数量。",
+    "showing": "{from} 至 {to} 的数据",
+    "subtitle": "NZB 下载的成功率。",
+    "successRate": "总体成功率",
+    "to": "到",
+    "total": "已结束的 NZB"
   },
   "status": {
     "completed": "已完成",

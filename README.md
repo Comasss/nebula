@@ -6,9 +6,10 @@ A modern Usenet (NZB) client for Windows: an alternative to SABnzbd with a dark,
 - **Built-in post-processing**: PAR2 verification and repair (par2cmdline-turbo) that downloads only the recovery blocks it needs, and RAR/7z/ZIP extraction (7-Zip), with a progress bar, percentage and speed. Both tools ship **inside the .exe**.
 - **Newznab indexer search** (NZBGeek, NZBFinder, DrunkenSlug…): several at once or only the ones you pick, with category filter, sorting and optional grouping of duplicates (the same release reposted to several indexers shows up once and, if one indexer fails to download, the next one is used). Download with one click or save the `.nzb` to your PC.
 - **Downloads through debrid services** (TorBox Pro and Premiumize): Nebula sends them the NZB, they download it (and repair/extract it) on their servers, and Nebula fetches the loose files over HTTPS with several ranged connections, to the same place and in the same layout as over NNTP (never a `.zip`). You choose the default method and, for each NZB, NNTP or the service you want.
+- **Statistics**: overall NZB success rate and one per NNTP server (plus debrid services), for the last 7, 30 or 90 days, the last year, all time or a custom date range. Each server also shows how many of the articles it was asked for it actually had.
 - **Pick your features** on first launch (at least one): indexers only (save `.nzb` files), indexers + NNTP, or NNTP only.
 - **12 languages**: English, Spanish, Simplified Chinese, Hindi, Portuguese (Brazil), French, German, Russian, Japanese, Arabic, Italian and Catalan. On startup it uses the Windows language (or English if it isn't available), and you can change it in **Settings → Language**; the tray menu, notifications and error messages are translated too.
-- **Svelte 5 interface**: first-run NNTP credentials wizard, Downloads / History / Servers / Settings / Log tabs, `.nzb` drag and drop, link pasting, configurable clipboard watching, tray icon and notifications.
+- **Svelte 5 interface**: first-run NNTP credentials wizard, Downloads / History / Statistics / Servers / Settings / Log tabs, `.nzb` drag and drop, link pasting, configurable clipboard watching, tray icon and notifications.
 
 ## Download
 
@@ -29,7 +30,7 @@ Both need WebView2, which comes with Windows 11 (the installer downloads it if m
 
   Each download goes through three stages: sending the NZB, downloading on the service (its progress and speed are shown) and downloading to the PC (8 connections and 32 MB chunks by default, resumable after closing Nebula). Afterwards it is verified/extracted by the usual post-processing if needed and, optionally, removed from the service. When adding an NZB, if TorBox already has it cached it is marked as instant (⚡).
 - Translations: UI strings live in `src/locales/<code>.json` and engine strings in `src-tauri/locales/<code>.json` (`es` is the original). To add a language, create both files and add it to `LANGUAGES` in `src/lib/i18n.svelte.js` and to `LOCALES` in `src-tauri/src/i18n.rs`; `cargo test` checks that every translation has the same keys and variables.
-- Data: `%APPDATA%\Nebula` (settings, queue, history, logs). Server passwords are encrypted with DPAPI.
+- Data: `%APPDATA%\Nebula` (settings, queue, history, statistics, logs). Server passwords are encrypted with DPAPI.
   The `NEBULA_DATA_DIR` environment variable lets you use another folder (portable mode or testing).
 
 ## Automatic builds (GitHub Actions)

@@ -303,7 +303,8 @@
     "logs": "ログ",
     "search": "検索",
     "servers": "サーバー",
-    "settings": "設定"
+    "settings": "設定",
+    "stats": "統計"
   },
   "search": {
     "adding": "追加しています…",
@@ -561,6 +562,41 @@
     "repairing": "修復中",
     "verifying": "検証中",
     "waiting": "待機中"
+  },
+  "stats": {
+    "articlesTip": "サーバー上の記事: 取得 {ok} 件、なし {missing} 件",
+    "col": {
+      "server": "サーバー",
+      "service": "サービス",
+      "nzbs": "NZB",
+      "rate": "成功率",
+      "articles": "記事",
+      "data": "ダウンロード量"
+    },
+    "completed": "成功",
+    "debrid": "Debrid サービス",
+    "downloaded": "{size} ダウンロード済み",
+    "failed": "失敗",
+    "from": "開始",
+    "noData": "この期間に完了したダウンロードはありません。",
+    "noServerDetail": "このバージョンより前のダウンロードは使用サーバーを記録していないため、全体の成功率にのみ含まれます。",
+    "ofTotal": "{total} 件中 {n} 件",
+    "range": {
+      "d7": "7 日間",
+      "d30": "30 日間",
+      "d90": "90 日間",
+      "year": "過去 1 年",
+      "all": "すべて",
+      "custom": "カスタム"
+    },
+    "removed": "削除済み",
+    "servers": "NNTP サーバー",
+    "serversHint": "各サーバーが関わった NZB と、そのうち正常に完了した数。",
+    "showing": "{from} ～ {to} のデータ",
+    "subtitle": "NZB ダウンロードの成功率。",
+    "successRate": "全体の成功率",
+    "to": "終了",
+    "total": "完了した NZB"
   },
   "status": {
     "completed": "完了",

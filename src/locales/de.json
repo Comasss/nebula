@@ -311,7 +311,8 @@
     "logs": "Protokoll",
     "search": "Suche",
     "servers": "Server",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "stats": "Statistiken"
   },
   "search": {
     "adding": "Wird hinzugefügt …",
@@ -581,6 +582,41 @@
     "repairing": "Wird repariert",
     "verifying": "Wird geprüft",
     "waiting": "Wartet"
+  },
+  "stats": {
+    "articlesTip": "Artikel auf dem Server: {ok} gefunden, {missing} nicht verfügbar",
+    "col": {
+      "server": "Server",
+      "service": "Dienst",
+      "nzbs": "NZBs",
+      "rate": "Erfolgsquote",
+      "articles": "Artikel",
+      "data": "Heruntergeladen"
+    },
+    "completed": "Erfolgreich",
+    "debrid": "Debrid-Dienste",
+    "downloaded": "{size} heruntergeladen",
+    "failed": "Fehlgeschlagen",
+    "from": "Von",
+    "noData": "Keine abgeschlossenen Downloads in diesem Zeitraum.",
+    "noServerDetail": "Downloads vor dieser Version haben den verwendeten Server nicht gespeichert und zählen daher nur zur Gesamtquote.",
+    "ofTotal": "{n} von {total}",
+    "range": {
+      "d7": "7 Tage",
+      "d30": "30 Tage",
+      "d90": "90 Tage",
+      "year": "Letztes Jahr",
+      "all": "Gesamt",
+      "custom": "Benutzerdefiniert"
+    },
+    "removed": "entfernt",
+    "servers": "NNTP-Server",
+    "serversHint": "NZBs, an denen jeder Server beteiligt war, und wie viele davon erfolgreich waren.",
+    "showing": "Daten vom {from} bis {to}",
+    "subtitle": "Erfolgsquote deiner NZB-Downloads.",
+    "successRate": "Gesamte Erfolgsquote",
+    "to": "Bis",
+    "total": "Abgeschlossene NZBs"
   },
   "status": {
     "completed": "Abgeschlossen",
