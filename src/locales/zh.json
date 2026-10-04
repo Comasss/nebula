@@ -303,7 +303,8 @@
     "logs": "日志",
     "search": "搜索",
     "servers": "服务器",
-    "settings": "设置"
+    "settings": "设置",
+    "stats": "统计"
   },
   "search": {
     "adding": "正在添加…",
@@ -561,6 +562,67 @@
     "repairing": "正在修复",
     "verifying": "正在校验",
     "waiting": "等待中"
+  },
+  "stats": {
+    "articlesTip": "服务器上的文章：找到 {ok} 篇，缺失 {missing} 篇",
+    "col": {
+      "articles": "文章",
+      "data": "已下载",
+      "nzbs": "NZB",
+      "rate": "成功率",
+      "server": "服务器",
+      "service": "服务"
+    },
+    "completed": "成功",
+    "debrid": "Debrid 服务",
+    "downloaded": "已下载 {size}",
+    "failed": "失败",
+    "from": "从",
+    "ix": {
+      "avgResults": "每次搜索的平均结果数",
+      "avgTime": "平均响应时间",
+      "col": {
+        "avgResults": "结果",
+        "avgTime": "平均时间",
+        "downloads": "下载成功",
+        "errors": "错误",
+        "indexer": "索引器"
+      },
+      "dlTip": "{total} 个 NZB 中成功下载 {ok} 个",
+      "fastest": "最快：{name}",
+      "grabTip": "获取 {ok} 个，失败 {failed} 个",
+      "grabs": "已获取的 NZB",
+      "grabsFoot": "成功下载：{rate}",
+      "hint": "每个请求的耗时以及每次搜索第一页的结果数。",
+      "noData": "此期间没有搜索。从此版本开始记录。",
+      "requests": "请求：{n} · 失败：{failed}",
+      "searches": "搜索",
+      "timeTip": "最短 {min} ms · 最长 {max} ms",
+      "totalResults": "结果总数：{n}"
+    },
+    "noData": "此期间没有已结束的下载。",
+    "noServerDetail": "此版本之前的下载没有记录所用服务器，因此只计入总体成功率。",
+    "ofTotal": "{total} 个中的 {n} 个",
+    "range": {
+      "all": "全部",
+      "custom": "自定义",
+      "d30": "30 天",
+      "d7": "7 天",
+      "d90": "90 天",
+      "year": "过去一年"
+    },
+    "removed": "已删除",
+    "servers": "NNTP 服务器",
+    "serversHint": "每台服务器参与的 NZB 以及其中成功完成的数量。",
+    "showing": "{from} 至 {to} 的数据",
+    "subtitle": "NZB 下载的成功率。",
+    "successRate": "总体成功率",
+    "tab": {
+      "downloads": "下载",
+      "indexers": "索引器"
+    },
+    "to": "到",
+    "total": "已结束的 NZB"
   },
   "status": {
     "completed": "已完成",

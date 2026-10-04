@@ -1,6 +1,7 @@
 use crate::config::{DebridConfig, IndexerConfig, ServerConfig, Settings};
 use crate::engine::{AddRequest, Engine, FileView, HistoryEntry, NzbPreview, Snapshot, TestResult};
 use crate::logger::LogEntry;
+use crate::stats::{IndexerEvent, StatRecord};
 use crate::{debrid, fetch, indexer, logger, nzb, winint};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
@@ -47,18 +48,49 @@ pub async fn inspect_nzb_file(e: Eng<'_>, path: String) -> Result<NzbPreview, St
         .map_err(|_| t!("err.internal"))?
 }
 
-#[tauri::command]
-pub async fn inspect_nzb_url(e: Eng<'_>, url: String) -> Result<NzbPreview, String> {
-    let f = fetch::fetch(&url).await?;
-    let data = nzb::maybe_gunzip(&f.data)?;
-    if !nzb::looks_like_nzb(&data) {
-        return Err(fetch::explain_not_nzb(&data));
+/// Descarga un NZB de un enlace y devuelve sus datos y nombre. Si viene de un indexador,
+/// anota en las estadísticas si se pudo obtener y cuánto tardó.
+async fn grab_nzb(e: &Engine, url: &str, indexer_id: Option<&str>) -> Result<(Vec<u8>, fetch::Fetched), String> {
+    let start = std::time::Instant::now();
+    let res = async {
+        let f = fetch::fetch(url).await?;
+        let data = nzb::maybe_gunzip(&f.data)?;
+        if !nzb::looks_like_nzb(&data) {
+            return Err(fetch::explain_not_nzb(&data));
+        }
+        Ok((data, f))
     }
+    .await;
+    if let Some(id) = indexer_id {
+        e.record_indexer(IndexerEvent {
+            at: crate::util::now_secs(),
+            id: id.to_string(),
+            name: indexer_label(e, id),
+            kind: "grab".into(),
+            ms: start.elapsed().as_millis() as u64,
+            ok: res.is_ok(),
+            ..Default::default()
+        });
+    }
+    res
+}
+
+fn indexer_label(e: &Engine, id: &str) -> String {
+    e.settings.read().indexers.iter().find(|i| i.id == id).map(|i| i.label()).unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn inspect_nzb_url(e: Eng<'_>, url: String, indexer_id: Option<String>) -> Result<NzbPreview, String> {
+    let (data, f) = grab_nzb(e.inner(), &url, indexer_id.as_deref()).await?;
     let engine = e.inner().clone();
     let name = f.filename.unwrap_or_default();
-    tokio::task::spawn_blocking(move || engine.register_pending(data, &name, f.strong, url))
+    let preview = tokio::task::spawn_blocking(move || engine.register_pending(data, &name, f.strong, url))
         .await
-        .map_err(|_| t!("err.internal"))?
+        .map_err(|_| t!("err.internal"))??;
+    if let Some(id) = indexer_id {
+        e.set_pending_indexer(&preview.token, id);
+    }
+    Ok(preview)
 }
 
 #[tauri::command]
@@ -69,6 +101,11 @@ pub fn discard_pending(e: Eng, token: String) {
 #[tauri::command]
 pub fn add_job(e: Eng, req: AddRequest) -> Result<String, String> {
     e.inner().add_job(req)
+}
+
+#[tauri::command]
+pub fn get_stats(e: Eng) -> Vec<StatRecord> {
+    e.stats()
 }
 
 #[tauri::command]
@@ -242,18 +279,35 @@ pub async fn search_indexer(
     query: String,
     category: Option<String>,
     offset: u32,
+    search_id: Option<String>,
 ) -> Result<indexer::SearchResult, String> {
     let (ix, limit) = {
         let s = e.settings.read();
         let ix = s.indexers.iter().find(|i| i.id == id).cloned().ok_or_else(|| t!("err.indexerNotFound"))?;
         (ix, s.search_limit)
     };
-    indexer::search(&ix, &query, category.as_deref(), offset, limit)
-        .await
-        .map_err(|err| {
-            crate::lwarn!("{}: {}", ix.label(), err);
-            err
-        })
+    let start = std::time::Instant::now();
+    let res = indexer::search(&ix, &query, category.as_deref(), offset, limit).await;
+    e.record_indexer(IndexerEvent {
+        at: crate::util::now_secs(),
+        id: ix.id.clone(),
+        name: ix.label(),
+        kind: "search".into(),
+        ms: res.as_ref().map(|r| r.ms).unwrap_or_else(|_| start.elapsed().as_millis() as u64),
+        ok: res.is_ok(),
+        results: res.as_ref().map(|r| r.items.len() as u64).unwrap_or(0),
+        offset,
+        search: search_id,
+    });
+    res.map_err(|err| {
+        crate::lwarn!("{}: {}", ix.label(), err);
+        err
+    })
+}
+
+#[tauri::command]
+pub fn get_indexer_stats(e: Eng) -> Vec<IndexerEvent> {
+    e.indexer_stats()
 }
 
 #[tauri::command]
@@ -263,12 +317,8 @@ pub async fn test_indexer(indexer: IndexerConfig) -> indexer::IndexerTest {
 
 /// Descarga un NZB desde un enlace y lo guarda en una carpeta del PC.
 #[tauri::command]
-pub async fn save_nzb_url(url: String, dir: String, name: String) -> Result<String, String> {
-    let f = fetch::fetch(&url).await?;
-    let data = nzb::maybe_gunzip(&f.data)?;
-    if !nzb::looks_like_nzb(&data) {
-        return Err(fetch::explain_not_nzb(&data));
-    }
+pub async fn save_nzb_url(e: Eng<'_>, url: String, dir: String, name: String, indexer_id: Option<String>) -> Result<String, String> {
+    let (data, f) = grab_nzb(e.inner(), &url, indexer_id.as_deref()).await?;
     let name = if name.trim().is_empty() { f.filename.unwrap_or_default() } else { name };
     fetch::save_nzb_file(&data, &dir, &name)
 }

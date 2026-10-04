@@ -66,10 +66,13 @@
     selected = next.length === indexers.length ? null : next;
   }
 
+  // Agrupa en las estadísticas las peticiones de una misma búsqueda.
+  let searchId = null;
+
   async function runIndexer(ix, gen, offset) {
     perIndexer[ix.id] = { ...(perIndexer[ix.id] ?? { items: [] }), state: 'loading', name: ix.name };
     try {
-      const r = await invoke('search_indexer', { id: ix.id, query: lastQuery, category: category || null, offset });
+      const r = await invoke('search_indexer', { id: ix.id, query: lastQuery, category: category || null, offset, searchId });
       if (gen !== generation) return;
       const prev = offset > 0 ? perIndexer[ix.id]?.items ?? [] : [];
       const items = [...prev, ...r.items];
@@ -96,6 +99,7 @@
       return;
     }
     generation++;
+    searchId = crypto.randomUUID();
     lastQuery = query.trim();
     searched = true;
     expanded = null;
@@ -137,7 +141,7 @@
     const s = ui.settings;
     try {
       await tryEach(sources, async (src) => {
-        const p = await invoke('inspect_nzb_url', { url: src.link });
+        const p = await invoke('inspect_nzb_url', { url: src.link, indexerId: src.indexerId });
         if (s.searchQuickAdd) {
           await invoke('add_job', {
             req: {
@@ -171,7 +175,7 @@
     }
     setAct(g, 'saving');
     try {
-      const path = await tryEach(sources, (src) => invoke('save_nzb_url', { url: src.link, dir, name: g.title }));
+      const path = await tryEach(sources, (src) => invoke('save_nzb_url', { url: src.link, dir, name: g.title, indexerId: src.indexerId }));
       setAct(g, 'saved');
       toast('success', t('common.nzbSaved', { name: path.split(/[\\/]/).pop() }), 3500);
     } catch (e) {

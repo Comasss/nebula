@@ -20,10 +20,11 @@
   import Search from './views/Search.svelte';
   import Indexers from './views/Indexers.svelte';
   import Debrid from './views/Debrid.svelte';
+  import Stats from './views/Stats.svelte';
   import { ui, init, queueAdd, toast, d } from './lib/state.svelte.js';
 
-  const VIEWS = { search: Search, downloads: Downloads, history: History, indexers: Indexers, servers: Servers, debrid: Debrid, settings: Settings, logs: Logs };
-  const ORDER = ['search', 'downloads', 'history', 'indexers', 'servers', 'debrid', 'settings', 'logs'];
+  const VIEWS = { search: Search, downloads: Downloads, history: History, stats: Stats, indexers: Indexers, servers: Servers, debrid: Debrid, settings: Settings, logs: Logs };
+  const ORDER = ['search', 'downloads', 'history', 'stats', 'indexers', 'servers', 'debrid', 'settings', 'logs'];
   const NEEDS = { search: 'featureIndexers', indexers: 'featureIndexers', downloads: 'featureNntp', history: 'featureNntp', servers: 'featureNntp', debrid: 'featureNntp' };
 
   // Si se desactiva la función de la vista actual, se salta a la primera disponible.

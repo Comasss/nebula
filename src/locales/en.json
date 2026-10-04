@@ -311,7 +311,8 @@
     "logs": "Log",
     "search": "Search",
     "servers": "Servers",
-    "settings": "Settings"
+    "settings": "Settings",
+    "stats": "Statistics"
   },
   "search": {
     "adding": "Adding…",
@@ -581,6 +582,67 @@
     "repairing": "Repairing",
     "verifying": "Verifying",
     "waiting": "Waiting"
+  },
+  "stats": {
+    "articlesTip": "Articles the server had: {ok} found, {missing} unavailable",
+    "col": {
+      "articles": "Articles",
+      "data": "Downloaded",
+      "nzbs": "NZBs",
+      "rate": "Success rate",
+      "server": "Server",
+      "service": "Service"
+    },
+    "completed": "Successful",
+    "debrid": "Debrid services",
+    "downloaded": "{size} downloaded",
+    "failed": "Failed",
+    "from": "From",
+    "ix": {
+      "avgResults": "Average results per search",
+      "avgTime": "Average response time",
+      "col": {
+        "avgResults": "Results",
+        "avgTime": "Average time",
+        "downloads": "Downloads OK",
+        "errors": "Errors",
+        "indexer": "Indexer"
+      },
+      "dlTip": "{ok} of {total} NZBs downloaded successfully",
+      "fastest": "Fastest: {name}",
+      "grabTip": "{ok} grabbed, {failed} failed",
+      "grabs": "NZBs grabbed",
+      "grabsFoot": "Downloaded successfully: {rate}",
+      "hint": "Time of each request and results on the first page of each search.",
+      "noData": "No searches in this period. They're recorded starting with this version.",
+      "requests": "Requests: {n} · failed: {failed}",
+      "searches": "Searches",
+      "timeTip": "Min {min} ms · max {max} ms",
+      "totalResults": "Total results: {n}"
+    },
+    "noData": "No finished downloads in this period.",
+    "noServerDetail": "Downloads from before this version didn't record which server was used, so they only count toward the overall rate.",
+    "ofTotal": "{n} of {total}",
+    "range": {
+      "all": "All time",
+      "custom": "Custom",
+      "d30": "30 days",
+      "d7": "7 days",
+      "d90": "90 days",
+      "year": "Last year"
+    },
+    "removed": "removed",
+    "servers": "NNTP servers",
+    "serversHint": "NZBs each server took part in and how many finished successfully.",
+    "showing": "Data from {from} to {to}",
+    "subtitle": "Success rate of your NZB downloads.",
+    "successRate": "Overall success rate",
+    "tab": {
+      "downloads": "Downloads",
+      "indexers": "Indexers"
+    },
+    "to": "To",
+    "total": "Finished NZBs"
   },
   "status": {
     "completed": "Completed",

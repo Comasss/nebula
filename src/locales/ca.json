@@ -311,7 +311,8 @@
     "logs": "Registre",
     "search": "Cerca",
     "servers": "Servidors",
-    "settings": "Configuració"
+    "settings": "Configuració",
+    "stats": "Estadístiques"
   },
   "search": {
     "adding": "S'està afegint…",
@@ -581,6 +582,67 @@
     "repairing": "Reparant",
     "verifying": "Verificant",
     "waiting": "En espera"
+  },
+  "stats": {
+    "articlesTip": "Articles que tenia el servidor: {ok} trobats, {missing} no disponibles",
+    "col": {
+      "articles": "Articles",
+      "data": "Descarregat",
+      "nzbs": "NZB",
+      "rate": "Taxa d'èxit",
+      "server": "Servidor",
+      "service": "Servei"
+    },
+    "completed": "Correctes",
+    "debrid": "Serveis debrid",
+    "downloaded": "{size} descarregats",
+    "failed": "Fallits",
+    "from": "Des de",
+    "ix": {
+      "avgResults": "Resultats mitjans per cerca",
+      "avgTime": "Temps mitjà de resposta",
+      "col": {
+        "avgResults": "Resultats",
+        "avgTime": "Temps mitjà",
+        "downloads": "Descàrregues OK",
+        "errors": "Errors",
+        "indexer": "Indexador"
+      },
+      "dlTip": "{ok} de {total} NZB descarregats correctament",
+      "fastest": "El més ràpid: {name}",
+      "grabTip": "{ok} obtinguts, {failed} amb error",
+      "grabs": "NZB obtinguts",
+      "grabsFoot": "Descarregats correctament: {rate}",
+      "hint": "Temps de cada petició i resultats de la primera pàgina de cada cerca.",
+      "noData": "No hi ha cerques en aquest període. Es registren des d'aquesta versió.",
+      "requests": "Peticions: {n} · fallides: {failed}",
+      "searches": "Cerques",
+      "timeTip": "Mínim {min} ms · màxim {max} ms",
+      "totalResults": "Resultats en total: {n}"
+    },
+    "noData": "No hi ha descàrregues acabades en aquest període.",
+    "noServerDetail": "Les descàrregues anteriors a aquesta versió no guardaven quin servidor s'havia fet servir, així que només compten en la taxa general.",
+    "ofTotal": "{n} de {total}",
+    "range": {
+      "all": "Tot",
+      "custom": "Personalitzat",
+      "d30": "30 dies",
+      "d7": "7 dies",
+      "d90": "90 dies",
+      "year": "Últim any"
+    },
+    "removed": "eliminat",
+    "servers": "Servidors NNTP",
+    "serversHint": "NZB en què ha participat cada servidor i quants han acabat bé.",
+    "showing": "Dades del {from} al {to}",
+    "subtitle": "Taxa d'èxit de les teves descàrregues de NZB.",
+    "successRate": "Taxa d'èxit general",
+    "tab": {
+      "downloads": "Descàrregues",
+      "indexers": "Indexadors"
+    },
+    "to": "Fins a",
+    "total": "NZB acabats"
   },
   "status": {
     "completed": "Completada",
