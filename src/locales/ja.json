@@ -566,28 +566,50 @@
   "stats": {
     "articlesTip": "サーバー上の記事: 取得 {ok} 件、なし {missing} 件",
     "col": {
-      "server": "サーバー",
-      "service": "サービス",
+      "articles": "記事",
+      "data": "ダウンロード量",
       "nzbs": "NZB",
       "rate": "成功率",
-      "articles": "記事",
-      "data": "ダウンロード量"
+      "server": "サーバー",
+      "service": "サービス"
     },
     "completed": "成功",
     "debrid": "Debrid サービス",
     "downloaded": "{size} ダウンロード済み",
     "failed": "失敗",
     "from": "開始",
+    "ix": {
+      "avgResults": "検索あたりの平均結果数",
+      "avgTime": "平均応答時間",
+      "col": {
+        "avgResults": "結果",
+        "avgTime": "平均時間",
+        "downloads": "DL 成功",
+        "errors": "エラー",
+        "indexer": "インデクサー"
+      },
+      "dlTip": "{total} 件中 {ok} 件の NZB を正常にダウンロード",
+      "fastest": "最速: {name}",
+      "grabTip": "取得 {ok} 件、失敗 {failed} 件",
+      "grabs": "取得した NZB",
+      "grabsFoot": "正常にダウンロード: {rate}",
+      "hint": "各リクエストの時間と、各検索の最初のページの結果数。",
+      "noData": "この期間の検索はありません。このバージョンから記録されます。",
+      "requests": "リクエスト: {n} · 失敗: {failed}",
+      "searches": "検索",
+      "timeTip": "最小 {min} ms · 最大 {max} ms",
+      "totalResults": "結果の合計: {n}"
+    },
     "noData": "この期間に完了したダウンロードはありません。",
     "noServerDetail": "このバージョンより前のダウンロードは使用サーバーを記録していないため、全体の成功率にのみ含まれます。",
     "ofTotal": "{total} 件中 {n} 件",
     "range": {
-      "d7": "7 日間",
-      "d30": "30 日間",
-      "d90": "90 日間",
-      "year": "過去 1 年",
       "all": "すべて",
-      "custom": "カスタム"
+      "custom": "カスタム",
+      "d30": "30 日間",
+      "d7": "7 日間",
+      "d90": "90 日間",
+      "year": "過去 1 年"
     },
     "removed": "削除済み",
     "servers": "NNTP サーバー",
@@ -595,6 +617,10 @@
     "showing": "{from} ～ {to} のデータ",
     "subtitle": "NZB ダウンロードの成功率。",
     "successRate": "全体の成功率",
+    "tab": {
+      "downloads": "ダウンロード",
+      "indexers": "インデクサー"
+    },
     "to": "終了",
     "total": "完了した NZB"
   },

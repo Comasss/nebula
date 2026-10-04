@@ -586,28 +586,50 @@
   "stats": {
     "articlesTip": "Articoli presenti sul server: {ok} trovati, {missing} non disponibili",
     "col": {
-      "server": "Server",
-      "service": "Servizio",
+      "articles": "Articoli",
+      "data": "Scaricato",
       "nzbs": "NZB",
       "rate": "Successo",
-      "articles": "Articoli",
-      "data": "Scaricato"
+      "server": "Server",
+      "service": "Servizio"
     },
     "completed": "Riusciti",
     "debrid": "Servizi debrid",
     "downloaded": "{size} scaricati",
     "failed": "Falliti",
     "from": "Dal",
+    "ix": {
+      "avgResults": "Risultati medi per ricerca",
+      "avgTime": "Tempo medio di risposta",
+      "col": {
+        "avgResults": "Risultati",
+        "avgTime": "Tempo medio",
+        "downloads": "Download OK",
+        "errors": "Errori",
+        "indexer": "Indicizzatore"
+      },
+      "dlTip": "{ok} NZB su {total} scaricati correttamente",
+      "fastest": "Il più veloce: {name}",
+      "grabTip": "{ok} ottenuti, {failed} con errore",
+      "grabs": "NZB ottenuti",
+      "grabsFoot": "Scaricati correttamente: {rate}",
+      "hint": "Durata di ogni richiesta e risultati della prima pagina di ogni ricerca.",
+      "noData": "Nessuna ricerca in questo periodo. Vengono registrate da questa versione.",
+      "requests": "Richieste: {n} · fallite: {failed}",
+      "searches": "Ricerche",
+      "timeTip": "Min {min} ms · max {max} ms",
+      "totalResults": "Risultati in totale: {n}"
+    },
     "noData": "Nessun download terminato in questo periodo.",
     "noServerDetail": "I download precedenti a questa versione non registravano il server usato, quindi contano solo nella percentuale generale.",
     "ofTotal": "{n} su {total}",
     "range": {
-      "d7": "7 giorni",
-      "d30": "30 giorni",
-      "d90": "90 giorni",
-      "year": "Ultimo anno",
       "all": "Tutto",
-      "custom": "Personalizzato"
+      "custom": "Personalizzato",
+      "d30": "30 giorni",
+      "d7": "7 giorni",
+      "d90": "90 giorni",
+      "year": "Ultimo anno"
     },
     "removed": "rimosso",
     "servers": "Server NNTP",
@@ -615,6 +637,10 @@
     "showing": "Dati dal {from} al {to}",
     "subtitle": "Percentuale di successo dei tuoi download NZB.",
     "successRate": "Percentuale di successo generale",
+    "tab": {
+      "downloads": "Download",
+      "indexers": "Indicizzatori"
+    },
     "to": "Al",
     "total": "NZB terminati"
   },

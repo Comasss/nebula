@@ -166,7 +166,29 @@ const stats = (() => {
       ...(miss1 ? [{ id: 's2', name: 'Blocknews (bloque)', ok: Math.floor(miss1 * (ok ? 0.9 : 0.3)), missing: Math.ceil(miss1 * (ok ? 0.1 : 0.7)), bytes: miss1 * 700 * 1024 }] : []),
       ...(rnd() < 0.1 ? [{ id: 's9', name: 'Newshosting', ok: 50, missing: 10, bytes: 50 * 700 * 1024 }] : []),
     ];
-    out.push({ id: 'r' + i, name: 'nzb ' + i, at, ok, size: parts * 740 * 1024, via: debrid ? 'd1' : 'nntp', viaName: debrid ? 'TorBox' : null, failedStage: ok ? null : 'download', servers });
+    const indexer = rnd() < 0.7 ? ['i1', 'i2', 'i3'][Math.floor(rnd() * 3)] : null;
+    out.push({ id: 'r' + i, name: 'nzb ' + i, at, ok, size: parts * 740 * 1024, via: debrid ? 'd1' : 'nntp', viaName: debrid ? 'TorBox' : null, failedStage: ok ? null : 'download', servers, indexer });
+  }
+  return out.sort((a, b) => a.at - b.at);
+})();
+
+// Búsquedas de ejemplo en los tres indexadores.
+const indexerStats = (() => {
+  let seed = 11;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const IX = [['i1', 'NZBGeek', 650, 0.01, 60], ['i2', 'NZBFinder', 1250, 0.04, 35], ['i3', 'DrunkenSlug', 2100, 0.12, 48], ['i9', 'NZBPlanet', 900, 0.02, 20]];
+  const out = [];
+  for (let s = 0; s < 900; s++) {
+    const at = now() - Math.floor(rnd() * 380 * 86400);
+    for (const [id, name, ms, err, res] of IX) {
+      if (id === 'i9' && at > now() - 250 * 86400) continue;
+      const ok = rnd() > err;
+      out.push({ at, id, name, kind: 'search', ms: Math.round(ms * (0.5 + rnd())), ok, results: ok ? Math.floor(rnd() * res * 2) : 0, offset: 0, search: 's' + s });
+    }
+    if (rnd() < 0.4) {
+      const [id, name] = IX[Math.floor(rnd() * 3)];
+      out.push({ at: at + 30, id, name, kind: 'grab', ms: 400, ok: rnd() > 0.05, results: 0, offset: 0, search: null });
+    }
   }
   return out.sort((a, b) => a.at - b.at);
 })();
@@ -182,6 +204,7 @@ mockIPC(
       case 'get_queue': return snapshot();
       case 'get_history': return structuredClone(history);
       case 'get_stats': return params.has('nostats') ? [] : stats;
+      case 'get_indexer_stats': return params.has('nostats') ? [] : indexerStats;
       case 'get_logs': return logs;
       case 'app_info': return { version: '1.0.0', dataDir: 'C:\\Users\\demo\\AppData\\Roaming\\Nebula', toolsDir: '', logDir: '' };
       case 'get_job_files': return files;

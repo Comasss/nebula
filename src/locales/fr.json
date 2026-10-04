@@ -586,28 +586,50 @@
   "stats": {
     "articlesTip": "Articles disponibles sur le serveur : {ok} trouvés, {missing} manquants",
     "col": {
-      "server": "Serveur",
-      "service": "Service",
+      "articles": "Articles",
+      "data": "Téléchargé",
       "nzbs": "NZB",
       "rate": "Taux de réussite",
-      "articles": "Articles",
-      "data": "Téléchargé"
+      "server": "Serveur",
+      "service": "Service"
     },
     "completed": "Réussis",
     "debrid": "Services debrid",
     "downloaded": "{size} téléchargés",
     "failed": "Échoués",
     "from": "Du",
+    "ix": {
+      "avgResults": "Résultats moyens par recherche",
+      "avgTime": "Temps de réponse moyen",
+      "col": {
+        "avgResults": "Résultats",
+        "avgTime": "Temps moyen",
+        "downloads": "Téléch. réussis",
+        "errors": "Erreurs",
+        "indexer": "Indexeur"
+      },
+      "dlTip": "{ok} NZB sur {total} téléchargés avec succès",
+      "fastest": "Le plus rapide : {name}",
+      "grabTip": "{ok} récupérés, {failed} en échec",
+      "grabs": "NZB récupérés",
+      "grabsFoot": "Téléchargés avec succès : {rate}",
+      "hint": "Durée de chaque requête et résultats de la première page de chaque recherche.",
+      "noData": "Aucune recherche sur cette période. Elles sont enregistrées à partir de cette version.",
+      "requests": "Requêtes : {n} · échouées : {failed}",
+      "searches": "Recherches",
+      "timeTip": "Min {min} ms · max {max} ms",
+      "totalResults": "Résultats au total : {n}"
+    },
     "noData": "Aucun téléchargement terminé sur cette période.",
     "noServerDetail": "Les téléchargements antérieurs à cette version n'enregistraient pas le serveur utilisé : ils ne comptent que dans le taux global.",
     "ofTotal": "{n} sur {total}",
     "range": {
-      "d7": "7 jours",
-      "d30": "30 jours",
-      "d90": "90 jours",
-      "year": "Dernière année",
       "all": "Tout",
-      "custom": "Personnalisé"
+      "custom": "Personnalisé",
+      "d30": "30 jours",
+      "d7": "7 jours",
+      "d90": "90 jours",
+      "year": "Dernière année"
     },
     "removed": "supprimé",
     "servers": "Serveurs NNTP",
@@ -615,6 +637,10 @@
     "showing": "Données du {from} au {to}",
     "subtitle": "Taux de réussite de vos téléchargements NZB.",
     "successRate": "Taux de réussite global",
+    "tab": {
+      "downloads": "Téléchargements",
+      "indexers": "Indexeurs"
+    },
     "to": "Au",
     "total": "NZB terminés"
   },

@@ -25,7 +25,7 @@
 
   const VIEWS = { search: Search, downloads: Downloads, history: History, stats: Stats, indexers: Indexers, servers: Servers, debrid: Debrid, settings: Settings, logs: Logs };
   const ORDER = ['search', 'downloads', 'history', 'stats', 'indexers', 'servers', 'debrid', 'settings', 'logs'];
-  const NEEDS = { search: 'featureIndexers', indexers: 'featureIndexers', downloads: 'featureNntp', history: 'featureNntp', stats: 'featureNntp', servers: 'featureNntp', debrid: 'featureNntp' };
+  const NEEDS = { search: 'featureIndexers', indexers: 'featureIndexers', downloads: 'featureNntp', history: 'featureNntp', servers: 'featureNntp', debrid: 'featureNntp' };
 
   // Si se desactiva la función de la vista actual, se salta a la primera disponible.
   $effect(() => {

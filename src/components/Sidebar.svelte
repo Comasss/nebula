@@ -11,7 +11,7 @@
     { id: 'search', icon: 'search', feature: 'indexers' },
     { id: 'downloads', icon: 'download', feature: 'nntp' },
     { id: 'history', icon: 'history', feature: 'nntp' },
-    { id: 'stats', icon: 'chart', feature: 'nntp' },
+    { id: 'stats', icon: 'chart' },
     { id: 'indexers', icon: 'layers', feature: 'indexers' },
     { id: 'servers', icon: 'server', feature: 'nntp' },
     { id: 'debrid', icon: 'cloud', feature: 'nntp' },

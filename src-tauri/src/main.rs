@@ -195,6 +195,7 @@ fn main() {
             commands::set_speed_limit,
             commands::get_history,
             commands::get_stats,
+            commands::get_indexer_stats,
             commands::remove_history,
             commands::clear_history,
             commands::retry_history,

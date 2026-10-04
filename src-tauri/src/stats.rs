@@ -62,6 +62,8 @@ pub struct StatRecord {
     pub via_name: Option<String>,
     pub failed_stage: Option<String>,
     pub servers: Vec<ServerUse>,
+    /// Indexador del que se obtuvo el NZB, si vino de una búsqueda.
+    pub indexer: Option<String>,
 }
 
 impl StatRecord {
@@ -76,7 +78,56 @@ impl StatRecord {
             via_name: h.via_name.clone(),
             failed_stage: h.failed_stage.clone(),
             servers,
+            indexer: h.indexer.clone(),
         }
+    }
+}
+
+/// Petición a un indexador: una búsqueda (o página de resultados) o la descarga de un NZB.
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
+#[serde(default, rename_all = "camelCase")]
+pub struct IndexerEvent {
+    pub at: u64,
+    pub id: String,
+    pub name: String,
+    /// "search" o "grab".
+    pub kind: String,
+    pub ms: u64,
+    pub ok: bool,
+    /// Resultados recibidos (búsquedas).
+    pub results: u64,
+    /// Posición de la página (0 = primera página de la búsqueda).
+    pub offset: u32,
+    /// Agrupa las peticiones a varios indexadores de una misma búsqueda.
+    pub search: Option<String>,
+}
+
+const MAX_EVENTS: usize = 100_000;
+
+fn indexer_file(paths: &AppPaths) -> std::path::PathBuf {
+    paths.data.join("indexer_stats.json")
+}
+
+pub fn load_indexer(paths: &AppPaths) -> Vec<IndexerEvent> {
+    std::fs::read(indexer_file(paths)).ok().and_then(|d| serde_json::from_slice(&d).ok()).unwrap_or_default()
+}
+
+pub fn save_indexer(paths: &AppPaths, events: &[IndexerEvent]) {
+    match serde_json::to_vec(events) {
+        Ok(d) => {
+            if let Err(e) = write_atomic(&indexer_file(paths), &d) {
+                lerror!("{}", e);
+            }
+        }
+        Err(e) => lerror!("{}", e),
+    }
+}
+
+pub fn push_indexer(events: &mut Vec<IndexerEvent>, ev: IndexerEvent) {
+    events.push(ev);
+    if events.len() > MAX_EVENTS {
+        let extra = events.len() - MAX_EVENTS;
+        events.drain(..extra);
     }
 }
 

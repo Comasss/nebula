@@ -1,6 +1,6 @@
 <script module>
   // El periodo elegido se mantiene al cambiar de vista.
-  const sel = $state({ range: 'd30', from: '', to: '' });
+  const sel = $state({ range: 'd30', from: '', to: '', tab: null });
 </script>
 
 <script>
@@ -9,6 +9,7 @@
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import Icon from '../components/Icon.svelte';
+  import IndexerStats from '../components/IndexerStats.svelte';
   import { ui, d } from '../lib/state.svelte.js';
   import { debridLabel } from '../lib/debrid.js';
   import * as f from '../lib/format.js';
@@ -24,21 +25,29 @@
   ];
 
   let records = $state([]);
+  let events = $state([]);
   let loaded = $state(false);
 
+  const nntp = $derived(ui.settings?.featureNntp !== false);
+  const idx = $derived(!!ui.settings?.featureIndexers);
+  const tab = $derived(sel.tab === 'indexers' && idx ? 'indexers' : sel.tab === 'downloads' && nntp ? 'downloads' : nntp ? 'downloads' : 'indexers');
+
   async function load() {
-    try {
-      records = await invoke('get_stats');
-    } catch {
-      records = [];
-    }
+    const [r, e] = await Promise.all([invoke('get_stats').catch(() => []), invoke('get_indexer_stats').catch(() => [])]);
+    records = r ?? [];
+    events = e ?? [];
     loaded = true;
   }
 
-  // Se recargan cuando termina una descarga (el historial cambia a la vez).
+  // Se recargan cuando termina una descarga (el historial cambia a la vez) y cada poco
+  // mientras la vista está abierta, para incluir las búsquedas nuevas.
   $effect(() => {
     ui.history;
     load();
+  });
+  $effect(() => {
+    const id = setInterval(load, 15000);
+    return () => clearInterval(id);
   });
 
   const ymd = (date) => {
@@ -68,12 +77,16 @@
       if (a === null || b === null) return { from: 0, to: now };
       return a <= b ? { from: a, to: b } : { from: parseDay(sel.to, false), to: parseDay(sel.from, true) };
     }
-    if (sel.range === 'all') return { from: records.reduce((m, r) => Math.min(m, r.at), now), to: now };
+    if (sel.range === 'all') {
+      const first = tab === 'indexers' ? events.reduce((m, e) => Math.min(m, e.at), now) : records.reduce((m, r) => Math.min(m, r.at), now);
+      return { from: Math.min(first, now - DAY), to: now, all: true };
+    }
     const days = RANGES.find(([k]) => k === sel.range)?.[1] ?? 30;
     return { from: now - days * DAY, to: now };
   });
 
-  const inRange = $derived(records.filter((r) => r.at >= period.from && r.at <= period.to));
+  const inRange = $derived(records.filter((r) => period.all || (r.at >= period.from && r.at <= period.to)));
+  const hasData = $derived(tab === 'indexers' ? events.length > 0 : records.length > 0);
 
   const total = $derived(inRange.length);
   const okCount = $derived(inRange.filter((r) => r.ok).length);
@@ -132,7 +145,7 @@
 
   const nntpWithoutDetail = $derived(inRange.some((r) => (!r.via || r.via === 'nntp') && !r.servers?.length));
 
-  const pct = (v) => (v === null ? '—' : `${num(v, { maximumFractionDigits: 1, minimumFractionDigits: v > 0 && v < 100 ? 1 : 0 })} %`);
+  const pct = (v) => (v === null ? '—' : `${num(v, { maximumFractionDigits: 1, minimumFractionDigits: v > 0 && v < 100 ? 1 : 0 })}\u00a0%`);
   const tone = (v) => (v === null ? 'muted' : v >= 90 ? 'ok' : v >= 60 ? 'warn' : 'err');
   const day = (ts) => new Date(ts * 1000).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 </script>
@@ -142,7 +155,7 @@
     <div>
       <h1>{t('nav.stats')}</h1>
       <p class="subtitle">
-        {#if total || sel.range !== 'all'}
+        {#if hasData || sel.range !== 'all'}
           {t('stats.showing', { from: day(period.from), to: day(period.to) })}
         {:else}
           {t('stats.subtitle')}
@@ -150,6 +163,17 @@
       </p>
     </div>
   </header>
+
+  {#if nntp && idx}
+    <div class="tabs">
+      {#each [['downloads', 'download', t('stats.tab.downloads')], ['indexers', 'layers', t('stats.tab.indexers')]] as [k, icon, label]}
+        <button class="tab" class:sel={tab === k} onclick={() => (sel.tab = k)}>
+          <Icon name={icon} size={15} /> {label}
+          {#if tab === k}<span class="underline"></span>{/if}
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   <div class="toolbar">
     <div class="seg" role="tablist">
@@ -174,6 +198,9 @@
     {/if}
   </div>
 
+  {#if tab === 'indexers'}
+    <IndexerStats {events} {records} {period} {loaded} />
+  {:else}
   <div class="kpis">
     <div class="kpi card">
       <div class="k-label"><Icon name="inbox" size={14} /> {t('stats.total')}</div>
@@ -275,6 +302,7 @@
       </div>
     </section>
   {/if}
+  {/if}
 </div>
 
 <style>
@@ -284,6 +312,12 @@
   .subtitle { margin: 4px 0 0; color: var(--text-2); }
 
   .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; margin-top: 20px; }
+  .tabs { display: flex; gap: 4px; margin-top: 16px; border-bottom: 1px solid var(--border); }
+  .tab { position: relative; height: 40px; padding: 0 14px; border: none; background: none; color: var(--text-2); font-weight: 560; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .tab:hover, .tab.sel { color: var(--text); }
+  .tab.sel :global(svg) { color: var(--accent-2); }
+  .underline { position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--grad); animation: grow 0.3s var(--ease); }
+  @keyframes grow { from { transform: scaleX(0.3); opacity: 0; } }
   .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 11px; background: var(--panel); border: 1px solid var(--border); }
   .seg-btn {
     height: 32px; padding: 0 12px;
