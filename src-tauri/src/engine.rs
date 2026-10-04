@@ -70,6 +70,9 @@ pub struct JobFile {
     pub remaining: u32,
     pub held: bool,
     pub is_par2: bool,
+    /// Volumen de recuperación PAR2 (queda en reserva hasta que la reparación lo pida).
+    pub is_vol: bool,
+    /// Bloques de recuperación según el nombre; 0 si el nombre no lo dice (ofuscado).
     pub vol_blocks: u32,
     pub complete: bool,
     pub yenc_name: Option<String>,
@@ -176,7 +179,7 @@ impl Job {
         options: JobOptions,
         nzb: &Nzb,
     ) -> Job {
-        let has_main_par2 = nzb.files.iter().any(|f| f.is_par2() && f.vol_blocks().is_none());
+        let has_main_par2 = nzb.files.iter().any(|f| f.is_par2() && !f.is_recovery_vol());
         // Sin verificación PAR2 no se descarga ningún .par2; con ella, solo el índice y
         // los volúmenes de recuperación quedan en reserva hasta que hagan falta.
         let use_par2 = options.par2;
@@ -185,7 +188,8 @@ impl Job {
             .iter()
             .map(|f| {
                 let vb = f.vol_blocks().unwrap_or(0);
-                let held = vb > 0 || (!use_par2 && f.is_par2());
+                let is_vol = f.is_recovery_vol();
+                let held = is_vol || (!use_par2 && f.is_par2());
                 JobFile {
                     name: f.filename.clone(),
                     bytes: f.bytes,
@@ -206,6 +210,7 @@ impl Job {
                     remaining: f.segments.len() as u32,
                     held,
                     is_par2: f.is_par2(),
+                    is_vol,
                     vol_blocks: vb,
                     complete: false,
                     yenc_name: None,
@@ -458,7 +463,7 @@ impl Job {
         let capacity: u64 = self
             .files
             .iter()
-            .filter(|f| f.vol_blocks > 0)
+            .filter(|f| f.is_vol)
             .map(|f| f.bytes.saturating_sub(f.failed_bytes))
             .sum();
         let data_failed: u64 = self.files.iter().filter(|f| !f.is_par2).map(|f| f.failed_bytes).sum();
@@ -1636,36 +1641,55 @@ impl Engine {
     }
 
     /// Libera volúmenes PAR2 retenidos para cubrir `needed` bloques. Devuelve false si no hay suficientes.
-    pub fn unhold_vols(&self, id: &str, needed: u32) -> bool {
+    /// `block_size` (el que informa par2) sirve para estimar los bloques de los volúmenes ofuscados,
+    /// cuyo nombre no dice cuántos traen; sin él se liberan todos los retenidos.
+    pub fn unhold_vols(&self, id: &str, needed: u32, block_size: Option<u64>) -> bool {
         let mut st = self.st.lock();
         let Some(job) = st.jobs.iter_mut().find(|j| j.id == id) else { return false };
-        let mut held: Vec<usize> = (0..job.files.len()).filter(|&i| job.files[i].held && job.files[i].vol_blocks > 0).collect();
-        let available: u32 = held.iter().map(|&i| job.files[i].vol_blocks).sum();
-        if held.is_empty() || available < needed {
+        let mut held: Vec<usize> = (0..job.files.len()).filter(|&i| job.files[i].held && job.files[i].is_vol).collect();
+        let blocks_of = |f: &JobFile| -> Option<u32> {
+            if f.vol_blocks > 0 {
+                return Some(f.vol_blocks);
+            }
+            // Estimación a la baja: cada bloque va en un paquete con 68 bytes de cabecera, y el
+            // tamaño del NZB incluye la sobrecarga de yEnc. Si se queda corta, par2 pedirá más.
+            let bs = block_size.filter(|&b| b > 0)?;
+            Some(((f.bytes * 97 / 100) / (bs + 68)).max(1).min(u32::MAX as u64) as u32)
+        };
+        let estimates: Vec<Option<u32>> = held.iter().map(|&i| blocks_of(&job.files[i])).collect();
+        let exact = held.iter().all(|&i| job.files[i].vol_blocks > 0);
+        let available: u32 = estimates.iter().map(|b| b.unwrap_or(0)).fold(0u32, |a, b| a.saturating_add(b));
+        if held.is_empty() || (exact && available < needed) {
             return false;
         }
-        held.sort_by_key(|&i| job.files[i].vol_blocks);
         let target = (needed + needed / 20 + 1).min(available);
-        // Primero el volumen más pequeño que cubra todo; si no existe, se acumulan.
-        let chosen: Vec<usize> = if let Some(&one) = held.iter().find(|&&i| job.files[i].vol_blocks >= target) {
-            vec![one]
+        let chosen: Vec<usize> = if estimates.iter().any(|b| b.is_none()) || available < needed {
+            // Sin forma de saber cuántos bloques traen: se bajan todos.
+            held.clone()
         } else {
-            let mut acc = 0;
-            let mut v = Vec::new();
-            for &i in held.iter().rev() {
-                if acc >= target {
-                    break;
+            let est = |i: usize| blocks_of(&job.files[i]).unwrap_or(0);
+            held.sort_by_key(|&i| est(i));
+            // Primero el volumen más pequeño que cubra todo; si no existe, se acumulan.
+            if let Some(&one) = held.iter().find(|&&i| est(i) >= target) {
+                vec![one]
+            } else {
+                let mut acc = 0;
+                let mut v = Vec::new();
+                for &i in held.iter().rev() {
+                    if acc >= target {
+                        break;
+                    }
+                    acc += est(i);
+                    v.push(i);
                 }
-                acc += job.files[i].vol_blocks;
-                v.push(i);
+                v
             }
-            v
         };
-        let mut blocks = 0;
+        let mut blocks = 0u32;
         for i in chosen {
+            blocks = blocks.saturating_add(blocks_of(&job.files[i]).unwrap_or(0));
             let f = &mut job.files[i];
             f.held = false;
-            blocks += f.vol_blocks;
             job.total_bytes += f.bytes;
             job.remaining += f.remaining;
             for (si, s) in f.segments.iter().enumerate() {

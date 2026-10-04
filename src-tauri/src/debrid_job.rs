@@ -190,6 +190,7 @@ pub fn job_file(name: String, size: u64, remote: String) -> JobFile {
     let lower = name.to_ascii_lowercase();
     JobFile {
         is_par2: lower.ends_with(".par2"),
+        is_vol: nzb::vol_blocks_of(&name).is_some(),
         vol_blocks: nzb::vol_blocks_of(&name).unwrap_or(0),
         remaining: segments.len() as u32,
         name,
