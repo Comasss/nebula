@@ -160,6 +160,22 @@ pub fn file_name(p: &Path) -> String {
     p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default()
 }
 
+/// ¿Parece un nombre ofuscado? Sin extensión reconocible (`a6a50c…c81e`) o una ristra larga
+/// de letras y números sin separadores. Sirve para no cambiar un buen nombre por uno así.
+pub fn looks_obfuscated(name: &str) -> bool {
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((s, e)) if !s.is_empty() => (s, e),
+        _ => return true,
+    };
+    let ext_ok = (1..=5).contains(&ext.len())
+        && ext.chars().all(|c| c.is_ascii_alphanumeric())
+        && ext.chars().any(|c| c.is_ascii_alphabetic() || ext.len() == 3);
+    if !ext_ok {
+        return true;
+    }
+    stem.len() >= 24 && stem.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
 /// Borra un directorio con reintentos (Windows puede tardar en liberar handles).
 pub fn remove_dir_retry(dir: &Path) {
     for i in 0..5 {
@@ -183,4 +199,19 @@ pub fn split_password(name: &str) -> (String, Option<String>) {
         }
     }
     (name.to_string(), None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn obfuscated_names() {
+        assert!(looks_obfuscated("6a9d9cde8057274c68ee918fa1f8dbbfb855bc387a236d197e49d6764285"));
+        assert!(looks_obfuscated("a6a50c17a23322d596c91488a858b8b51d5c4decc0224d4976de1182c81e.par2"));
+        assert!(!looks_obfuscated("Zero.Day.S01E03.2025.1080p.NF.MULTI.WEB-DL.DDP5.1.H.264-SPWEB.mkv"));
+        assert!(!looks_obfuscated("movie.part01.rar"));
+        assert!(!looks_obfuscated("movie.7z.001"));
+        assert!(!looks_obfuscated("x.vol07+08.par2"));
+    }
 }
