@@ -445,7 +445,9 @@ impl Job {
         f.complete = true;
         if let Some(yn) = f.yenc_name.clone() {
             let yn = util::sanitize_filename(&yn);
-            if !yn.is_empty() && yn != f.name {
+            // Si yEnc trae un nombre ofuscado y el NZB uno bueno, se queda el del NZB.
+            let worse = util::looks_obfuscated(&yn) && !util::looks_obfuscated(&f.name);
+            if !yn.is_empty() && yn != f.name && !worse {
                 let from = work_dir.join(&f.name);
                 let to = work_dir.join(&yn);
                 if from.exists() && !to.exists() && std::fs::rename(&from, &to).is_ok() {

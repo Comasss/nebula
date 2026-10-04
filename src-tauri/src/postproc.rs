@@ -80,6 +80,7 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
                 }
             }
             Some(par2) => {
+                let par2 = with_par2_extension(par2);
                 engine.set_stage(&c.id, JobStatus::Verifying, "verifying", 0.0, 0, "");
                 let result = run_par2(engine, c, "v", &par2).await?;
                 let mut need_repair = false;
@@ -345,6 +346,21 @@ fn find_main_par2(dir: &Path) -> Option<PathBuf> {
     }
     named.sort_by_key(|(p, s)| (crate::nzb::vol_blocks_of(&util::file_name(p)).is_some(), *s));
     named.first().map(|(p, _)| p.clone())
+}
+
+/// par2 rechaza ("invalid arguments") un índice sin extensión `.par2`, que es lo que queda
+/// cuando yEnc lo llama por un hash; se renombra antes de usarlo.
+fn with_par2_extension(par2: PathBuf) -> PathBuf {
+    if util::file_name(&par2).to_ascii_lowercase().ends_with(".par2") {
+        return par2;
+    }
+    let mut named = par2.clone().into_os_string();
+    named.push(".par2");
+    let named = PathBuf::from(named);
+    if !named.exists() && std::fs::rename(&par2, &named).is_ok() {
+        return named;
+    }
+    par2
 }
 
 fn cleanup_par2_backups(dir: &Path, before: &HashSet<PathBuf>) {
