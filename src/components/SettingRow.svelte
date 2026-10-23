@@ -10,6 +10,7 @@
   class="srow"
   class:clickable={isToggle && !disabled}
   class:disabled
+  class:custom={!isToggle}
   onclick={() => isToggle && !disabled && onchange?.(!checked)}
   role="presentation">
   {#if icon}
@@ -53,4 +54,12 @@
   .s-label { font-weight: 560; }
   .s-desc { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
   .control { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+  /* Móvil: los controles que no son interruptores (campos, botones) bajan bajo el texto. */
+  @media (max-width: 720px) {
+    .srow { padding: 12px 14px; gap: 12px; }
+    .srow.custom { flex-wrap: wrap; }
+    .srow.custom .control { width: 100%; justify-content: flex-end; }
+    .srow.custom .control :global(.input:not(.small)) { flex: 1; min-width: 0; }
+    .srow.custom .control :global(.select) { flex: 1; }
+  }
 </style>

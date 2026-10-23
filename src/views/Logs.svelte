@@ -1,4 +1,5 @@
 <script>
+  import { isAndroid } from '../lib/platform.js';
   import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { tick } from 'svelte';
@@ -52,7 +53,7 @@
     </div>
     <div class="actions">
       <button class="btn sm" onclick={copy}><Icon name="copy" size={14} /> {t('logs.copy')}</button>
-      <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="folder" size={14} /> {t('logs.openFolder')}</button>
+      {#if !isAndroid}<button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="folder" size={14} /> {t('logs.openFolder')}</button>{/if}
       <button class="btn ghost sm" onclick={clear}><Icon name="trash" size={14} /> {t('common.clear')}</button>
     </div>
   </header>
@@ -110,4 +111,17 @@
   .msg { word-break: break-word; color: var(--text-2); }
   .empty { padding: 30px; text-align: center; color: var(--muted); font-family: var(--font); }
   .jump { position: absolute; right: 50px; bottom: 44px; box-shadow: var(--shadow); }
+
+  @media (max-width: 720px) {
+    .view { padding: 16px 14px 14px; }
+    .head { flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 23px; }
+    .toolbar { flex-wrap: wrap; margin: 12px 0 10px; }
+    .search { width: 100%; order: 5; }
+    .search .input { height: 40px; }
+    .search :global(svg) { top: 12px; }
+    .line { grid-template-columns: 60px 1fr; padding: 4px 10px; font-size: 11.5px; }
+    .msg { grid-column: 1 / -1; }
+    .jump { right: 18px; bottom: 24px; }
+  }
 </style>

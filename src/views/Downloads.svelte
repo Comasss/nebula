@@ -1,7 +1,7 @@
 <script>
   import { t, tn, th, locale, num } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
-  import { open } from '@tauri-apps/plugin-dialog';
+  import { pickNzbFiles } from '../lib/platform.js';
   import { fly, fade, scale } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
@@ -54,13 +54,13 @@
   }
 
   async function addFiles() {
-    const sel = await open({
-      multiple: true,
-      title: t('downloads.pickFiles'),
-      filters: [{ name: t('downloads.nzbFiles'), extensions: ['nzb', 'gz'] }],
-    });
-    if (!sel) return;
-    const arr = Array.isArray(sel) ? sel : [sel];
+    let arr;
+    try {
+      arr = await pickNzbFiles({ title: t('downloads.pickFiles'), filterName: t('downloads.nzbFiles') });
+    } catch (e) {
+      toast('error', String(e));
+      return;
+    }
     queueAdd(arr.map((p) => ({ kind: 'file', value: p })));
   }
 
@@ -322,4 +322,27 @@
   .empty h3 { margin: 0; font-family: var(--font-display); font-size: 19px; }
   .empty p { margin: 8px auto 0; color: var(--text-2); max-width: 420px; line-height: 1.5; }
   .empty-actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; }
+
+  @media (max-width: 720px) {
+    .view { padding: 16px 14px 28px; }
+    .head { flex-direction: column; align-items: stretch; gap: 14px; }
+    h1 { font-size: 23px; }
+    .head-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .url-bar { margin-top: 14px; height: 50px; padding: 0 6px 0 14px; }
+    .url-input { font-size: 16px; min-width: 0; }
+    .kbd { display: none; }
+    .banner { flex-wrap: wrap; }
+    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+    .stat.speed { grid-column: 1 / -1; }
+    .stat { padding: 12px; }
+    .stat.speed { padding: 14px 14px 10px; }
+    .graph { margin: 6px -14px 0; }
+    .st-icon { width: 28px; height: 28px; margin-bottom: 8px; }
+    .st-label { font-size: 9.5px; letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .st-value { font-size: 17px; }
+    .st-foot { font-size: 11px; }
+    .list { margin-top: 16px; gap: 10px; }
+    .empty { padding: 36px 8px 24px; }
+    .empty-actions { flex-direction: column; align-items: stretch; }
+  }
 </style>

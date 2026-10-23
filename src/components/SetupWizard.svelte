@@ -1,6 +1,6 @@
 <script>
   import { t, th } from '../lib/i18n.svelte.js';
-  import { open } from '@tauri-apps/plugin-dialog';
+  import { pickFolder, isAndroid } from '../lib/platform.js';
   import { fly, fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import Icon from './Icon.svelte';
@@ -92,7 +92,7 @@
   }
 
   async function browse(key) {
-    const p = await open({ directory: true, defaultPath: prefs[key] });
+    const p = await pickFolder({ defaultPath: prefs[key] });
     if (p) prefs[key] = p;
   }
 
@@ -229,10 +229,14 @@
                 <SettingRow label={t('wizard.askDestination')} checked={prefs.askDestination} onchange={(v) => (prefs.askDestination = v)} />
                 <SettingRow label={t('settings.par2')} checked={prefs.par2Enabled} onchange={(v) => (prefs.par2Enabled = v)} />
                 <SettingRow label={t('settings.extract')} checked={prefs.extractEnabled} onchange={(v) => (prefs.extractEnabled = v)} />
-                <SettingRow label={t('settings.associate')} checked={prefs.associateNzb} onchange={(v) => (prefs.associateNzb = v)} />
+                {#if !isAndroid}
+                  <SettingRow label={t('settings.associate')} checked={prefs.associateNzb} onchange={(v) => (prefs.associateNzb = v)} />
+                {/if}
               {/if}
               <SettingRow label={t('wizard.clipboard')} checked={prefs.clipboardMonitor} onchange={(v) => (prefs.clipboardMonitor = v)} />
-              <SettingRow label={t('wizard.closeToTray')} checked={prefs.closeToTray} onchange={(v) => (prefs.closeToTray = v)} />
+              {#if !isAndroid}
+                <SettingRow label={t('wizard.closeToTray')} checked={prefs.closeToTray} onchange={(v) => (prefs.closeToTray = v)} />
+              {/if}
             </div>
           {:else}
             <div class="welcome">
@@ -277,7 +281,7 @@
 </div>
 
 <style>
-  .overlay { position: fixed; inset: 40px 0 0 0; z-index: 200; display: grid; place-items: center; background: rgba(5, 6, 10, 0.75); backdrop-filter: blur(10px); padding: 24px; }
+  .overlay { position: fixed; inset: var(--titlebar-h) 0 0 0; z-index: 200; display: grid; place-items: center; background: rgba(5, 6, 10, 0.75); backdrop-filter: blur(10px); padding: 24px; }
   .wizard { position: relative; width: min(780px, 100%); max-height: calc(100vh - 90px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border-2); border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; }
   .glow { position: absolute; inset: -200px -100px auto auto; width: 500px; height: 400px; background: radial-gradient(circle, rgba(var(--accent-rgb), 0.25), transparent 65%); pointer-events: none; }
   .wz-debrid { margin-top: 14px; }
@@ -324,4 +328,18 @@
   .done-badge { width: 86px; height: 86px; margin: 20px auto 0; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #10b981, #34d399); color: #fff; box-shadow: 0 16px 50px -12px rgba(52, 211, 153, 0.8); animation: pop-in 0.6s var(--ease); }
   @keyframes pop-in { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.08); } }
   footer { display: flex; align-items: center; gap: 10px; padding: 16px 28px; border-top: 1px solid var(--border); background: rgba(0, 0, 0, 0.15); }
+
+  /* Móvil: a pantalla completa y en una columna. */
+  :global(html.mobile) .overlay { padding: 0; place-items: stretch; background: var(--panel); }
+  :global(html.mobile) .wizard { width: 100%; max-height: none; height: 100%; border: none; border-radius: 0; box-shadow: none; }
+  :global(html.mobile) .steps { padding: 18px 18px 0; gap: 6px; }
+  :global(html.mobile) .stp .lbl { display: none; }
+  :global(html.mobile) .stp.cur .lbl { display: inline; }
+  :global(html.mobile) .stage { min-height: 0; flex: 1; }
+  :global(html.mobile) .page { padding: 22px 18px 18px; }
+  :global(html.mobile) .welcome { padding: 8px 4px 0; }
+  :global(html.mobile) .welcome h1 { font-size: 24px; }
+  :global(html.mobile) .features-list, :global(html.mobile) .fcards { grid-template-columns: 1fr; }
+  :global(html.mobile) .dirrow { flex-direction: column; }
+  :global(html.mobile) footer { padding: 12px 16px; flex-wrap: wrap; }
 </style>

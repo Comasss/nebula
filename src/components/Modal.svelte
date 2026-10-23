@@ -4,6 +4,7 @@
   import { cubicOut } from 'svelte/easing';
   import Icon from './Icon.svelte';
   import { d } from '../lib/state.svelte.js';
+  import { isAndroid } from '../lib/platform.js';
 
   let {
     title = '',
@@ -16,6 +17,12 @@
     children,
     footer,
   } = $props();
+
+  // En el móvil el diálogo sube desde abajo como una hoja; en el escritorio aparece en el centro.
+  function sheetOrScale(node) {
+    if (!isAndroid) return scale(node, { start: 0.94, duration: d(240), easing: cubicOut });
+    return { duration: d(280), easing: cubicOut, css: (t) => `transform: translateY(${(1 - t) * 100}%)` };
+  }
 
   function onkey(e) {
     if (e.key === 'Escape' && dismissable && onclose) {
@@ -36,8 +43,8 @@
   role="presentation">
   <div
     class="modal"
-    style="width: min({width}px, calc(100vw - 48px))"
-    transition:scale={{ start: 0.94, duration: d(240), easing: cubicOut }}
+    style={isAndroid ? '' : `width: min(${width}px, calc(100vw - 48px))`}
+    transition:sheetOrScale
     role="dialog"
     aria-modal="true">
     {#if title}
@@ -66,7 +73,7 @@
 <style>
   .backdrop {
     position: fixed;
-    inset: 40px 0 0 0;
+    inset: var(--titlebar-h) 0 0 0;
     background: rgba(5, 6, 10, 0.62);
     backdrop-filter: blur(6px);
     display: grid;
@@ -105,6 +112,16 @@
   h2 { margin: 0; font-family: var(--font-display); font-size: 17px; font-weight: 650; line-height: 1.3; word-break: break-word; }
   header p { margin: 3px 0 0; color: var(--text-2); font-size: 13px; }
   .body { padding: 16px 22px 20px; overflow-y: auto; }
+  :global(html.mobile) .backdrop { padding: 0; place-items: end stretch; }
+  :global(html.mobile) .modal {
+    width: 100%;
+    max-height: calc(100% - 24px);
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+  }
+  :global(html.mobile) header { padding: 18px 16px 4px 18px; }
+  :global(html.mobile) .body { padding: 14px 16px 18px; }
+  :global(html.mobile) footer { padding: 12px 16px; flex-wrap: wrap; }
   footer {
     display: flex;
     align-items: center;

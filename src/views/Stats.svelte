@@ -380,4 +380,22 @@
   @media (max-width: 980px) {
     .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
+
+  @media (max-width: 720px) {
+    .view { padding: 16px 14px 28px; }
+    h1 { font-size: 23px; }
+    .subtitle { font-size: 13px; }
+    .toolbar { margin-top: 14px; }
+    .seg { max-width: 100%; overflow-x: auto; }
+    .seg-btn { padding: 0 10px; }
+    .kpis { gap: 8px; margin-top: 14px; }
+    .kpi { padding: 12px 14px; }
+    .k-value { font-size: 25px; }
+    .k-label { font-size: 10px; }
+    section { margin-top: 22px; }
+    .table { overflow-x: auto; }
+    .tr { min-width: 660px; padding: 11px 12px; }
+    .tr > :first-child { position: sticky; left: -12px; margin-left: -12px; padding-left: 12px; align-self: stretch; display: flex; align-items: center; background: var(--panel); z-index: 1; box-shadow: 8px 0 12px -8px rgba(0, 0, 0, 0.6); }
+    .th > :first-child { background: #12141c; }
+  }
 </style>

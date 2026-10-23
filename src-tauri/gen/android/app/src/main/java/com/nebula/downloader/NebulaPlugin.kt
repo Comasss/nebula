@@ -235,6 +235,12 @@ class NebulaPlugin(private val activity: Activity) : Plugin(activity) {
   }
 
   @Command
+  fun moveToBack(invoke: Invoke) {
+    activity.runOnUiThread { activity.moveTaskToBack(true) }
+    invoke.resolve()
+  }
+
+  @Command
   fun openUrl(invoke: Invoke) {
     val url = invoke.parseArgs(UrlArgs::class.java).url
     try {

@@ -1,7 +1,7 @@
 <script>
   import { t, tn } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
-  import { open } from '@tauri-apps/plugin-dialog';
+  import { pickFolder } from '../lib/platform.js';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import Icon from './Icon.svelte';
@@ -69,7 +69,7 @@
   async function saveOne() {
     let dir = ui.settings.nzbSaveDir;
     if (ui.settings.nzbAskSaveDir || !dir) {
-      dir = await open({ directory: true, defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
+      dir = await pickFolder({ defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
       if (!dir) return;
     }
     const { url, st } = take();

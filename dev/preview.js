@@ -272,6 +272,15 @@ mockIPC(
         await sleep(500);
         return args.dir + '\\' + args.name + '.nzb';
       case 'plugin:window|is_maximized': return false;
+      // Android (con ?android y el user agent de un móvil)
+      case 'app_resumed': return { files: [], urls: [], clipboard: [], storage: !params.has('nostorage') };
+      case 'request_storage_access': return true;
+      case 'list_dirs': {
+        const p = args.path.replace(/\/+$/, '');
+        const tree = { '/storage/emulated/0': ['Alarms', 'DCIM', 'Documents', 'Download', 'Movies', 'Music', 'Pictures'], '/storage/emulated/0/Download': ['Nebula', 'NZB', 'Telegram'], '/storage/emulated/0/Movies': ['Series'] };
+        return { path: p, parent: p.replace(/\/[^/]+$/, '') || '/', dirs: tree[p] ?? [] };
+      }
+      case 'make_dir': return null;
       default: return null;
     }
   },

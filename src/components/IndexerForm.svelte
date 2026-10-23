@@ -119,4 +119,6 @@
   .result { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
   .result.ok { color: #6ee7b7; }
   .result.err { color: #fca5a5; }
+  :global(html.mobile) .grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  :global(html.mobile) .span3 { grid-column: span 2; }
 </style>

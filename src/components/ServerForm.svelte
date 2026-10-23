@@ -1,4 +1,5 @@
 <script>
+  import Select from './Select.svelte';
   import { t } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { fly } from 'svelte/transition';
@@ -68,10 +69,8 @@
     {#if !compact}
       <div class="field">
         <label for="sf-prio">{t('common.priority')}</label>
-        <select id="sf-prio" class="select" bind:value={server.priority}>
-          <option value={0}>{t('server.primary')}</option>
-          {#each [1, 2, 3, 4, 5] as p}<option value={p}>{t('server.backupN', { n: p })}</option>{/each}
-        </select>
+        <Select id="sf-prio" label={t('common.priority')} bind:value={server.priority}
+          options={[{ value: 0, label: t('server.primary') }, ...[1, 2, 3, 4, 5].map((p) => ({ value: p, label: t('server.backupN', { n: p }) }))]} />
       </div>
       <div class="field">
         <label for="sf-ret">{t('server.retention')}</label>
@@ -131,4 +130,5 @@
   .result { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
   .result.ok { color: #6ee7b7; }
   .result.err { color: #fca5a5; }
+  :global(html.mobile) .grid { grid-template-columns: 1fr 1fr; gap: 12px; }
 </style>

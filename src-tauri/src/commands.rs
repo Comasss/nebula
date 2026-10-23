@@ -469,3 +469,10 @@ pub fn list_dirs(path: String) -> Result<DirList, String> {
 pub fn make_dir(path: String) -> Result<(), String> {
     std::fs::create_dir_all(&path).map_err(|err| err.to_string())
 }
+
+/// Android: el botón Atrás desde la vista principal deja la app en segundo plano.
+#[tauri::command]
+pub fn app_background() {
+    #[cfg(target_os = "android")]
+    crate::android::move_to_back();
+}

@@ -200,4 +200,24 @@
   .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 650; }
   .v { font-size: 13px; margin-top: 2px; word-break: break-all; }
   .empty { text-align: center; padding: 60px 20px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+  @media (max-width: 720px) {
+    .view { padding: 16px 14px 28px; }
+    .head { flex-direction: column; align-items: stretch; gap: 12px; }
+    h1 { font-size: 23px; }
+    .head-actions .btn:first-child { flex: 1; }
+    .toolbar { flex-direction: column-reverse; align-items: stretch; gap: 10px; margin-top: 14px; }
+    .tabs { overflow-x: auto; }
+    .tab { padding: 0 10px; flex-shrink: 0; }
+    .search { width: 100%; margin-bottom: 0; }
+    .search .input { height: 42px; }
+    .search :global(svg) { top: 13px; }
+    .list { margin-top: 12px; }
+    .hist { padding: 12px 14px; }
+    .h-top { flex-wrap: wrap; gap: 10px 12px; }
+    .h-name { white-space: normal; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+    .h-actions { width: 100%; justify-content: flex-end; padding-left: 48px; }
+    .h-details { grid-template-columns: 1fr 1fr; }
+    .h-details > div:first-child { grid-column: 1 / -1; }
+  }
 </style>

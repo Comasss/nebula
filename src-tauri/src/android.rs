@@ -61,6 +61,10 @@ pub fn open_path(path: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn move_to_back() {
+    fire("moveToBack", json!({}));
+}
+
 pub fn open_url(url: &str) -> Result<(), String> {
     fire("openUrl", json!({ "url": url }));
     Ok(())

@@ -130,8 +130,13 @@ jobs:
 
       - name: Preparar el NDK
         run: |
-          echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
-          ls "$ANDROID_NDK_LATEST_HOME"
+          tc="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          {
+            echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME"
+            # OpenSSL (compilado junto a la app) busca ar/ranlib con prefijo GNU, que el NDK ya no trae.
+            echo "AR_aarch64_linux_android=$tc/llvm-ar"
+            echo "RANLIB_aarch64_linux_android=$tc/llvm-ranlib"
+          } >> "$GITHUB_ENV"
 
       # 7-Zip y par2 compilados para Android: solo se recompilan si cambia el script.
       - name: Caché de 7-Zip y par2 para Android

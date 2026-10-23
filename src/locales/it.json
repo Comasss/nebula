@@ -725,5 +725,24 @@
     "welcomeTitle": "Benvenuto in <span class=\"grad-text\">Nebula</span>",
     "yourIndexer": "il tuo indexer",
     "yourIndexers": "i tuoi indexer"
+  },
+  "mobile": {
+    "more": "Altro",
+    "appTitle": "App e notifiche",
+    "storageTitle": "Consenti l'accesso ai tuoi file",
+    "storageText": "Nebula ha bisogno dell'autorizzazione per salvare i download nelle cartelle del telefono (Download, scheda SD…).",
+    "storageGrant": "Consenti accesso",
+    "storageLater": "Più tardi"
+  },
+  "folder": {
+    "title": "Scegli una cartella",
+    "use": "Usa questa cartella",
+    "newFolder": "Nuova cartella",
+    "name": "Nome della cartella",
+    "empty": "Nessuna sottocartella",
+    "up": "Cartella superiore",
+    "error": "Impossibile aprire questa cartella: {error}",
+    "storage": "Memoria interna",
+    "downloads": "Download"
   }
 }

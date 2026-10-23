@@ -266,6 +266,7 @@ pub fn run() {
             commands::import_nzb,
             commands::list_dirs,
             commands::make_dir,
+            commands::app_background,
         ])
         .build(tauri::generate_context!())
         .expect("no se pudo iniciar Nebula");

@@ -725,5 +725,24 @@
     "welcomeTitle": "<span class=\"grad-text\">Nebula</span> में आपका स्वागत है",
     "yourIndexer": "आपके इंडेक्सर",
     "yourIndexers": "आपके इंडेक्सर"
+  },
+  "mobile": {
+    "more": "और",
+    "appTitle": "ऐप और सूचनाएँ",
+    "storageTitle": "अपनी फ़ाइलों तक पहुँच दें",
+    "storageText": "डाउनलोड को फ़ोन के फ़ोल्डरों (Download, SD कार्ड…) में सहेजने के लिए Nebula को अनुमति चाहिए।",
+    "storageGrant": "पहुँच दें",
+    "storageLater": "बाद में"
+  },
+  "folder": {
+    "title": "फ़ोल्डर चुनें",
+    "use": "यह फ़ोल्डर इस्तेमाल करें",
+    "newFolder": "नया फ़ोल्डर",
+    "name": "फ़ोल्डर का नाम",
+    "empty": "कोई सब-फ़ोल्डर नहीं",
+    "up": "ऊपर वाला फ़ोल्डर",
+    "error": "यह फ़ोल्डर नहीं खुल सकता: {error}",
+    "storage": "आंतरिक स्टोरेज",
+    "downloads": "Download"
   }
 }
