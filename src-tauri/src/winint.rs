@@ -192,32 +192,6 @@ pub fn reveal_path(path: &str) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// Busca enlaces a NZB en un texto (una o varias líneas).
-pub fn detect_nzb_urls(text: &str, patterns: &[String]) -> Vec<String> {
-    let mut out = Vec::new();
-    if text.len() > 20_000 {
-        return out;
-    }
-    for line in text.lines() {
-        let t = line.trim().trim_matches(['"', '\'', '<', '>']);
-        if t.is_empty() || t.len() > 4096 || t.contains(char::is_whitespace) {
-            continue;
-        }
-        let lower = t.to_ascii_lowercase();
-        if !(lower.starts_with("http://") || lower.starts_with("https://")) {
-            continue;
-        }
-        let path = lower.split(['?', '#']).next().unwrap_or("");
-        let hit = path.ends_with(".nzb")
-            || path.ends_with(".nzb.gz")
-            || patterns.iter().any(|p| !p.trim().is_empty() && lower.contains(&p.trim().to_ascii_lowercase()));
-        if hit && !out.contains(&t.to_string()) {
-            out.push(t.to_string());
-        }
-    }
-    out
-}
-
 pub fn start_clipboard_monitor(engine: Arc<Engine>) {
     std::thread::Builder::new()
         .name("clipboard".into())
@@ -240,7 +214,7 @@ pub fn start_clipboard_monitor(engine: Arc<Engine>) {
                     continue;
                 }
                 let Ok(text) = clipboard_win::get_clipboard_string() else { continue };
-                let urls: Vec<String> = detect_nzb_urls(&text, &patterns).into_iter().filter(|u| !seen.contains(u)).collect();
+                let urls: Vec<String> = crate::util::detect_nzb_urls(&text, &patterns).into_iter().filter(|u| !seen.contains(u)).collect();
                 if urls.is_empty() {
                     continue;
                 }
@@ -271,18 +245,4 @@ pub fn start_clipboard_monitor(engine: Arc<Engine>) {
             }
         })
         .ok();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn detect() {
-        let p = crate::config::default_patterns();
-        assert_eq!(detect_nzb_urls("https://x.org/file.nzb", &p).len(), 1);
-        assert_eq!(detect_nzb_urls("https://x.org/getnzb/abc?i=1&r=k", &p).len(), 1);
-        assert_eq!(detect_nzb_urls("https://x.org/api?t=get&id=abc&apikey=z", &p).len(), 1);
-        assert!(detect_nzb_urls("https://google.com/search?q=nzb", &p).is_empty());
-        assert!(detect_nzb_urls("hola que tal", &p).is_empty());
-    }
 }

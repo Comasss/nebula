@@ -201,6 +201,51 @@ pub fn split_password(name: &str) -> (String, Option<String>) {
     (name.to_string(), None)
 }
 
+/// Busca enlaces a NZB en un texto (una o varias líneas).
+pub fn detect_nzb_urls(text: &str, patterns: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    if text.len() > 20_000 {
+        return out;
+    }
+    for line in text.lines() {
+        let t = line.trim().trim_matches(['"', '\'', '<', '>']);
+        if t.is_empty() || t.len() > 4096 || t.contains(char::is_whitespace) {
+            continue;
+        }
+        let lower = t.to_ascii_lowercase();
+        if !(lower.starts_with("http://") || lower.starts_with("https://")) {
+            continue;
+        }
+        let path = lower.split(['?', '#']).next().unwrap_or("");
+        let hit = path.ends_with(".nzb")
+            || path.ends_with(".nzb.gz")
+            || patterns.iter().any(|p| !p.trim().is_empty() && lower.contains(&p.trim().to_ascii_lowercase()));
+        if hit && !out.contains(&t.to_string()) {
+            out.push(t.to_string());
+        }
+    }
+    out
+}
+
+/// Deshace encodeURIComponent (%XX en UTF-8).
+pub fn percent_decode(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' && i + 2 < b.len() && s.is_char_boundary(i + 1) && s.is_char_boundary(i + 3) {
+            if let Ok(v) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
+                out.push(v);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,5 +258,22 @@ mod tests {
         assert!(!looks_obfuscated("movie.part01.rar"));
         assert!(!looks_obfuscated("movie.7z.001"));
         assert!(!looks_obfuscated("x.vol07+08.par2"));
+    }
+
+    #[test]
+    fn detect() {
+        let p = crate::config::default_patterns();
+        assert_eq!(detect_nzb_urls("https://x.org/file.nzb", &p).len(), 1);
+        assert_eq!(detect_nzb_urls("https://x.org/getnzb/abc?i=1&r=k", &p).len(), 1);
+        assert_eq!(detect_nzb_urls("https://x.org/api?t=get&id=abc&apikey=z", &p).len(), 1);
+        assert!(detect_nzb_urls("https://google.com/search?q=nzb", &p).is_empty());
+        assert!(detect_nzb_urls("hola que tal", &p).is_empty());
+    }
+
+    #[test]
+    fn percent() {
+        assert_eq!(percent_decode("Pel%C3%ADcula%20(2024).nzb"), "Película (2024).nzb");
+        assert_eq!(percent_decode("a%2"), "a%2");
+        assert_eq!(percent_decode("100%"), "100%");
     }
 }

@@ -1,7 +1,7 @@
-# Compila Nebula para Windows en cada push / PR.
-# - Artefactos: instalador NSIS y ejecutable portable (pestaña Actions → ejecución → Artifacts).
-# - Cada push a main publica la Release vX.Y.Z de la versión de src-tauri/tauri.conf.json con los dos .exe
-#   y SHA256SUMS.txt. Si esa Release ya la creó este workflow, se actualiza con la nueva compilación; si se
+# Compila Nebula para Windows y Android en cada push / PR.
+# - Artefactos: instalador NSIS, ejecutable portable y APK de Android (pestaña Actions → ejecución → Artifacts).
+# - Cada push a main publica la Release vX.Y.Z de la versión de src-tauri/tauri.conf.json con los dos .exe,
+#   el .apk y SHA256SUMS.txt. Si esa Release ya la creó este workflow, se actualiza con la nueva compilación; si se
 #   publicó a mano, no se toca (sube la versión para publicar otra). También funciona subiendo una etiqueta vX.Y.Z.
 name: Build
 
@@ -103,10 +103,98 @@ jobs:
           path: release/*.exe
           if-no-files-found: error
 
+  android:
+    name: Build Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: android
+
+      - name: Preparar el NDK
+        run: |
+          echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          ls "$ANDROID_NDK_LATEST_HOME"
+
+      # 7-Zip y par2 compilados para Android: solo se recompilan si cambia el script.
+      - name: Caché de 7-Zip y par2 para Android
+        id: tools-cache
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/gen/android/app/src/main/jniLibs
+          key: android-tools-${{ hashFiles('src-tauri/gen/android/build-native-tools.sh') }}
+
+      - name: Compilar 7-Zip y par2 para Android
+        if: steps.tools-cache.outputs.cache-hit != 'true'
+        run: src-tauri/gen/android/build-native-tools.sh
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Clave de firma propia (opcional): secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+      # ANDROID_KEY_ALIAS y ANDROID_KEY_PASSWORD. Sin ellos se firma con src-tauri/gen/android/nebula-release.jks.
+      - name: Clave de firma
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/nebula.jks"
+            {
+              echo "NEBULA_KEYSTORE=$RUNNER_TEMP/nebula.jks"
+              echo "NEBULA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "NEBULA_KEY_ALIAS=$KEY_ALIAS"
+              echo "NEBULA_KEY_PASSWORD=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "Firma con la clave de los secretos"
+          else
+            echo "Firma con nebula-release.jks"
+          fi
+
+      - name: Compilar (tauri android build)
+        run: npx tauri android build --apk --target aarch64 --ci
+
+      - name: Preparar APK
+        run: |
+          set -euo pipefail
+          v=$(jq -r .version src-tauri/tauri.conf.json)
+          mkdir -p release
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*-release.apk' | head -1)
+          [ -n "$apk" ] || { echo "::error::No se generó el APK"; exit 1; }
+          cp "$apk" "release/Nebula_${v}_android_arm64.apk"
+          unzip -l "release/Nebula_${v}_android_arm64.apk" | grep -E 'lib/arm64-v8a/' 
+          ls -la release
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nebula_${{ env.VERSION }}_android
+          path: release/*.apk
+          if-no-files-found: error
+
   release:
     name: Publicar release
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    needs: [test, build]
+    needs: [test, build, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -127,7 +215,7 @@ jobs:
           v=$(jq -r .version src-tauri/tauri.conf.json)
           tag="v$v"
           short="${GITHUB_SHA::7}"
-          (cd release && sha256sum *.exe > SHA256SUMS.txt)
+          (cd release && sha256sum *.exe *.apk > SHA256SUMS.txt)
           cat > notes.md <<EOF
           <!-- nebula-autobuild -->
           Automatic build of **Nebula $v** from commit [\`$short\`](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA).
@@ -136,9 +224,10 @@ jobs:
           |---|---|
           | \`Nebula_${v}_x64-setup.exe\` | Installer: shortcut, uninstaller and \`.nzb\` file association. |
           | \`Nebula_${v}_x64_portable.exe\` | A single executable, no installation. Stores its data in \`%APPDATA%\\Nebula\`. |
+          | \`Nebula_${v}_android_arm64.apk\` | Android app (arm64, Android 7.0 or later). Open it on the phone to install it. |
           | \`SHA256SUMS.txt\` | SHA-256 checksums to verify the files. |
 
-          Requirements: Windows 10/11 x64 with WebView2 (included in Windows 11; the installer downloads it if missing).
+          Requirements: Windows 10/11 x64 with WebView2 (included in Windows 11; the installer downloads it if missing). Android 7.0+ on a 64-bit ARM phone or tablet.
           EOF
           if gh release view "$tag" --json body -q .body > current.md 2>/dev/null; then
             if ! grep -q "nebula-autobuild" current.md; then

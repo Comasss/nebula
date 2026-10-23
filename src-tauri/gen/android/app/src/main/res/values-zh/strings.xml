@@ -1,0 +1,4 @@
+<resources>
+    <string name="channel_downloads">正在下载</string>
+    <string name="channel_events">下载通知</string>
+</resources>

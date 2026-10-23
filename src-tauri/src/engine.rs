@@ -954,6 +954,12 @@ fn eligibility(servers: &[ServerRt], s: usize) -> Option<(u64, u64, bool)> {
     Some((avail, higher, me.priority == min_prio))
 }
 
+#[cfg(unix)]
+pub(crate) fn write_all_at(f: &File, buf: &[u8], off: u64) -> std::io::Result<()> {
+    std::os::unix::fs::FileExt::write_all_at(f, buf, off)
+}
+
+#[cfg(windows)]
 pub(crate) fn write_all_at(f: &File, mut buf: &[u8], mut off: u64) -> std::io::Result<()> {
     use std::os::windows::fs::FileExt;
     while !buf.is_empty() {
@@ -1021,7 +1027,7 @@ impl Engine {
     }
 
     pub fn notify_os(&self, title: &str, body: &str) {
-        crate::winint::toast(&self.app, &self.paths.tools, title, body);
+        crate::os::notify(&self.app, &self.paths.tools, title, body);
     }
 
     fn timeout(&self) -> Duration {
@@ -2124,9 +2130,7 @@ impl Engine {
                 } else {
                     format!("Nebula — {}", t!("tray.queued", n = active))
                 };
-                if let Some(tray) = self.app.tray_by_id("main") {
-                    let _ = tray.set_tooltip(Some(tip));
-                }
+                crate::os::queue_status(&self.app, if snap.paused { 0 } else { active }, tip);
                 self.sweep();
             }
             if tick % 20 == 0 && self.dirty.swap(false, Ordering::Relaxed) {
@@ -2377,13 +2381,13 @@ impl Engine {
         let old = self.settings.read().clone();
         new.save(&self.paths)?;
         if old.associate_nzb != new.associate_nzb {
-            if let Err(e) = crate::winint::set_association(new.associate_nzb) {
+            if let Err(e) = crate::os::set_association(new.associate_nzb) {
                 lerror!("{}", t!("err.association", error = e));
                 self.toast("error", t!("err.association", error = e));
             }
         }
         if old.start_with_windows != new.start_with_windows {
-            if let Err(e) = crate::winint::set_autostart(new.start_with_windows) {
+            if let Err(e) = crate::os::set_autostart(new.start_with_windows) {
                 lerror!("{}", t!("err.autostart", error = e));
             }
         }
@@ -2553,6 +2557,7 @@ impl Engine {
     pub fn show_main(&self) {
         if let Some(w) = self.app.get_webview_window("main") {
             let _ = w.show();
+            #[cfg(desktop)]
             let _ = w.unminimize();
             let _ = w.set_focus();
         }

@@ -5,3 +5,7 @@
 *.png binary
 *.ico binary
 *.icns binary
+*.jar binary
+*.jks binary
+gradlew text eol=lf
+*.sh text eol=lf

@@ -1,0 +1,4 @@
+<resources>
+    <string name="channel_downloads">ダウンロード中</string>
+    <string name="channel_events">ダウンロードの通知</string>
+</resources>
