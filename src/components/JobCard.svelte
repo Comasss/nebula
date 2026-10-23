@@ -252,4 +252,22 @@
   .file.held { opacity: 0.55; }
   .fname { color: var(--text); }
   .fsize { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Móvil: las acciones bajan a su propia fila y la información se reparte en varias líneas. */
+  @media (max-width: 720px) {
+    .job { padding: 14px 14px 12px; }
+    .top { flex-wrap: wrap; gap: 10px 12px; }
+    .s-icon { width: 38px; height: 38px; }
+    .ring { width: 40px; height: 40px; }
+    .name { white-space: normal; overflow: visible; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; }
+    .meta { flex-wrap: wrap; row-gap: 6px; }
+    .stats { min-width: 0; }
+    .actions { order: 5; width: 100%; justify-content: space-between; padding-top: 2px; border-top: 1px solid var(--border); margin-top: 2px; }
+    .actions .icon-btn { opacity: 1; }
+    .bar-row { margin-top: 10px; }
+    .d-grid { grid-template-columns: 1fr 1fr; }
+    .d-grid > div:first-child { grid-column: span 2; }
+    .file { grid-template-columns: 16px 1fr auto 64px; row-gap: 4px; }
+    .fbar { grid-column: 1 / -1; }
+  }
 </style>

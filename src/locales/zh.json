@@ -705,5 +705,24 @@
     "welcomeTitle": "欢迎使用 <span class=\"grad-text\">Nebula</span>",
     "yourIndexer": "你的索引器",
     "yourIndexers": "你的索引器"
+  },
+  "mobile": {
+    "more": "更多",
+    "appTitle": "应用和通知",
+    "storageTitle": "允许访问你的文件",
+    "storageText": "Nebula 需要权限才能把下载内容保存到手机的文件夹（Download、SD 卡…）。",
+    "storageGrant": "允许访问",
+    "storageLater": "稍后"
+  },
+  "folder": {
+    "title": "选择文件夹",
+    "use": "使用此文件夹",
+    "newFolder": "新建文件夹",
+    "name": "文件夹名称",
+    "empty": "没有子文件夹",
+    "up": "上级文件夹",
+    "error": "无法打开此文件夹：{error}",
+    "storage": "内部存储",
+    "downloads": "Download"
   }
 }

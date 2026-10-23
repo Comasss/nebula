@@ -180,4 +180,18 @@
   .empty p { margin: 0 0 12px; max-width: 520px; }
   .tip { margin-top: 16px; }
   .link { border: none; background: none; color: var(--accent-2); cursor: pointer; font-weight: 600; padding: 0; margin-left: 4px; }
+
+  @media (max-width: 720px) {
+    .view { padding: 16px 14px 28px; }
+    .head { flex-direction: column; align-items: stretch; gap: 12px; }
+    h1 { font-size: 23px; }
+    .subtitle { font-size: 13px; }
+    .list { margin-top: 16px; gap: 10px; }
+    .db { padding: 14px; }
+    .db-top { flex-wrap: wrap; gap: 10px 12px; }
+    .db-icon { width: 40px; height: 40px; }
+    .db-sub { word-break: break-all; }
+    .db-actions { width: 100%; justify-content: flex-end; padding-top: 8px; border-top: 1px solid var(--border); }
+    .empty { padding: 32px 12px; }
+  }
 </style>

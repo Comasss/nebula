@@ -1,10 +1,11 @@
 <script>
   import { t, th, LANGUAGES, setLanguage, systemLanguage } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
-  import { open } from '@tauri-apps/plugin-dialog';
+  import { pickFolder, isAndroid } from '../lib/platform.js';
   import { fly, scale } from 'svelte/transition';
   import Icon from '../components/Icon.svelte';
   import SettingRow from '../components/SettingRow.svelte';
+  import Select from '../components/Select.svelte';
   import { ui, saveSettings, toast, d } from '../lib/state.svelte.js';
   import { usableDebrid, debridLabel, hasNntp } from '../lib/debrid.js';
 
@@ -20,7 +21,7 @@
     { id: 'folders', icon: 'folder' },
     { id: 'post', icon: 'package' },
     { id: 'links', icon: 'clipboard' },
-    { id: 'windows', icon: 'monitor' },
+    { id: 'windows', icon: isAndroid ? 'smartphone' : 'monitor' },
     { id: 'network', icon: 'wifi' },
     { id: 'look', icon: 'palette' },
     { id: 'about', icon: 'info' },
@@ -55,7 +56,7 @@
   }
 
   async function pick(key) {
-    const dir = await open({ directory: true, defaultPath: s[key] || undefined });
+    const dir = await pickFolder({ defaultPath: s[key] || undefined });
     if (dir) saveSettings({ [key]: dir });
   }
 
@@ -104,7 +105,7 @@
       <nav>
         {#each SECTIONS as sec}
           <button class:sel={section === sec.id} onclick={() => scrollTo(sec.id)}>
-            <Icon name={sec.icon} size={16} /> {t(`settings.section.${sec.id}`)}
+            <Icon name={sec.icon} size={16} /> {sec.id === 'windows' && isAndroid ? t('mobile.appTitle') : t(`settings.section.${sec.id}`)}
           </button>
         {/each}
       </nav>
@@ -123,10 +124,8 @@
         <h2><Icon name="globe" size={18} /> {t('settings.section.language')}</h2>
         <div class="card group">
           <SettingRow icon="globe" label={t('settings.language')} description={t('settings.languageDesc')}>
-            <select class="select lang" value={s.language || ''} onchange={(e) => setLang(e.target.value)}>
-              <option value="">{t('settings.languageAuto', { lang: systemLang })}</option>
-              {#each LANGUAGES as l (l.code)}<option value={l.code}>{l.name}</option>{/each}
-            </select>
+            <Select class="lang" value={s.language || ''} label={t('settings.language')} onchange={setLang}
+              options={[{ value: '', label: t('settings.languageAuto', { lang: systemLang }) }, ...LANGUAGES.map((l) => ({ value: l.code, label: l.name }))]} />
           </SettingRow>
         </div>
       </section>
@@ -211,7 +210,9 @@
         <div class="card group">
           <SettingRow icon="clipboard" label={t('settings.clipboard')} description={t('settings.clipboardDesc')} checked={s.clipboardMonitor} onchange={set('clipboardMonitor')} />
           <SettingRow label={t('settings.clipboardInspect')} description={t('settings.clipboardInspectDesc')} checked={s.clipboardInspect} onchange={set('clipboardInspect')} disabled={!s.clipboardMonitor} />
-          <SettingRow label={t('settings.clipboardShow')} description={t('settings.clipboardShowDesc')} checked={s.clipboardShowWindow} onchange={set('clipboardShowWindow')} disabled={!s.clipboardMonitor} />
+          {#if !isAndroid}
+            <SettingRow label={t('settings.clipboardShow')} description={t('settings.clipboardShowDesc')} checked={s.clipboardShowWindow} onchange={set('clipboardShowWindow')} disabled={!s.clipboardMonitor} />
+          {/if}
           <div class="patterns" class:disabled={!s.clipboardMonitor}>
             <div class="p-head">
               <div>
@@ -236,13 +237,27 @@
       </section>
 
       <section id="sec-windows">
-        <h2><Icon name="monitor" size={18} /> {t('settings.windowsTitle')}</h2>
+        {#if isAndroid}
+          <h2><Icon name="smartphone" size={18} /> {t('mobile.appTitle')}</h2>
+        {:else}
+          <h2><Icon name="monitor" size={18} /> {t('settings.windowsTitle')}</h2>
+        {/if}
         <div class="card group">
-          <SettingRow icon="file" label={t('settings.associate')} description={t('settings.associateDesc')} checked={s.associateNzb} onchange={set('associateNzb')} />
-          <SettingRow icon="power" label={t('settings.startWithWindows')} checked={s.startWithWindows} onchange={set('startWithWindows')} />
-          <SettingRow label={t('settings.startMinimized')} checked={s.startMinimized} onchange={set('startMinimized')} />
-          <SettingRow label={t('settings.minimizeToTray')} description={t('settings.minimizeToTrayDesc')} checked={s.minimizeToTray} onchange={set('minimizeToTray')} />
-          <SettingRow label={t('settings.closeToTray')} description={t('settings.closeToTrayDesc')} checked={s.closeToTray} onchange={set('closeToTray')} />
+          {#if isAndroid}
+            <SettingRow icon="folder" label={t('mobile.storageTitle')} description={t('mobile.storageText')}>
+              {#if ui.storage}
+                <span class="chip ok"><Icon name="check" size={11} stroke={3} /> OK</span>
+              {:else}
+                <button class="btn sm primary" onclick={async () => (ui.storage = await invoke('request_storage_access'))}>{t('mobile.storageGrant')}</button>
+              {/if}
+            </SettingRow>
+          {:else}
+            <SettingRow icon="file" label={t('settings.associate')} description={t('settings.associateDesc')} checked={s.associateNzb} onchange={set('associateNzb')} />
+            <SettingRow icon="power" label={t('settings.startWithWindows')} checked={s.startWithWindows} onchange={set('startWithWindows')} />
+            <SettingRow label={t('settings.startMinimized')} checked={s.startMinimized} onchange={set('startMinimized')} />
+            <SettingRow label={t('settings.minimizeToTray')} description={t('settings.minimizeToTrayDesc')} checked={s.minimizeToTray} onchange={set('minimizeToTray')} />
+            <SettingRow label={t('settings.closeToTray')} description={t('settings.closeToTrayDesc')} checked={s.closeToTray} onchange={set('closeToTray')} />
+          {/if}
           <SettingRow label={t('settings.notifyComplete')} checked={s.notifyComplete} onchange={set('notifyComplete')} />
           <SettingRow label={t('settings.notifyFailed')} checked={s.notifyFailed} onchange={set('notifyFailed')} />
           <SettingRow label={t('settings.confirmDelete')} checked={s.confirmDelete} onchange={set('confirmDelete')} />
@@ -302,10 +317,12 @@
               <div class="muted">{t('settings.version', { version: ui.info?.version })}</div>
             </div>
           </div>
-          <div class="links">
-            <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.dataDir })}><Icon name="folder" size={14} /> {t('settings.dataDir')}</button>
-            <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="logs" size={14} /> {t('settings.logsDir')}</button>
-          </div>
+          {#if !isAndroid}
+            <div class="links">
+              <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.dataDir })}><Icon name="folder" size={14} /> {t('settings.dataDir')}</button>
+              <button class="btn sm" onclick={() => invoke('open_path', { path: ui.info.logDir })}><Icon name="logs" size={14} /> {t('settings.logsDir')}</button>
+            </div>
+          {/if}
           <p class="legal">{@html th('settings.legal')}</p>
         </div>
       </section>
@@ -314,7 +331,7 @@
 {/if}
 
 <style>
-  .select.lang { min-width: 220px; }
+  :global(.select.lang) { min-width: 220px; }
   .wrap { display: flex; height: 100%; max-width: 1140px; margin: 0 auto; }
   .toc { width: 230px; flex-shrink: 0; padding: 26px 10px 20px 30px; }
   h1 { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 700; }
@@ -378,4 +395,22 @@
   .app-name { font-family: var(--font-display); font-size: 22px; font-weight: 750; }
   .links { display: flex; gap: 8px; margin-top: 16px; }
   .legal { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 16px 0 0; }
+
+  @media (max-width: 720px) {
+    .wrap { flex-direction: column; }
+    .toc { width: auto; padding: 16px 14px 0; }
+    .toc nav { flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 10px; scrollbar-width: none; }
+    .toc nav button { flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); white-space: nowrap; }
+    .toc nav button.sel { border-color: rgba(var(--accent-rgb), 0.4); }
+    h1 { font-size: 23px; }
+    .saved { margin: 4px 0 12px; }
+    .content { padding: 8px 14px 40px; }
+    section { margin-bottom: 24px; }
+    :global(.select.lang) { min-width: 0; width: 100%; }
+    .path { width: 100%; }
+    .note { padding: 0 14px 12px; }
+    .patterns { padding: 14px; }
+    .p-head { flex-direction: column; }
+    .links { flex-wrap: wrap; }
+  }
 </style>

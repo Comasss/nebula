@@ -6,12 +6,25 @@ use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::{Arc, LazyLock, OnceLock};
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 use tokio::io::AsyncReadExt;
 
+#[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+#[cfg(windows)]
 const BELOW_NORMAL_PRIORITY_CLASS: u32 = 0x0000_4000;
+
+// Nombres de las herramientas dentro de la carpeta `tools`. En Android van en el APK como
+// bibliotecas nativas (lib*.so), porque Android solo deja ejecutar archivos de esa carpeta.
+#[cfg(not(target_os = "android"))]
+const PAR2_EXE: &str = "par2.exe";
+#[cfg(not(target_os = "android"))]
+const SEVENZIP_EXE: &str = "7z.exe";
+#[cfg(target_os = "android")]
+const PAR2_EXE: &str = "libpar2.so";
+#[cfg(target_os = "android")]
+const SEVENZIP_EXE: &str = "lib7zz.so";
 
 pub struct PpCtx {
     pub id: String,
@@ -207,8 +220,9 @@ async fn pipeline(engine: &Arc<Engine>, c: &PpCtx) -> Result<Flow, PpError> {
 // Procesos externos
 // ---------------------------------------------------------------------------
 
+#[cfg(windows)]
 fn job_object() -> Option<usize> {
-    static JOB: OnceLock<usize> = OnceLock::new();
+    static JOB: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
     let h = *JOB.get_or_init(|| unsafe {
         use windows_sys::Win32::System::JobObjects::*;
         let h = CreateJobObjectW(std::ptr::null(), std::ptr::null());
@@ -233,6 +247,7 @@ fn job_object() -> Option<usize> {
 }
 
 /// Asocia el proceso hijo a un Job Object para que muera si Nebula se cierra.
+#[cfg(windows)]
 fn attach_child(child: &tokio::process::Child) {
     if let (Some(job), Some(handle)) = (job_object(), child.raw_handle()) {
         unsafe {
@@ -241,13 +256,27 @@ fn attach_child(child: &tokio::process::Child) {
     }
 }
 
+/// En Android y Linux el hijo muere con Nebula porque comparte su proceso (kill_on_drop) y
+/// la app entera se cierra de golpe; no hace falta un Job Object.
+#[cfg(not(windows))]
+fn attach_child(_child: &tokio::process::Child) {}
+
 fn command(exe: &Path) -> tokio::process::Command {
     let mut cmd = tokio::process::Command::new(exe);
     cmd.stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(true)
-        .creation_flags(CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS);
+        .kill_on_drop(true);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS);
+    #[cfg(unix)]
+    unsafe {
+        // Prioridad baja, como BELOW_NORMAL en Windows, para no entorpecer al resto del sistema.
+        cmd.pre_exec(|| {
+            libc::setpriority(libc::PRIO_PROCESS, 0, 10);
+            Ok(())
+        });
+    }
     cmd
 }
 
@@ -379,7 +408,7 @@ fn cleanup_par2_backups(dir: &Path, before: &HashSet<PathBuf>) {
 }
 
 async fn run_par2(engine: &Arc<Engine>, c: &PpCtx, mode: &str, par2: &Path) -> Result<Par2Result, PpError> {
-    let exe = c.tools.join("par2.exe");
+    let exe = c.tools.join(PAR2_EXE);
     let mut cmd = command(&exe);
     cmd.current_dir(&c.work_dir).arg(mode).arg(util::file_name(par2));
     // Archivos extra para detectar archivos con nombre cambiado (ofuscados).
@@ -565,7 +594,7 @@ static RE_PCT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\d{1,3})%").unw
 async fn extract_set(engine: &Arc<Engine>, c: &PpCtx, set: &ArchiveSet, before: u64, total: u64, detail: &str) -> Result<(), PpError> {
     std::fs::create_dir_all(&c.final_dir)
         .map_err(|e| PpError::new("extract", t!("pp.createDest", error = e)))?;
-    let exe = c.tools.join("7z.exe");
+    let exe = c.tools.join(SEVENZIP_EXE);
     let pw = c.password.clone().filter(|p| !p.is_empty()).unwrap_or_else(|| "nebula-no-password".into());
     let mut cmd = command(&exe);
     cmd.current_dir(&c.work_dir)

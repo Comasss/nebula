@@ -1,0 +1,4 @@
+<resources>
+    <string name="channel_downloads">Baixades en curs</string>
+    <string name="channel_events">Avisos de baixades</string>
+</resources>

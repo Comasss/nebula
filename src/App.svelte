@@ -12,6 +12,13 @@
   import SetupWizard from './components/SetupWizard.svelte';
   import ClipboardPrompt from './components/ClipboardPrompt.svelte';
   import DropOverlay from './components/DropOverlay.svelte';
+  import FolderPicker from './components/FolderPicker.svelte';
+  import MobileHeader from './components/MobileHeader.svelte';
+  import MobileNav from './components/MobileNav.svelte';
+  import Icon from './components/Icon.svelte';
+  import { invoke } from '@tauri-apps/api/core';
+  import { isAndroid } from './lib/platform.js';
+  import { onBackButtonPress } from '@tauri-apps/api/app';
   import Downloads from './views/Downloads.svelte';
   import History from './views/History.svelte';
   import Servers from './views/Servers.svelte';
@@ -49,13 +56,18 @@
     document.documentElement.dataset.anim = ui.settings.animations ? 'on' : 'off';
   });
 
+  async function grantStorage() {
+    ui.storage = await invoke('request_storage_access');
+  }
+  let storageLater = $state(false);
+
   onMount(() => {
     let unlistenDrop;
     init().catch((e) => {
       console.error(e);
       toast('error', t('app.startError', { error: e }));
     });
-    getCurrentWebview()
+    if (!isAndroid) getCurrentWebview()
       .onDragDropEvent((ev) => {
         const p = ev.payload;
         if (p.type === 'enter' || p.type === 'over') {
@@ -71,6 +83,21 @@
       })
       .then((f) => (unlistenDrop = f));
 
+    // Botón Atrás de Android: cierra lo que esté abierto, luego vuelve a la vista principal y,
+    // desde ella, deja Nebula en segundo plano (sin cerrarla, para no cortar las descargas).
+    let backListener;
+    if (isAndroid) {
+      onBackButtonPress(() => {
+        const home = ui.settings?.featureNntp !== false ? 'downloads' : 'search';
+        if (ui.moreOpen) ui.moreOpen = false;
+        else if (document.querySelector('[role="dialog"], [role="listbox"]')) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        else if (ui.view !== home) ui.view = home;
+        else invoke('app_background');
+      })
+        .then((l) => (backListener = l))
+        .catch(console.error);
+    }
+
     const onKey = (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'r') e.preventDefault();
       if (e.key === 'F5') e.preventDefault();
@@ -78,6 +105,7 @@
     window.addEventListener('keydown', onKey);
     return () => {
       unlistenDrop?.();
+      backListener?.unregister();
       window.removeEventListener('keydown', onKey);
     };
   });
@@ -86,10 +114,27 @@
 </script>
 
 <div class="app">
-  <TitleBar />
+  {#if isAndroid}
+    <MobileHeader />
+  {:else}
+    <TitleBar />
+  {/if}
   <div class="body">
-    <Sidebar />
+    {#if !isAndroid}<Sidebar />{/if}
     <main>
+      {#if isAndroid && ui.ready && !ui.storage && !storageLater}
+        <div class="storage alert warn">
+          <Icon name="folder" size={18} />
+          <div class="spacer">
+            <strong>{t('mobile.storageTitle')}</strong>
+            <div>{t('mobile.storageText')}</div>
+            <div class="st-actions">
+              <button class="btn sm primary" onclick={grantStorage}>{t('mobile.storageGrant')}</button>
+              <button class="btn sm ghost" onclick={() => (storageLater = true)}>{t('mobile.storageLater')}</button>
+            </div>
+          </div>
+        </div>
+      {/if}
       {#if ui.ready}
         {#key ui.view}
           <div class="page" in:fly={{ y: 14 * direction, duration: d(320), easing: cubicOut, opacity: 0 }}>
@@ -101,6 +146,7 @@
       {/if}
     </main>
   </div>
+  {#if isAndroid && ui.ready}<MobileNav />{/if}
 </div>
 
 {#if ui.ready}
@@ -109,6 +155,7 @@
   {#if ui.setupOpen && ui.settings}
     <SetupWizard />
   {/if}
+  <FolderPicker />
   <Dialog />
 {/if}
 <DropOverlay />
@@ -131,7 +178,12 @@
     border-left: 1px solid rgba(255, 255, 255, 0.04);
     overflow: hidden;
   }
-  .page { grid-area: 1 / 1; overflow-y: auto; min-height: 0; height: 100%; }
+  .page { grid-area: 2 / 1; overflow-y: auto; min-height: 0; height: 100%; }
+  main { grid-template-rows: auto minmax(0, 1fr); }
+  .boot { grid-area: 2 / 1; }
+  .storage { grid-area: 1 / 1; margin: 12px 12px 0; }
+  .st-actions { display: flex; gap: 8px; margin-top: 10px; }
+  :global(html.mobile) main { border-radius: 0; border: none; }
   .boot { display: grid; place-items: center; }
   .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--panel-3); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
 </style>

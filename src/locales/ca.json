@@ -725,5 +725,24 @@
     "welcomeTitle": "Et donem la benvinguda a <span class=\"grad-text\">Nebula</span>",
     "yourIndexer": "el teu indexador",
     "yourIndexers": "els teus indexadors"
+  },
+  "mobile": {
+    "more": "Més",
+    "appTitle": "App i avisos",
+    "storageTitle": "Permet l'accés als teus fitxers",
+    "storageText": "Nebula necessita permís per desar les baixades a les carpetes del mòbil (Baixades, targeta SD…).",
+    "storageGrant": "Donar accés",
+    "storageLater": "Més tard"
+  },
+  "folder": {
+    "title": "Tria una carpeta",
+    "use": "Fes servir aquesta carpeta",
+    "newFolder": "Carpeta nova",
+    "name": "Nom de la carpeta",
+    "empty": "No hi ha subcarpetes",
+    "up": "Carpeta superior",
+    "error": "No es pot obrir aquesta carpeta: {error}",
+    "storage": "Emmagatzematge intern",
+    "downloads": "Baixades"
   }
 }

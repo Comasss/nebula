@@ -27,6 +27,10 @@ export const ui = $state({
   setupOpen: false,
   dragging: false,
   dialog: null,
+  // Solo en Android: selector de carpetas propio, menú "Más" y acceso a los archivos.
+  folderPicker: null,
+  moreOpen: false,
+  storage: true,
 });
 
 /** Duración de animaciones respetando la preferencia del usuario. */
@@ -108,6 +112,24 @@ function handleOpenItems(items) {
   queueAdd(adds);
 }
 
+/** Android: al volver a la app llegan los .nzb abiertos o compartidos y los enlaces del portapapeles. */
+const seenClip = new Set();
+async function resumed() {
+  try {
+    const r = await invoke('app_resumed');
+    ui.storage = r.storage;
+    queueAdd([...r.files.map((value) => ({ kind: 'file', value })), ...r.urls.map((value) => ({ kind: 'url', value }))]);
+    // Cada enlace se ofrece una sola vez, aunque siga en el portapapeles.
+    for (const u of r.clipboard) {
+      if (seenClip.has(u)) continue;
+      seenClip.add(u);
+      if (!ui.clipboard.includes(u)) ui.clipboard.push(u);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 export async function init() {
   const [settings, queue, history, logs, info] = await Promise.all([
     invoke('get_settings'),
@@ -141,6 +163,13 @@ export async function init() {
     ui.speedHistory.push(ui.queue.paused ? 0 : ui.queue.speed);
     if (ui.speedHistory.length > 120) ui.speedHistory.shift();
   }, 500);
+
+  if (/android/i.test(navigator.userAgent)) {
+    await resumed();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') resumed();
+    });
+  }
 
   ui.view = settings.featureNntp ? 'downloads' : 'search';
   if (!settings.firstRunDone || !settings.featuresChosen) ui.setupOpen = true;

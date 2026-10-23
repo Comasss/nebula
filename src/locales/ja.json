@@ -705,5 +705,24 @@
     "welcomeTitle": "<span class=\"grad-text\">Nebula</span> へようこそ",
     "yourIndexer": "インデクサー",
     "yourIndexers": "各インデクサー"
+  },
+  "mobile": {
+    "more": "その他",
+    "appTitle": "アプリと通知",
+    "storageTitle": "ファイルへのアクセスを許可",
+    "storageText": "ダウンロードをスマートフォンのフォルダー（Download、SD カードなど）に保存するには許可が必要です。",
+    "storageGrant": "アクセスを許可",
+    "storageLater": "あとで"
+  },
+  "folder": {
+    "title": "フォルダーを選択",
+    "use": "このフォルダーを使う",
+    "newFolder": "新しいフォルダー",
+    "name": "フォルダー名",
+    "empty": "サブフォルダーはありません",
+    "up": "上のフォルダー",
+    "error": "このフォルダーを開けません: {error}",
+    "storage": "内部ストレージ",
+    "downloads": "Download"
   }
 }

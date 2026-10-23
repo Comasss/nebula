@@ -1,7 +1,8 @@
 <script>
+  import Select from '../components/Select.svelte';
   import { t, tn, num } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
-  import { open } from '@tauri-apps/plugin-dialog';
+  import { pickFolder } from '../lib/platform.js';
   import { fly, fade, scale, slide } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import Icon from '../components/Icon.svelte';
@@ -170,7 +171,7 @@
   async function saveNzb(g, sources = g.sources) {
     let dir = ui.settings.nzbSaveDir;
     if (ui.settings.nzbAskSaveDir || !dir) {
-      dir = await open({ directory: true, defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
+      dir = await pickFolder({ defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
       if (!dir) return;
     }
     setAct(g, 'saving');
@@ -233,9 +234,7 @@
           </div>
         {/if}
       </div>
-      <select class="select cat" bind:value={category} title={t('search.category')}>
-        {#each CATEGORIES as c}<option value={c.id}>{c.label}</option>{/each}
-      </select>
+      <Select class="cat" bind:value={category} title={t('search.category')} options={CATEGORIES.map((c) => ({ value: c.id, label: c.label }))} />
       <button class="btn primary" type="submit" disabled={loading && !searched}>
         {#if loading}<Icon name="loader" size={15} class="spin" />{:else}<Icon name="search" size={15} />{/if} {t('nav.search')}
       </button>
@@ -268,9 +267,7 @@
           {tn('search.results', groups.length)}
           {#if ui.settings.searchDedup && merged > 0}<span class="chip accent" title={t('search.mergedTitle')}>{tn('search.merged', merged)}</span>{/if}
         </span>
-        <select class="select sort" bind:value={sort}>
-          {#each SORTS as s}<option value={s.id}>{s.label}</option>{/each}
-        </select>
+        <Select class="sort" bind:value={sort} options={SORTS.map((s) => ({ value: s.id, label: s.label }))} />
       </div>
 
       <div class="list">
@@ -389,7 +386,7 @@
   }
   .pill:hover { background: var(--panel-3); color: var(--text); }
   .pill.partial { border-color: rgba(var(--accent-rgb), 0.45); color: var(--text); }
-  .cat { width: 190px; height: 36px; }
+  :global(.select.cat) { width: 190px; height: 36px; }
   .popover {
     position: absolute; right: 0; top: 44px; z-index: 40;
     width: 250px; padding: 6px;
@@ -412,7 +409,7 @@
 
   .toolbar { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 10px; }
   .count { display: flex; align-items: center; gap: 10px; color: var(--text-2); font-weight: 560; }
-  .sort { width: 180px; height: 34px; }
+  :global(.select.sort) { width: 180px; height: 34px; }
 
   .list { display: flex; flex-direction: column; gap: 8px; }
   .res { padding: 12px 12px 12px 16px; transition: border-color 0.2s, background 0.2s; }
@@ -451,4 +448,28 @@
   .orb-ring { position: absolute; inset: -12px -26px; border-radius: 50%; border: 2px solid rgba(var(--accent-rgb), 0.45); transform: rotate(-18deg); animation: ring 6s linear infinite; }
   @keyframes float { 50% { transform: translateY(-8px); } }
   @keyframes ring { to { transform: rotate(342deg); } }
+
+  @media (max-width: 720px) {
+    .view { padding: 16px 14px 28px; }
+    .head { align-items: flex-start; gap: 12px; }
+    h1 { font-size: 23px; }
+    .subtitle { font-size: 13px; }
+    .head .btn { flex-shrink: 0; }
+    .bar { flex-wrap: wrap; height: auto; padding: 4px 8px 8px 14px; gap: 8px; margin-top: 14px; }
+    .q { flex: 1 1 calc(100% - 30px); height: 44px; font-size: 16px; }
+    .picker-wrap { flex: 0 0 auto; }
+    :global(.select.cat) { flex: 1 1 0; width: auto; min-width: 0; }
+    .bar .btn.primary { flex: 1 0 100%; }
+    .popover { left: 0; right: auto; transform-origin: top left; width: min(280px, calc(100vw - 48px)); }
+    .toolbar { flex-wrap: wrap; gap: 8px; }
+    :global(.select.sort) { width: 150px; }
+    .res { padding: 12px; }
+    .r-row { flex-wrap: wrap; gap: 10px; }
+    .r-main { flex-basis: 100%; }
+    .r-title { white-space: normal; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+    .r-actions { width: 100%; justify-content: flex-end; }
+    .src { grid-template-columns: auto 1fr auto auto; row-gap: 4px; }
+    .ist { max-width: 100%; }
+    .empty, .hint { padding: 30px 8px; }
+  }
 </style>

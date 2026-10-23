@@ -805,5 +805,24 @@
     "welcomeTitle": "مرحبًا بك في <span class=\"grad-text\">Nebula</span>",
     "yourIndexer": "مفهرسك",
     "yourIndexers": "مفهرساتك"
+  },
+  "mobile": {
+    "more": "المزيد",
+    "appTitle": "التطبيق والإشعارات",
+    "storageTitle": "اسمح بالوصول إلى ملفاتك",
+    "storageText": "يحتاج Nebula إلى إذن لحفظ التنزيلات في مجلدات الهاتف (Download، بطاقة SD…).",
+    "storageGrant": "السماح بالوصول",
+    "storageLater": "لاحقًا"
+  },
+  "folder": {
+    "title": "اختر مجلدًا",
+    "use": "استخدام هذا المجلد",
+    "newFolder": "مجلد جديد",
+    "name": "اسم المجلد",
+    "empty": "لا توجد مجلدات فرعية",
+    "up": "المجلد الأعلى",
+    "error": "تعذّر فتح هذا المجلد: {error}",
+    "storage": "التخزين الداخلي",
+    "downloads": "Download"
   }
 }

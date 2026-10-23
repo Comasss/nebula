@@ -208,4 +208,18 @@
   .empty h3 { margin: 8px 0 0; color: var(--text); font-family: var(--font-display); }
   .empty p { margin: 0 0 12px; }
   .tip { margin-top: 16px; }
+
+  @media (max-width: 720px) {
+    .view { padding: 16px 14px 28px; }
+    .head { flex-direction: column; align-items: stretch; gap: 12px; }
+    h1 { font-size: 23px; }
+    .subtitle { font-size: 13px; }
+    .list { margin-top: 16px; gap: 10px; }
+    .srv { padding: 14px; }
+    .srv-top { flex-wrap: wrap; gap: 10px 12px; }
+    .srv-icon { width: 40px; height: 40px; }
+    .srv-sub { word-break: break-all; }
+    .srv-actions { width: 100%; justify-content: flex-end; padding-top: 8px; border-top: 1px solid var(--border); }
+    .empty { padding: 32px 12px; }
+  }
 </style>

@@ -765,5 +765,24 @@
     "welcomeTitle": "Добро пожаловать в <span class=\"grad-text\">Nebula</span>",
     "yourIndexer": "вашем индексаторе",
     "yourIndexers": "ваших индексаторах"
+  },
+  "mobile": {
+    "more": "Ещё",
+    "appTitle": "Приложение и уведомления",
+    "storageTitle": "Разрешите доступ к файлам",
+    "storageText": "Nebula нужно разрешение, чтобы сохранять загрузки в папки телефона (Download, SD-карта…).",
+    "storageGrant": "Разрешить доступ",
+    "storageLater": "Позже"
+  },
+  "folder": {
+    "title": "Выберите папку",
+    "use": "Выбрать эту папку",
+    "newFolder": "Новая папка",
+    "name": "Имя папки",
+    "empty": "Нет вложенных папок",
+    "up": "Папка выше",
+    "error": "Не удаётся открыть папку: {error}",
+    "storage": "Внутренняя память",
+    "downloads": "Download"
   }
 }

@@ -1,7 +1,7 @@
 <script>
   import { t, tn } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
-  import { open } from '@tauri-apps/plugin-dialog';
+  import { pickFolder } from '../lib/platform.js';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import Icon from './Icon.svelte';
@@ -69,7 +69,7 @@
   async function saveOne() {
     let dir = ui.settings.nzbSaveDir;
     if (ui.settings.nzbAskSaveDir || !dir) {
-      dir = await open({ directory: true, defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
+      dir = await pickFolder({ defaultPath: dir || undefined, title: t('common.whereSaveNzb') });
       if (!dir) return;
     }
     const { url, st } = take();
@@ -170,4 +170,9 @@
   .c-sub.err { color: #fde68a; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .c-more { font-size: 12px; color: var(--muted); }
   .c-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  @media (max-width: 720px) {
+    .clip { width: calc(100vw - 20px); bottom: 74px; flex-wrap: wrap; gap: 10px 12px; padding: 12px; }
+    .c-actions { width: 100%; display: flex; justify-content: flex-end; gap: 8px; }
+  }
 </style>

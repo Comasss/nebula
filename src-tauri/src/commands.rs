@@ -2,7 +2,7 @@ use crate::config::{DebridConfig, IndexerConfig, ServerConfig, Settings};
 use crate::engine::{AddRequest, Engine, FileView, HistoryEntry, NzbPreview, Snapshot, TestResult};
 use crate::logger::LogEntry;
 use crate::stats::{IndexerEvent, StatRecord};
-use crate::{debrid, fetch, indexer, logger, nzb, winint};
+use crate::{debrid, fetch, indexer, logger, nzb, os};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -175,12 +175,12 @@ pub fn retry_extract(e: Eng, id: String, password: Option<String>) -> Result<(),
 
 #[tauri::command]
 pub fn open_path(path: String) -> Result<(), String> {
-    winint::open_path(&path)
+    os::open_path(&path)
 }
 
 #[tauri::command]
 pub fn reveal_path(path: String) -> Result<(), String> {
-    winint::reveal_path(&path)
+    os::reveal_path(&path)
 }
 
 #[tauri::command]
@@ -195,7 +195,7 @@ pub fn clear_logs() {
 
 #[tauri::command]
 pub fn disk_free(path: String) -> Option<u64> {
-    winint::disk_free(std::path::Path::new(&path))
+    os::disk_free(std::path::Path::new(&path))
 }
 
 #[tauri::command]
@@ -206,7 +206,7 @@ pub fn default_patterns() -> Vec<String> {
 #[tauri::command]
 pub fn detect_nzb_urls(e: Eng, text: String) -> Vec<String> {
     let patterns = e.settings.read().clipboard_patterns.clone();
-    winint::detect_nzb_urls(&text, &patterns)
+    crate::util::detect_nzb_urls(&text, &patterns)
 }
 
 #[derive(Serialize)]
@@ -216,6 +216,8 @@ pub struct AppInfo {
     data_dir: String,
     tools_dir: String,
     log_dir: String,
+    /// "windows", "android"…
+    platform: String,
 }
 
 #[tauri::command]
@@ -225,6 +227,7 @@ pub fn app_info(e: Eng) -> AppInfo {
         data_dir: e.paths.data.to_string_lossy().to_string(),
         tools_dir: e.paths.tools.to_string_lossy().to_string(),
         log_dir: e.paths.logs.to_string_lossy().to_string(),
+        platform: std::env::consts::OS.into(),
     }
 }
 
@@ -252,6 +255,7 @@ pub fn window_minimize(window: WebviewWindow, e: Eng) {
     if e.settings.read().minimize_to_tray {
         let _ = window.hide();
     } else {
+        #[cfg(desktop)]
         let _ = window.minimize();
     }
 }
@@ -338,7 +342,7 @@ pub fn open_url(url: String) -> Result<(), String> {
     if !(url.starts_with("https://") || url.starts_with("http://")) {
         return Err(t!("err.invalidLink"));
     }
-    std::process::Command::new("explorer").arg(url).spawn().map(|_| ()).map_err(|e| e.to_string())
+    os::open_url(&url)
 }
 
 // ---- Servicios debrid ----
@@ -364,4 +368,111 @@ pub async fn debrid_cached(e: Eng<'_>, token: String) -> Result<Vec<String>, Str
         }
     }
     Ok(out)
+}
+
+// ---- Móvil ----
+
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Resumed {
+    /// .nzb abiertos o compartidos desde otra app.
+    files: Vec<String>,
+    /// Enlaces compartidos con Nebula.
+    urls: Vec<String>,
+    /// Enlaces a NZB encontrados en el portapapeles.
+    clipboard: Vec<String>,
+    /// Si se puede escribir en el almacenamiento compartido.
+    storage: bool,
+}
+
+/// La interfaz vuelve a primer plano (en Android): entrega lo que haya llegado mientras tanto.
+#[tauri::command]
+pub async fn app_resumed(e: Eng<'_>) -> Result<Resumed, String> {
+    #[cfg(target_os = "android")]
+    {
+        let (enabled, patterns) = {
+            let s = e.settings.read();
+            (s.clipboard_monitor, s.clipboard_patterns.clone())
+        };
+        let r = crate::android::resume(enabled).await;
+        let clipboard = if enabled { crate::util::detect_nzb_urls(&r.clipboard, &patterns) } else { Vec::new() };
+        Ok(Resumed { files: r.files, urls: r.urls, clipboard, storage: r.storage })
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = e;
+        Ok(Resumed { storage: true, ..Default::default() })
+    }
+}
+
+/// Pide acceso a los archivos del móvil. Devuelve si ya se tiene.
+#[tauri::command]
+pub async fn request_storage_access() -> bool {
+    #[cfg(target_os = "android")]
+    return crate::android::request_storage_access().await;
+    #[cfg(not(target_os = "android"))]
+    true
+}
+
+/// Guarda un .nzb elegido con el selector de archivos del sistema (llega su contenido, no una
+/// ruta) y devuelve la ruta donde ha quedado. El nombre va en la cabecera `x-name`, codificado
+/// con encodeURIComponent.
+#[tauri::command]
+pub fn import_nzb(e: Eng, request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    let tauri::ipc::InvokeBody::Raw(data) = request.body() else {
+        return Err(t!("err.internal"));
+    };
+    let name = request
+        .headers()
+        .get("x-name")
+        .and_then(|v| v.to_str().ok())
+        .map(crate::util::percent_decode)
+        .unwrap_or_default();
+    let name = crate::util::sanitize_filename(&name);
+    let name = if name.trim().is_empty() { "nebula.nzb".to_string() } else { name };
+    let dir = e.paths.data.join("incoming");
+    std::fs::create_dir_all(&dir).map_err(|err| t!("err.writeFile", path = dir.display(), error = err))?;
+    let path = dir.join(&name);
+    std::fs::write(&path, data).map_err(|err| t!("err.writeFile", path = path.display(), error = err))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DirList {
+    path: String,
+    parent: Option<String>,
+    dirs: Vec<String>,
+}
+
+/// Subcarpetas de una carpeta, para el selector de carpetas propio de la versión móvil.
+#[tauri::command]
+pub fn list_dirs(path: String) -> Result<DirList, String> {
+    let p = std::path::PathBuf::from(&path);
+    let rd = std::fs::read_dir(&p).map_err(|err| err.to_string())?;
+    let mut dirs: Vec<String> = rd
+        .flatten()
+        .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .filter(|n| !n.starts_with('.'))
+        .collect();
+    dirs.sort_by_key(|n| n.to_lowercase());
+    Ok(DirList {
+        path: p.to_string_lossy().to_string(),
+        parent: p.parent().map(|x| x.to_string_lossy().to_string()),
+        dirs,
+    })
+}
+
+/// Crea una carpeta (botón "Nueva carpeta" del selector de carpetas).
+#[tauri::command]
+pub fn make_dir(path: String) -> Result<(), String> {
+    std::fs::create_dir_all(&path).map_err(|err| err.to_string())
+}
+
+/// Android: el botón Atrás desde la vista principal deja la app en segundo plano.
+#[tauri::command]
+pub fn app_background() {
+    #[cfg(target_os = "android")]
+    crate::android::move_to_back();
 }

@@ -1,6 +1,6 @@
 # Nebula
 
-A modern Usenet (NZB) client for Windows: an alternative to SABnzbd with a dark, animated interface.
+A modern Usenet (NZB) client for Windows and Android: an alternative to SABnzbd with a dark, animated interface.
 
 - **Rust engine** (Tauri 2 + tokio): NNTP with TLS, multiple connections, backup servers by priority, yEnc decoding with CRC checks, direct-to-disk writes and resuming after the app is closed.
 - **Built-in post-processing**: PAR2 verification and repair (par2cmdline-turbo) that downloads only the recovery blocks it needs, and RAR/7z/ZIP extraction (7-Zip), with a progress bar, percentage and speed. Both tools ship **inside the .exe**.
@@ -20,6 +20,18 @@ A modern Usenet (NZB) client for Windows: an alternative to SABnzbd with a dark,
 
 Both need WebView2, which comes with Windows 11 (the installer downloads it if missing).
 
+For Android 7+ on 64-bit ARM phones (practically all of them) there is `Nebula_<version>_android_arm64.apk`. Download it on the phone, allow installing from that source and open it.
+
+## Android
+
+The Android app is the same program: the Rust engine and the Svelte interface run through Tauri's Android support, so it has the same features (NNTP, PAR2 repair and extraction, indexers, debrid, statistics, 12 languages) with a touch layout (bottom tab bar, bottom sheets, its own folder picker).
+
+- Downloads go to `Download/` by default. To save to any other folder, grant **access to all files** when Nebula asks (or in **Settings → App and notifications**).
+- While something is downloading, Nebula keeps a notification visible so Android doesn't stop it in the background.
+- Add NZBs with the **Add NZB** button, by opening a `.nzb` from a file manager or browser, by sharing a file or link to Nebula, or by copying a link (Nebula offers it when you come back to the app if clipboard watching is enabled).
+- PAR2 and 7-Zip are compiled for Android and ship inside the APK (`lib7zz.so`, `libpar2.so`).
+- The APK is signed with the key in `src-tauri/gen/android/nebula-release.jks`. To sign with your own key, set the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` repository secrets (switching keys means uninstalling the old APK once).
+
 ## Usage
 
 - Add an NZB: the **Add NZB** button, drag it onto the window, double-click a `.nzb` (if the association is enabled) or paste a link into the top bar. Nebula downloads the NZB, parses it and asks where to save it.
@@ -35,11 +47,11 @@ Both need WebView2, which comes with Windows 11 (the installer downloads it if m
 
 ## Automatic builds (GitHub Actions)
 
-`.github/workflows/build.yml` builds Nebula on `windows-latest` on every push and pull request:
+`.github/workflows/build.yml` builds Nebula on `windows-latest` (and the Android APK on `ubuntu-latest`) on every push and pull request:
 
 - Runs the engine tests (`cargo test`) and builds the interface.
 - Produces the installer and the portable exe and uploads them as a run artifact (**Actions** tab → the run → **Artifacts**).
-- On every push to `main` it publishes the **Release** `vX.Y.Z` for the version in `src-tauri/tauri.conf.json` with `Nebula_<version>_x64-setup.exe`, `Nebula_<version>_x64_portable.exe` and `SHA256SUMS.txt`:
+- On every push to `main` it publishes the **Release** `vX.Y.Z` for the version in `src-tauri/tauri.conf.json` with `Nebula_<version>_x64-setup.exe`, `Nebula_<version>_x64_portable.exe`, `Nebula_<version>_android_arm64.apk` and `SHA256SUMS.txt`:
   - If that version has no Release yet, it creates it.
   - If this same workflow created it, it updates it with the new build (and moves the tag to the latest commit).
   - If you published it by hand, it leaves it alone.
@@ -61,6 +73,14 @@ Development with hot reload:
 
 ```bash
 npx tauri dev
+```
+
+Android (needs the Android SDK + NDK, Java 17+ and `rustup target add aarch64-linux-android`):
+
+```bash
+export NDK_HOME=$ANDROID_HOME/ndk/<version>
+src-tauri/gen/android/build-native-tools.sh   # 7-Zip and par2 for arm64, only once
+npx tauri android build --apk --target aarch64
 ```
 
 ## Testing

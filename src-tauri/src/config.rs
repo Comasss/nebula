@@ -11,16 +11,28 @@ pub struct AppPaths {
 }
 
 impl AppPaths {
+    #[cfg(not(target_os = "android"))]
     pub fn init() -> Self {
         // NEBULA_DATA_DIR permite una carpeta de datos alternativa (modo portable / pruebas).
         let data = std::env::var_os("NEBULA_DATA_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|| dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("Nebula"));
         let local = dirs::data_local_dir().unwrap_or_else(|| data.clone()).join("Nebula");
+        Self::with(data, local.join("tools").join(env!("CARGO_PKG_VERSION")))
+    }
+
+    /// En Android los datos van a la carpeta privada de la app y las herramientas (7-Zip, par2)
+    /// vienen dentro del APK como bibliotecas nativas, que es lo único que Android deja ejecutar.
+    #[cfg(target_os = "android")]
+    pub fn init(data: PathBuf) -> Self {
+        Self::with(data, crate::android::native_lib_dir())
+    }
+
+    fn with(data: PathBuf, tools: PathBuf) -> Self {
         let p = Self {
             nzb: data.join("nzb"),
             logs: data.join("logs"),
-            tools: local.join("tools").join(env!("CARGO_PKG_VERSION")),
+            tools,
             data,
         };
         for d in [&p.data, &p.nzb, &p.logs, &p.tools] {
@@ -236,11 +248,9 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        let dl = dirs::download_dir()
-            .or_else(dirs::home_dir)
-            .unwrap_or_else(|| PathBuf::from("C:\\"))
-            .join("Nebula");
-        let nzb_dir = dirs::download_dir().or_else(dirs::home_dir).unwrap_or_else(|| PathBuf::from("C:\\"));
+        let downloads = default_download_root();
+        let dl = downloads.join("Nebula");
+        let nzb_dir = downloads;
         Self {
             feature_nntp: true,
             feature_indexers: false,
@@ -361,8 +371,20 @@ pub fn write_atomic(path: &std::path::Path, data: &[u8]) -> Result<(), String> {
     std::fs::rename(&tmp, path).map_err(|e| t!("err.saveFile", path = path.display(), error = e))
 }
 
+#[cfg(not(target_os = "android"))]
+fn default_download_root() -> PathBuf {
+    dirs::download_dir().or_else(dirs::home_dir).unwrap_or_else(|| PathBuf::from("C:\\"))
+}
+
+/// Carpeta pública de descargas del móvil (visible desde el gestor de archivos).
+#[cfg(target_os = "android")]
+fn default_download_root() -> PathBuf {
+    PathBuf::from("/storage/emulated/0/Download")
+}
+
 // ---- DPAPI: cifra la contraseña ligada al usuario de Windows ----
 
+#[cfg(windows)]
 fn protect(plain: &str) -> Option<String> {
     use windows_sys::Win32::Foundation::LocalFree;
     use windows_sys::Win32::Security::Cryptography::{CryptProtectData, CRYPT_INTEGER_BLOB};
@@ -388,6 +410,7 @@ fn protect(plain: &str) -> Option<String> {
     }
 }
 
+#[cfg(windows)]
 fn unprotect(enc: &str) -> Option<String> {
     use windows_sys::Win32::Foundation::LocalFree;
     use windows_sys::Win32::Security::Cryptography::{CryptUnprotectData, CRYPT_INTEGER_BLOB};
@@ -411,4 +434,17 @@ fn unprotect(enc: &str) -> Option<String> {
         LocalFree(output.pbData as _);
         String::from_utf8(v).ok()
     }
+}
+
+// Fuera de Windows no hay DPAPI. En Android config.json vive en la carpeta privada de la app,
+// a la que no llegan otras apps, así que basta con no guardar las claves en texto plano.
+#[cfg(not(windows))]
+fn protect(plain: &str) -> Option<String> {
+    Some(base64::engine::general_purpose::STANDARD.encode(plain.as_bytes()))
+}
+
+#[cfg(not(windows))]
+fn unprotect(enc: &str) -> Option<String> {
+    let v = base64::engine::general_purpose::STANDARD.decode(enc).ok()?;
+    String::from_utf8(v).ok()
 }

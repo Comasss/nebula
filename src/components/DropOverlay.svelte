@@ -18,7 +18,7 @@
 <style>
   .drop {
     position: fixed;
-    inset: 40px 0 0 0;
+    inset: var(--titlebar-h) 0 0 0;
     z-index: 400;
     display: grid;
     place-items: center;

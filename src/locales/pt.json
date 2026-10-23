@@ -725,5 +725,24 @@
     "welcomeTitle": "Boas-vindas ao <span class=\"grad-text\">Nebula</span>",
     "yourIndexer": "seu indexador",
     "yourIndexers": "seus indexadores"
+  },
+  "mobile": {
+    "more": "Mais",
+    "appTitle": "App e notificações",
+    "storageTitle": "Permita o acesso aos seus arquivos",
+    "storageText": "O Nebula precisa de permissão para salvar os downloads nas pastas do celular (Download, cartão SD…).",
+    "storageGrant": "Permitir acesso",
+    "storageLater": "Depois"
+  },
+  "folder": {
+    "title": "Escolha uma pasta",
+    "use": "Usar esta pasta",
+    "newFolder": "Nova pasta",
+    "name": "Nome da pasta",
+    "empty": "Nenhuma subpasta",
+    "up": "Pasta acima",
+    "error": "Não é possível abrir esta pasta: {error}",
+    "storage": "Armazenamento interno",
+    "downloads": "Download"
   }
 }

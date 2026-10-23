@@ -21,6 +21,7 @@
   --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
   --mono: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --titlebar-h: 40px;
 
   --accent: #7c5cff;
   --accent-2: #22d3ee;
@@ -223,3 +224,14 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
 .dot.warn { --c: 251, 191, 36; }
 .dot.err { --c: 248, 113, 113; }
 .dot.idle { --c: 96, 165, 250; }
+
+/* ---------- Móvil (Android) ---------- */
+html.mobile { --titlebar-h: 0px; }
+html.mobile, html.mobile body { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+html.mobile ::-webkit-scrollbar { width: 0; height: 0; }
+/* Objetivos táctiles más grandes y campos a 16px (así el teclado no amplía la página). */
+html.mobile .btn { height: 42px; }
+html.mobile .btn.sm { height: 36px; }
+html.mobile .icon-btn { width: 38px; height: 38px; }
+html.mobile .input, html.mobile .select { height: 44px; font-size: 16px; }
+html.mobile textarea.input { height: auto; }

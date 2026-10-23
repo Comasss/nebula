@@ -1,0 +1,4 @@
+<resources>
+    <string name="channel_downloads">Текущие загрузки</string>
+    <string name="channel_events">Уведомления о загрузках</string>
+</resources>
