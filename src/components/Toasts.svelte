@@ -57,4 +57,8 @@
   .toast.info :global(svg:first-child) { color: var(--info); }
   .msg { flex: 1; min-width: 0; word-break: break-word; }
   .close { width: 24px; height: 24px; margin: -3px 0; }
+
+  @media (max-width: 720px) {
+    .toasts { left: 10px; right: 10px; width: auto; bottom: 74px; }
+  }
 </style>

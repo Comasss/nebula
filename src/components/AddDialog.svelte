@@ -377,4 +377,11 @@
   .files-toggle :global(.rot) { transform: rotate(90deg); }
   .files { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
   .file { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; padding: 4px 6px; font-size: 12.5px; color: var(--text-2); }
+
+  @media (max-width: 720px) {
+    .summary { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .dest { flex-direction: column; }
+    .opts { grid-template-columns: 1fr; }
+    .path { max-width: 50%; }
+  }
 </style>
