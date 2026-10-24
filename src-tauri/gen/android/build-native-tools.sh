@@ -57,6 +57,8 @@ tar -xzf "$WORK/par2.tar.gz" -C "$WORK/par2" --strip-components=1
   # que no está en el móvil: va dentro del propio compilador para que llegue al enlazado.
   ./configure --host=aarch64-linux-android CC="$CC" CXX="$CXX -static-libstdc++" AR="$TC/llvm-ar" RANLIB="$TC/llvm-ranlib" \
     LDFLAGS="-static-libstdc++"
+  # El Makefile añade -lstdc++, que en el NDK apunta a la libc++ compartida: fuera.
+  sed -i 's/ -lstdc++//g' Makefile
   make -j"$JOBS" LDFLAGS="-static-libstdc++" CXXLD="$CXX -static-libstdc++"
 )
 cp "$WORK/par2/par2" "$OUT/libpar2.so"
