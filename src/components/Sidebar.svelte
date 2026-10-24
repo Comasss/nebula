@@ -4,6 +4,7 @@
   import Icon from './Icon.svelte';
   import SpeedGraph from './SpeedGraph.svelte';
   import { ui } from '../lib/state.svelte.js';
+  import { upd } from '../lib/updater.svelte.js';
   import { speed, bytes } from '../lib/format.js';
   import { usableDebrid, debridLabel } from '../lib/debrid.js';
 
@@ -64,6 +65,8 @@
           <span class="badge err">{failedCount}</span>
         {:else if it.id === 'logs' && errorLogs}
           <span class="badge err small"></span>
+        {:else if it.id === 'settings' && upd.info?.available}
+          <span class="badge small upd" title={t('update.availableLabel', { version: upd.info.version })}></span>
         {/if}
       </button>
     {/each}
@@ -163,6 +166,7 @@
     animation: badge-in 0.35s var(--ease);
   }
   .badge.err { background: rgba(248, 113, 113, 0.2); color: #fca5a5; }
+  .badge.small.upd { background: var(--accent-2); }
   .badge.small { min-width: 8px; width: 8px; height: 8px; padding: 0; background: var(--err); }
   @keyframes badge-in { from { transform: scale(0.4); opacity: 0; } }
   .grow { flex: 1; }

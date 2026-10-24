@@ -5,6 +5,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
   import { ui } from '../lib/state.svelte.js';
+  import { upd } from '../lib/updater.svelte.js';
   import { haptic } from '../lib/feedback.js';
   import { onMount } from 'svelte';
 
@@ -113,6 +114,8 @@
     <span class="badge err">{failedCount}</span>
   {:else if id === 'settings' && errorLogs}
     <span class="badge err small"></span>
+  {:else if id === 'settings' && upd.info?.available}
+    <span class="badge small upd"></span>
   {/if}
 {/snippet}
 
@@ -260,6 +263,7 @@
     animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .badge.err { background: #dc5050; }
+  .badge.small.upd { background: var(--accent-2); }
   .badge.small { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 0; left: 17px; background: var(--err); }
   @keyframes pop { from { transform: scale(0.3); } }
 </style>

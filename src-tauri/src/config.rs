@@ -246,6 +246,10 @@ pub struct Settings {
     pub add_paused: bool,
     pub history_limit: u32,
     pub first_run_done: bool,
+    /// Buscar actualizaciones al abrir Nebula (y cada pocas horas).
+    pub update_check: bool,
+    /// Versión que el usuario decidió omitir: no se vuelve a avisar de ella.
+    pub update_skipped: String,
 }
 
 impl Default for Settings {
@@ -300,6 +304,8 @@ impl Default for Settings {
             add_paused: false,
             history_limit: 300,
             first_run_done: false,
+            update_check: true,
+            update_skipped: String::new(),
         }
     }
 }

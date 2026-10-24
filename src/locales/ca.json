@@ -534,7 +534,8 @@
       "network": "Connexió",
       "post": "Postprocessament",
       "search": "Cerca",
-      "windows": "Windows"
+      "windows": "Windows",
+      "updates": "Actualitzacions"
     },
     "speedLimitDesc": "En MB/s. 0 = sense límit.",
     "startMinimized": "Inicia minimitzat a la safata",
@@ -781,7 +782,41 @@
       "network": "Velocitat, reintents i historial",
       "look": "Color, animacions i vibració",
       "logs": "El que va fent Nebula",
-      "about": "Versió i llicències"
+      "about": "Versió i llicències",
+      "updates": "Cerca i instal·la versions noves"
     }
+  },
+  "update": {
+    "title": "Nova versió de Nebula",
+    "upToDate": "Nebula està al dia (v{version}).",
+    "downloading": "S'està descarregant l'actualització…",
+    "downloadedReady": "Actualització descarregada",
+    "permission": "Per instal·lar-la, permet que Nebula instal·li aplicacions a la pantalla que s'ha obert i torna aquí.",
+    "androidHint": "Si has tancat l'instal·lador d'Android, toca Instal·la per tornar-lo a obrir.",
+    "openingInstaller": "S'està obrint l'instal·lador d'Android…",
+    "restarting": "S'està instal·lant… Nebula es tancarà i es tornarà a obrir ja actualitzada.",
+    "whatsNew": "Novetats",
+    "activeDownloads": "Les baixades en curs es reprendran quan Nebula es torni a obrir.",
+    "manualOnly": "Per a aquest sistema no hi ha instal·lació automàtica: s'obrirà la pàgina de la versió.",
+    "background": "Continua en segon pla",
+    "dontClose": "No tanquis Nebula",
+    "later": "Ara no",
+    "install": "Instal·la",
+    "skip": "Omet aquesta versió",
+    "now": "Actualitza ara",
+    "openPage": "Obre la pàgina",
+    "downloadingPct": "S'està descarregant l'actualització… {pct}%",
+    "availableDesc": "Pots instal·lar-la ara o quan vulguis des d'aquí.",
+    "checking": "S'estan cercant actualitzacions…",
+    "upToDateDesc": "Tens l'última versió. Última comprovació: {time}.",
+    "neverChecked": "Cerca si hi ha una versió nova a GitHub.",
+    "availableLabel": "Nebula {version} disponible",
+    "currentLabel": "Nebula {version}",
+    "check": "Cerca actualitzacions",
+    "auto": "Cerca actualitzacions automàticament",
+    "autoDesc": "En obrir Nebula i cada poques hores. T'avisarà amb una finestra que pots tancar.",
+    "skipped": "Versió {version} omesa",
+    "skippedDesc": "No se t'avisarà d'aquesta versió; encara la pots instal·lar des d'aquí.",
+    "unskip": "Torna a avisar-me"
   }
 }

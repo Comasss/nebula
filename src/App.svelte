@@ -18,6 +18,8 @@
   import ViaMenu from './components/ViaMenu.svelte';
   import ActionSheet from './components/ActionSheet.svelte';
   import MobileSettings from './views/MobileSettings.svelte';
+  import UpdatePrompt from './components/UpdatePrompt.svelte';
+  import { initUpdater } from './lib/updater.svelte.js';
   import { installRipples } from './lib/feedback.js';
   import Icon from './components/Icon.svelte';
   import { invoke } from '@tauri-apps/api/core';
@@ -68,10 +70,12 @@
   onMount(() => {
     let unlistenDrop;
     installRipples();
-    init().catch((e) => {
-      console.error(e);
-      toast('error', t('app.startError', { error: e }));
-    });
+    init()
+      .then(initUpdater)
+      .catch((e) => {
+        console.error(e);
+        toast('error', t('app.startError', { error: e }));
+      });
     if (!isAndroid) getCurrentWebview()
       .onDragDropEvent((ev) => {
         const p = ev.payload;
@@ -193,6 +197,7 @@
   <FolderPicker />
   <ViaMenu />
   <ActionSheet />
+  <UpdatePrompt />
   <Dialog />
 {/if}
 <DropOverlay />

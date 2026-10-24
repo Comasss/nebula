@@ -9,6 +9,7 @@
   import { ui, d } from '../lib/state.svelte.js';
   import { haptic } from '../lib/feedback.js';
   import { usableDebrid, nntpServers } from '../lib/debrid.js';
+  import { upd } from '../lib/updater.svelte.js';
   import Settings from './Settings.svelte';
   import Indexers from './Indexers.svelte';
   import Servers from './Servers.svelte';
@@ -118,6 +119,7 @@
         <h3>{t('msettings.system')}</h3>
         <div class="card group">
           {@render row({ id: 'logs', icon: 'logs', hue: 0, label: t('nav.logs'), sub: t('msettings.desc.logs') }, () => open('logs'), errorLogs)}
+          {@render row({ id: 'updates', icon: 'refresh', hue: 170, label: t('settings.section.updates'), sub: upd.info?.available ? t('update.availableLabel', { version: upd.info.version }) : t('msettings.desc.updates') }, () => open('sec:updates'), upd.info?.available ? 1 : 0)}
           {@render row({ id: 'about', icon: 'info', hue: 250, label: t('settings.section.about'), sub: t('msettings.desc.about') }, () => open('sec:about'))}
         </div>
       {:else}
