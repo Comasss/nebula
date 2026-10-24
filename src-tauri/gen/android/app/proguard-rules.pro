@@ -21,3 +21,7 @@
 #-renamesourcefileattribute SourceFile
 # Puente con el motor de Nebula (se carga por nombre desde Rust).
 -keep class com.nebula.downloader.** { *; }
+# ML Kit (lector de QR) crea sus ComponentRegistrar por reflexión con el constructor vacío. Sin estas
+# reglas R8 los deja sin constructor, ML Kit no encuentra sus componentes y la cámara falla al abrirse.
+-keep interface com.google.firebase.components.ComponentRegistrar { *; }
+-keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); *; }
