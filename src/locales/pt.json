@@ -553,7 +553,9 @@
     "wizard": "Assistente de boas-vindas",
     "wizardDesc": "Mostra novamente a configuração inicial.",
     "haptics": "Vibrar ao tocar",
-    "hapticsDesc": "Uma vibração curta confirma o que você toca e o que segura."
+    "hapticsDesc": "Uma vibração curta confirma o que você toca e o que segura.",
+    "searchPlaceholder": "Pesquisar nas definições…",
+    "noResults": "Nenhuma definição corresponde a «{q}»"
   },
   "sidebar": {
     "activeConns": {

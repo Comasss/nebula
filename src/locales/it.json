@@ -553,7 +553,9 @@
     "wizard": "Procedura di benvenuto",
     "wizardDesc": "Mostra di nuovo la configurazione iniziale.",
     "haptics": "Vibrazione al tocco",
-    "hapticsDesc": "Una breve vibrazione conferma ciò che tocchi e ciò che tieni premuto."
+    "hapticsDesc": "Una breve vibrazione conferma ciò che tocchi e ciò che tieni premuto.",
+    "searchPlaceholder": "Cerca nelle impostazioni…",
+    "noResults": "Nessuna impostazione corrisponde a «{q}»"
   },
   "sidebar": {
     "activeConns": {

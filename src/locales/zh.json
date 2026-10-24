@@ -535,7 +535,9 @@
     "wizard": "欢迎向导",
     "wizardDesc": "重新显示初始设置。",
     "haptics": "触摸振动",
-    "hapticsDesc": "轻触或长按时以短暂振动确认。"
+    "hapticsDesc": "轻触或长按时以短暂振动确认。",
+    "searchPlaceholder": "搜索设置…",
+    "noResults": "没有与“{q}”匹配的设置"
   },
   "sidebar": {
     "activeConns": {

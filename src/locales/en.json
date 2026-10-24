@@ -553,7 +553,9 @@
     "wizard": "Welcome wizard",
     "wizardDesc": "Shows the initial setup again.",
     "haptics": "Vibrate on touch",
-    "hapticsDesc": "A short vibration confirms what you tap and what you press and hold."
+    "hapticsDesc": "A short vibration confirms what you tap and what you press and hold.",
+    "searchPlaceholder": "Search settings…",
+    "noResults": "No settings match “{q}”"
   },
   "sidebar": {
     "activeConns": {

@@ -11,6 +11,7 @@
   import { usableDebrid, nntpServers } from '../lib/debrid.js';
   import { upd } from '../lib/updater.svelte.js';
   import Settings from './Settings.svelte';
+  import { fold } from '../lib/format.js';
   import Indexers from './Indexers.svelte';
   import Servers from './Servers.svelte';
   import Debrid from './Debrid.svelte';
@@ -43,7 +44,7 @@
     { id: 'windows', icon: 'smartphone', hue: 200 },
     { id: 'network', icon: 'wifi', hue: 140 },
     { id: 'look', icon: 'palette', hue: 300 },
-    { id: 'api', icon: 'plug', hue: 100, indexers: true },
+    { id: 'api', icon: 'plug', hue: 100 },
   ];
   const prefs = $derived(SECTION_ROWS.filter((r) => (!r.nntp || s?.featureNntp !== false) && (!r.indexers || s?.featureIndexers)));
 
@@ -57,6 +58,15 @@
 
   const page = $derived(ui.settingsPage);
   const title = $derived(!page ? '' : page.startsWith('sec:') ? sectionTitle(page.slice(4)) : t(`nav.${page}`));
+
+  // Buscador: muestra las páginas y los ajustes de todas las secciones que coinciden.
+  let query = $state('');
+  const pageHits = $derived.by(() => {
+    const q = fold(query);
+    if (!q) return [];
+    const logs = { id: 'logs', icon: 'logs', hue: 0, label: t('nav.logs'), sub: t('msettings.desc.logs') };
+    return [...sources, logs].filter((r) => fold(`${r.label} ${r.sub}`).includes(q));
+  });
 
   let dir = $state(1);
   function open(id) {
@@ -96,6 +106,23 @@
           <p><Icon name="check" size={13} /> {t('settings.autosave')}</p>
         </header>
 
+        <label class="find">
+          <Icon name="search" size={16} />
+          <input type="search" placeholder={t('settings.searchPlaceholder')} bind:value={query} />
+          {#if query}
+            <button onclick={() => (query = '')} aria-label={t('common.clear')}><Icon name="x" size={14} /></button>
+          {/if}
+        </label>
+
+        {#if fold(query)}
+          {#if pageHits.length}
+            <div class="card group hits">
+              {#each pageHits as r (r.id)}{@render row(r, () => open(r.id))}{/each}
+            </div>
+          {/if}
+          <div class="results"><Settings query={query} /></div>
+        {:else}
+
         <div class="about card">
           <img src={logo} alt="" width="52" height="52" />
           <div class="a-text">
@@ -124,6 +151,7 @@
           {@render row({ id: 'updates', icon: 'refresh', hue: 170, label: t('settings.section.updates'), sub: upd.info?.available ? t('update.availableLabel', { version: upd.info.version }) : t('msettings.desc.updates') }, () => open('sec:updates'), upd.info?.available ? 1 : 0)}
           {@render row({ id: 'about', icon: 'info', hue: 250, label: t('settings.section.about'), sub: t('msettings.desc.about') }, () => open('sec:about'))}
         </div>
+        {/if}
       {:else}
         <header class="bar">
           <button class="back" onclick={back} aria-label={t('common.back')}><Icon name="chevron-left" size={20} stroke={2.4} /></button>
@@ -161,6 +189,17 @@
   .a-text span { font-size: 12.5px; color: var(--muted); }
   h3 { margin: 22px 6px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
   .group { overflow: hidden; padding: 4px 0; }
+  .find {
+    display: flex; align-items: center; gap: 10px;
+    height: 44px; margin: 0 0 14px; padding: 0 14px;
+    border-radius: 14px; border: 1px solid var(--border); background: var(--panel);
+    color: var(--muted);
+  }
+  .find:focus-within { border-color: rgba(var(--accent-rgb), 0.5); }
+  .find input { flex: 1; min-width: 0; border: none; outline: none; background: none; color: var(--text); font: inherit; font-size: 15px; }
+  .find input::-webkit-search-cancel-button { display: none; }
+  .find button { display: grid; place-items: center; width: 26px; height: 26px; border: none; border-radius: 50%; background: var(--panel-3); color: var(--text-2); }
+  .hits { margin-bottom: 16px; }
   .s-row {
     display: flex; align-items: center; gap: 13px;
     width: 100%; min-height: 60px; padding: 8px 14px;

@@ -535,7 +535,9 @@
     "wizard": "ようこそウィザード",
     "wizardDesc": "初期設定をもう一度表示します。",
     "haptics": "タップ時に振動",
-    "hapticsDesc": "タップや長押しを短い振動で知らせます。"
+    "hapticsDesc": "タップや長押しを短い振動で知らせます。",
+    "searchPlaceholder": "設定を検索…",
+    "noResults": "「{q}」に一致する設定はありません"
   },
   "sidebar": {
     "activeConns": {
