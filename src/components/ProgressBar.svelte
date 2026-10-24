@@ -1,9 +1,10 @@
 <script>
-  let { value = 0, kind = 'accent', active = false, height = 8 } = $props();
+  // indeterminate: sin progreso conocido (un tramo que va y viene).
+  let { value = 0, kind = 'accent', active = false, height = 8, indeterminate = false } = $props();
   const pct = $derived(Math.max(0, Math.min(100, value || 0)));
 </script>
 
-<div class="pbar {kind}" class:active style="height:{height}px" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100">
+<div class="pbar {kind}" class:active class:indeterminate style="height:{height}px" role="progressbar" aria-valuenow={indeterminate ? undefined : pct} aria-valuemin="0" aria-valuemax="100">
   <div class="fill" style="width:{pct}%"></div>
 </div>
 
@@ -39,6 +40,12 @@
   .teal .fill { background: linear-gradient(90deg, #14b8a6, #34d399); box-shadow: 0 0 14px -3px rgba(45, 212, 191, 0.7); }
   .ok .fill { background: linear-gradient(90deg, #10b981, #34d399); }
   .err .fill { background: linear-gradient(90deg, #ef4444, #f87171); }
+  .indeterminate .fill { width: 35% !important; animation: slide 1.6s ease-in-out infinite; transition: none; }
+  .indeterminate .fill::after { display: none; }
+  @keyframes slide {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(290%); }
+  }
   @keyframes shimmer {
     to { transform: translateX(100%); }
   }

@@ -31,6 +31,8 @@ const READ_TIMEOUT: Duration = Duration::from_secs(60);
 const CONFIRM_WAIT: Duration = Duration::from_secs(15 * 60);
 /// Subidas sin confirmar seguidas antes de darse por vencido con este servicio.
 const MAX_UNCONFIRMED: u32 = 3;
+/// Con el NZB ya subido, cada cuánto se mira si el servicio lo ha añadido sin esperar a su respuesta.
+const LOOKUP_EVERY: Duration = Duration::from_secs(5);
 
 // ---------------------------------------------------------------------------
 // Modelo
@@ -81,6 +83,8 @@ pub struct DebridJob {
     pub confirm_until: Option<Instant>,
     /// Subidas seguidas que el servicio no confirmó.
     pub unconfirmed: u32,
+    /// Desde cuándo se espera al servicio con el NZB ya subido (para mostrar el tiempo).
+    pub wait_since: Option<Instant>,
 }
 
 impl DebridJob {
@@ -108,6 +112,7 @@ impl DebridJob {
             upload_speed: 0,
             confirm_until: None,
             unconfirmed: 0,
+            wait_since: None,
         }
     }
 
@@ -158,6 +163,7 @@ impl DebridJob {
             // Se cerró Nebula mientras se comprobaba: se vuelve a dar el plazo completo.
             confirm_until: s.confirming.then(|| Instant::now() + CONFIRM_WAIT),
             unconfirmed: s.unconfirmed,
+            wait_since: s.confirming.then(Instant::now),
         }
     }
 
@@ -176,6 +182,7 @@ impl DebridJob {
             phase: self.phase,
             state: self.remote_state.clone(),
             upload: if self.phase == DebridPhase::Submit { self.upload_percent() } else { 100.0 },
+            waiting: self.wait_since.is_some(),
             remote: match self.phase {
                 DebridPhase::Submit => 0.0,
                 DebridPhase::Remote => self.remote_percent,
@@ -212,6 +219,8 @@ pub struct DebridView {
     /// Progreso de cada fase (0-100): subida del NZB y descarga en el servicio.
     pub upload: f64,
     pub remote: f64,
+    /// NZB subido; se espera a que el servicio lo acepte (sin progreso que mostrar).
+    pub waiting: bool,
 }
 
 /// Fragmentos de un archivo de `size` bytes (al menos uno, aunque esté vacío).
@@ -417,6 +426,7 @@ async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resu
         d.upload_sent.store(0, Ordering::Relaxed);
         d.upload_total = total;
         d.upload_speed = 0;
+        d.wait_since = None;
         d.remote_state = t!("dj.uploading", name = s.label, done = util::fmt_bytes(0), total = util::fmt_bytes(total));
         d.upload_sent.clone()
     }) else {
@@ -429,11 +439,14 @@ async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resu
         post_processing: pp_mode(&s.options),
         sent: sent.clone(),
     };
+    let hash = debrid::nzb_hash(&data);
     let send = debrid::submit(cfg, &up);
     tokio::pin!(send);
     // Mientras se sube se actualizan el progreso, la velocidad y el estado una vez por segundo.
     let mut tick = tokio::time::interval(Duration::from_secs(1));
     let mut speed = util::Speedo::new(5000);
+    let mut uploaded: Option<Instant> = None;
+    let mut next_lookup = Instant::now();
     let res = loop {
         tokio::select! {
             r = &mut send => break r,
@@ -442,19 +455,38 @@ async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resu
                 let now = sent.load(Ordering::Relaxed);
                 speed.push(now);
                 let rate = speed.rate();
+                if now >= total && uploaded.is_none() {
+                    let at = Instant::now();
+                    uploaded = Some(at);
+                    next_lookup = at + LOOKUP_EVERY;
+                    e.debrid_mut(id, |_, d| d.wait_since = Some(at));
+                }
                 e.debrid_mut(id, |_, d| {
-                    if now >= total {
+                    if let Some(at) = uploaded {
                         d.upload_speed = 0;
-                        d.remote_state = t!("dj.processing", name = s.label);
+                        d.remote_state = t!("dj.processing", name = s.label, time = fmt_wait(at.elapsed()));
                     } else {
                         d.upload_speed = rate;
                         d.remote_state = t!("dj.uploading", name = s.label, done = util::fmt_bytes(now), total = util::fmt_bytes(total));
                     }
                 });
+                // TorBox analiza el NZB antes de contestar y con NZB grandes tarda (o su pasarela corta con 504),
+                // pero lo añade a la cuenta en cuanto termina: se busca por su hash para seguir sin esperar a la respuesta.
+                if uploaded.is_some() && Instant::now() >= next_lookup && debrid::finds_by_hash(cfg) {
+                    next_lookup = Instant::now() + LOOKUP_EVERY;
+                    if let Ok(st) = debrid::status(cfg, "", &hash).await {
+                        if !st.missing {
+                            break Ok(debrid::Submitted { id: st.id.unwrap_or_default(), hash: hash.clone(), unconfirmed: false });
+                        }
+                    }
+                }
             }
         }
     };
-    e.debrid_mut(id, |_, d| d.upload_speed = 0);
+    e.debrid_mut(id, |_, d| {
+        d.upload_speed = 0;
+        d.wait_since = None;
+    });
     let r = res?;
     if r.unconfirmed {
         lwarn!("{}", t!("log.dj.unconfirmed", name = s.name, provider = s.label));
@@ -463,12 +495,17 @@ async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resu
         d.remote_id = r.id.clone();
         d.remote_hash = r.hash.clone();
         d.phase = DebridPhase::Remote;
-        d.remote_state = if r.unconfirmed { t!("dj.confirming", name = s.label) } else { t!("dj.queuedAt", name = s.label) };
+        d.remote_state = if r.unconfirmed {
+            t!("dj.confirming", name = s.label, time = fmt_wait(Duration::ZERO))
+        } else {
+            t!("dj.queuedAt", name = s.label)
+        };
         d.remote_percent = 0.0;
         d.notice = None;
         if r.unconfirmed {
             d.confirm_until = Some(Instant::now() + CONFIRM_WAIT);
             d.unconfirmed += 1;
+            d.wait_since = Some(Instant::now());
         } else {
             d.confirm_until = None;
             d.unconfirmed = 0;
@@ -486,6 +523,12 @@ async fn submit(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Resu
     Ok(Next::Now)
 }
 
+/// Tiempo de espera como m:ss.
+fn fmt_wait(d: Duration) -> String {
+    let s = d.as_secs();
+    format!("{}:{:02}", s / 60, s % 60)
+}
+
 async fn poll(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Result<Next, DebridError> {
     let st = debrid::status(cfg, &s.remote_id, &s.remote_hash).await?;
     let new_id = st.id;
@@ -493,16 +536,18 @@ async fn poll(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Result
     let confirm = e.debrid_mut(id, |_, d| {
         if !st.missing {
             d.confirm_until = None;
+            d.wait_since = None;
         }
         d.confirm_until.map(|t| (t, d.unconfirmed))
     });
     if let Some(Some((until, rounds))) = confirm {
         if Instant::now() < until {
             e.debrid_mut(id, |_, d| {
-                d.remote_state = t!("dj.confirming", name = s.label);
+                let waited = d.wait_since.map(|t| t.elapsed()).unwrap_or_default();
+                d.remote_state = t!("dj.confirming", name = s.label, time = fmt_wait(waited));
                 d.notice = None;
             });
-            return Ok(Next::After(Duration::from_secs(15)));
+            return Ok(Next::After(LOOKUP_EVERY));
         }
         if rounds >= MAX_UNCONFIRMED {
             return Err(DebridError::new(ErrKind::Fatal, t!("dj.neverConfirmed", name = s.label)));
@@ -510,6 +555,7 @@ async fn poll(e: &Arc<Engine>, id: &str, cfg: &DebridConfig, s: &Snap) -> Result
         lwarn!("{}", t!("dj.notConfirmed", name = s.label));
         e.debrid_mut(id, |_, d| {
             d.confirm_until = None;
+            d.wait_since = None;
             d.phase = DebridPhase::Submit;
             d.remote_hash.clear();
             d.notice = Some(t!("dj.notConfirmed", name = s.label));

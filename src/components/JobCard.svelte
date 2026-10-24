@@ -26,12 +26,19 @@
   );
   const waiting = $derived(pp && job.post?.stage === 'waiting');
   // Debrid: una barra por fase (subida del NZB, descarga en el servicio y bajada al dispositivo).
+  // NZB ya subido: el servicio lo está aceptando y no hay progreso que mostrar.
+  const accepting = $derived(!!job.debrid?.waiting && !pp);
   const steps = $derived.by(() => {
     if (!job.debrid || pp) return [];
     const ph = job.debrid.phase;
     return [
-      { label: t('job.stepUpload'), value: job.debrid.upload ?? (ph === 'submit' ? 0 : 100), current: ph === 'submit' },
-      { label: t('job.stepRemote', { provider: job.debrid.provider }), value: job.debrid.remote ?? (ph === 'fetch' ? 100 : 0), current: ph === 'remote' },
+      { label: t('job.stepUpload'), value: job.debrid.upload ?? (ph === 'submit' ? 0 : 100), current: ph === 'submit' && !accepting },
+      {
+        label: t('job.stepRemote', { provider: job.debrid.provider }),
+        value: job.debrid.remote ?? (ph === 'fetch' ? 100 : 0),
+        current: ph === 'remote' || accepting,
+        indeterminate: accepting,
+      },
       { label: t('job.stepFetch'), value: ph === 'fetch' ? job.percent : 0, current: ph === 'fetch' },
     ];
   });
@@ -202,19 +209,20 @@
   </div>
 
   <div class="bar-row">
-    <ProgressBar value={percent} kind={barKind} active={(job.status === 'downloading' && !ui.queue.paused) || (pp && !waiting)} />
-    <span class="pct">{percent.toFixed(1)}%</span>
+    <ProgressBar value={percent} kind={barKind} indeterminate={accepting && job.status === 'downloading'} active={(job.status === 'downloading' && !ui.queue.paused) || (pp && !waiting)} />
+    <span class="pct">{accepting ? '…' : `${percent.toFixed(1)}%`}</span>
   </div>
 
   {#if steps.length}
     <div class="steps">
       {#each steps as s}
         <div class="step" class:current={s.current}>
-          <div class="step-head"><span class="truncate">{s.label}</span><span class="step-pct">{s.value.toFixed(0)}%</span></div>
+          <div class="step-head"><span class="truncate">{s.label}</span><span class="step-pct">{s.indeterminate ? '…' : `${s.value.toFixed(0)}%`}</span></div>
           <ProgressBar
             value={s.value}
             height={4}
             kind={s.current ? barKind : s.value >= 100 ? 'ok' : 'muted'}
+            indeterminate={s.indeterminate && job.status === 'downloading'}
             active={s.current && job.status === 'downloading' && !ui.queue.paused}
           />
         </div>
