@@ -218,26 +218,57 @@ class NebulaPlugin(private val activity: Activity) : Plugin(activity) {
     ctx.startActivity(Intent.createChooser(intent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
   }
 
-  /** Abre la carpeta en el gestor de archivos del sistema (si lo permite). */
+  /**
+   * Abre la carpeta en un gestor de archivos. Si hay varios instalados, Android deja elegir con
+   * cuál; si ninguno sabe abrir carpetas, se ofrece abrir el archivo principal de la descarga.
+   */
   private fun openFolder(dir: File) {
     val root = Environment.getExternalStorageDirectory().absolutePath
     val rel = dir.absolutePath.removePrefix(root).trim('/')
     val docId = if (rel.isEmpty()) "primary:" else "primary:$rel"
-    val uri = DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", docId)
-    val attempts = listOf(
-      Intent(Intent.ACTION_VIEW).setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR),
-      Intent(Intent.ACTION_VIEW).setDataAndType(uri, "resource/folder"),
-      Intent(Intent.ACTION_VIEW, Uri.parse("content://com.android.externalstorage.documents/root/primary")),
+    val docUri = DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", docId)
+    val ownUri = FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", dir)
+    // Cada gestor entiende una forma distinta de "esta carpeta". El permiso de lectura solo se
+    // puede conceder sobre las URIs propias: en las del almacenamiento del sistema Android lo
+    // rechaza y no se abriría nada.
+    val grant = Intent.FLAG_GRANT_READ_URI_PERMISSION
+    val variants = listOf(
+      Intent(Intent.ACTION_VIEW).setDataAndType(docUri, DocumentsContract.Document.MIME_TYPE_DIR),
+      Intent(Intent.ACTION_VIEW).setDataAndType(docUri, "resource/folder"),
+      Intent(Intent.ACTION_VIEW).setDataAndType(ownUri, "resource/folder").addFlags(grant),
+      Intent(Intent.ACTION_VIEW).setDataAndType(ownUri, "inode/directory").addFlags(grant),
+      Intent(Intent.ACTION_VIEW).setDataAndType(ownUri, DocumentsContract.Document.MIME_TYPE_DIR).addFlags(grant),
     )
-    for (intent in attempts) {
-      intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-      try {
-        ctx.startActivity(intent)
-        return
-      } catch (_: Exception) {
+    val pm = ctx.packageManager
+    val seen = mutableSetOf(ctx.packageName)
+    val targets = mutableListOf<Intent>()
+    for (variant in variants) {
+      for (info in pm.queryIntentActivities(variant, 0)) {
+        val app = info.activityInfo
+        if (seen.add(app.packageName)) targets += Intent(variant).setClassName(app.packageName, app.name)
       }
     }
-    throw Exception("No file manager")
+    // Gestores que no anuncian abrir carpetas concretas: al menos se pueden abrir.
+    if (Build.VERSION.SDK_INT >= 29) {
+      for (info in pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_FILES), 0)) {
+        val app = info.activityInfo
+        if (seen.add(app.packageName)) pm.getLaunchIntentForPackage(app.packageName)?.let { targets += it }
+      }
+    }
+    if (targets.isEmpty()) {
+      val main = dir.walkTopDown().filter { it.isFile }.maxByOrNull { it.length() } ?: throw Exception("No file manager")
+      openFile(main)
+      return
+    }
+    val first = targets.removeAt(0).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (targets.isEmpty()) {
+      ctx.startActivity(first)
+    } else {
+      val chooser = Intent.createChooser(first, null)
+        .putExtra(Intent.EXTRA_INITIAL_INTENTS, targets.toTypedArray())
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      ctx.startActivity(chooser)
+    }
   }
 
   @Command

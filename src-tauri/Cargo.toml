@@ -1,6 +1,6 @@
 [package]
 name = "nebula"
-version = "1.5.1"
+version = "1.5.2"
 description = "Nebula — a modern Usenet (NZB) client for Windows and Android"
 authors = ["Genis"]
 edition = "2021"
