@@ -279,7 +279,10 @@
     "waitingServer": "サーバーへの接続を待っています… 「サーバー」タブを確認してください。",
     "hideDetails": "詳細を隠す",
     "more": "その他の操作",
-    "serverTitle": "このサーバーからのみダウンロード"
+    "serverTitle": "このサーバーからのみダウンロード",
+    "stepUpload": "送信",
+    "stepRemote": "{provider} 上",
+    "stepFetch": "ダウンロード"
   },
   "logs": {
     "all": "すべて",

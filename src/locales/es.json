@@ -287,7 +287,10 @@
     "waitingServer": "Esperando conexión con algún servidor… Revisa la pestaña Servidores.",
     "hideDetails": "Ocultar detalles",
     "more": "Más acciones",
-    "serverTitle": "Se descarga solo con este servidor"
+    "serverTitle": "Se descarga solo con este servidor",
+    "stepUpload": "Envío",
+    "stepRemote": "En {provider}",
+    "stepFetch": "Descarga"
   },
   "logs": {
     "all": "Todo",

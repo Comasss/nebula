@@ -287,7 +287,10 @@
     "waitingServer": "En attente de connexion à un serveur… Vérifiez l'onglet Serveurs.",
     "hideDetails": "Masquer les détails",
     "more": "Plus d'actions",
-    "serverTitle": "Téléchargé uniquement depuis ce serveur"
+    "serverTitle": "Téléchargé uniquement depuis ce serveur",
+    "stepUpload": "Envoi",
+    "stepRemote": "Sur {provider}",
+    "stepFetch": "Téléchargement"
   },
   "logs": {
     "all": "Tout",

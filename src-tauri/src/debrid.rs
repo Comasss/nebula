@@ -7,7 +7,8 @@ use crate::config::DebridConfig;
 use md5::{Digest, Md5};
 use serde::Serialize;
 use serde_json::Value;
-use std::sync::LazyLock;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
 /// Servicios admitidos: (id interno, nombre).
@@ -32,6 +33,23 @@ static API: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .build()
         .expect("cliente HTTP")
 });
+
+/// Cliente para subir el NZB: sin tiempo total máximo (un NZB de decenas de MB por datos móviles tarda
+/// minutos). En su lugar `upload` vigila que la subida avance y que llegue la respuesta.
+static UPLOAD: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .user_agent(UA)
+        .connect_timeout(Duration::from_secs(20))
+        .build()
+        .expect("cliente HTTP")
+});
+
+/// Se aborta la subida si no se envía nada durante este tiempo.
+const UPLOAD_STALL: Duration = Duration::from_secs(60);
+/// Espera máxima de la respuesta una vez enviado todo el NZB (con NZB grandes el servicio tarda en analizarlo).
+const UPLOAD_REPLY: Duration = Duration::from_secs(300);
+/// Tamaño de cada trozo del NZB que se entrega a la conexión (marca el paso del progreso).
+const UPLOAD_PIECE: usize = 64 * 1024;
 
 /// Cliente para bajar los archivos: sin compresión (los rangos deben ser bytes reales) ni tiempo total máximo.
 pub static FILES: LazyLock<reqwest::Client> = LazyLock::new(|| {
@@ -90,6 +108,9 @@ impl std::fmt::Display for DebridError {
 pub struct Submitted {
     pub id: String,
     pub hash: String,
+    /// El NZB llegó entero pero el servicio no confirmó (p. ej. HTTP 504 de su pasarela): puede que lo
+    /// esté procesando igualmente, así que hay que comprobarlo por `hash` antes de volver a subirlo.
+    pub unconfirmed: bool,
 }
 
 /// Archivo ya descargado en el servicio. `path` es relativo (sin la carpeta raíz del release).
@@ -114,6 +135,8 @@ pub struct Status {
     /// Id descubierto si antes no se conocía (estaba en la cola del servicio).
     pub id: Option<String>,
     pub state: RemoteState,
+    /// Buscado por hash, no aparece ni en la lista ni en la cola del servicio.
+    pub missing: bool,
 }
 
 pub struct Upload<'a> {
@@ -123,6 +146,8 @@ pub struct Upload<'a> {
     /// Post-procesado de TorBox: -1 por defecto (reparar, extraer y borrar), 0 nada, 1 reparar,
     /// 2 reparar y extraer, 3 reparar, extraer y borrar.
     pub post_processing: i32,
+    /// Bytes del NZB entregados a la conexión (progreso de la subida).
+    pub sent: Arc<AtomicU64>,
 }
 
 #[derive(Serialize)]
@@ -236,16 +261,52 @@ fn net(label: &str, e: reqwest::Error) -> DebridError {
     } else {
         t!("debrid.netError", name = label, error = e.without_url())
     };
-    DebridError::new(ErrKind::Transient, msg)
+    DebridError::new(ErrKind::Transient, msg).with_code("NET")
 }
 
 fn http_status(label: &str, status: u16) -> DebridError {
-    match status {
+    let e = match status {
         401 | 403 => DebridError::new(ErrKind::Auth, t!("debrid.keyRejected", name = label, status = status)),
         429 => DebridError::new(ErrKind::Busy, t!("debrid.rateLimited", name = label)),
         500..=599 => DebridError::new(ErrKind::Transient, t!("debrid.serverError", name = label, status = status)),
         200..=299 => DebridError::new(ErrKind::Transient, t!("debrid.badResponse", name = label)),
         c => DebridError::new(ErrKind::Fatal, t!("debrid.httpError", name = label, status = c)),
+    };
+    e.with_code(&format!("HTTP_{}", status))
+}
+
+/// Error sin respuesta útil del servicio (pasarela 5xx sin JSON, corte o tiempo agotado). Si ocurre con el
+/// NZB ya enviado entero, el servicio puede haberlo recibido.
+fn no_answer(e: &DebridError) -> bool {
+    e.kind == ErrKind::Transient && (e.code.starts_with("HTTP_5") || e.code == "NET")
+}
+
+/// Envía una subida vigilando su avance mediante `sent`: se aborta si se atasca `UPLOAD_STALL` o si, enviado
+/// todo, la respuesta tarda más de `UPLOAD_REPLY`. Devuelve el estado HTTP y el cuerpo.
+async fn upload(label: &str, req: reqwest::RequestBuilder, sent: &AtomicU64, total: u64) -> Result<(u16, bytes::Bytes), DebridError> {
+    let fut = async {
+        let resp = req.send().await?;
+        let status = resp.status().as_u16();
+        Ok::<_, reqwest::Error>((status, resp.bytes().await?))
+    };
+    tokio::pin!(fut);
+    let mut tick = tokio::time::interval(Duration::from_secs(1));
+    let (mut last, mut since) = (u64::MAX, Instant::now());
+    loop {
+        tokio::select! {
+            r = &mut fut => return r.map_err(|e| net(label, e)),
+            _ = tick.tick() => {
+                let now = sent.load(Ordering::Relaxed);
+                if now != last {
+                    (last, since) = (now, Instant::now());
+                }
+                let done = now >= total;
+                if since.elapsed() > if done { UPLOAD_REPLY } else { UPLOAD_STALL } {
+                    let msg = if done { t!("debrid.noReply", name = label) } else { t!("debrid.uploadStalled", name = label) };
+                    return Err(DebridError::new(ErrKind::Transient, msg).with_code("NET"));
+                }
+            }
+        }
     }
 }
 
@@ -321,8 +382,19 @@ fn fmt_date(ts: u64) -> String {
     format!("{:02}/{:02}/{}", d, m, y)
 }
 
+/// El NZB como parte multipart que se envía por trozos, contando en `up.sent` lo entregado.
 fn nzb_part(up: &Upload<'_>) -> Result<reqwest::multipart::Part, DebridError> {
-    reqwest::multipart::Part::bytes(up.nzb.to_vec())
+    let data = bytes::Bytes::copy_from_slice(up.nzb);
+    let len = data.len();
+    let sent = up.sent.clone();
+    sent.store(0, Ordering::Relaxed);
+    let pieces = (0..len).step_by(UPLOAD_PIECE).map(move |i| {
+        let piece = data.slice(i..(i + UPLOAD_PIECE).min(len));
+        sent.fetch_add(piece.len() as u64, Ordering::Relaxed);
+        Ok::<_, std::io::Error>(piece)
+    });
+    let body = reqwest::Body::wrap_stream(futures_util::stream::iter(pieces));
+    reqwest::multipart::Part::stream_with_length(body, len as u64)
         .file_name(format!("{}.nzb", up.name))
         .mime_str("application/x-nzb")
         .map_err(|e| DebridError::new(ErrKind::Fatal, e.to_string()))
@@ -404,11 +476,21 @@ mod torbox {
         if let Some(p) = up.password.filter(|p| !p.is_empty()) {
             form = form.text("password", p.to_string());
         }
-        let req = API.post(format!("{}/usenet/createusenetdownload", base())).bearer_auth(key).multipart(form);
-        match send(req).await {
+        let req = UPLOAD.post(format!("{}/usenet/createusenetdownload", base())).bearer_auth(key).multipart(form);
+        let total = up.nzb.len() as u64;
+        let res = match upload(LABEL, req, &up.sent, total).await {
+            Ok((status, body)) => envelope(status, &body),
+            Err(e) => Err(e),
+        };
+        match res {
             Ok(data) => Ok(parse_created(&data, &hash)),
             // Ya estaba en la cuenta: se localiza por su hash.
-            Err(e) if e.code == "DUPLICATE_ITEM" => Ok(Submitted { id: String::new(), hash }),
+            Err(e) if e.code == "DUPLICATE_ITEM" => Ok(Submitted { id: String::new(), hash, unconfirmed: false }),
+            // Con NZB grandes la pasarela de TorBox corta (HTTP 504) mientras su servidor aún lo analiza y
+            // suele acabar añadiéndolo: se busca por su hash en vez de subirlo otra vez en bucle.
+            Err(e) if no_answer(&e) && up.sent.load(Ordering::Relaxed) >= total => {
+                Ok(Submitted { id: String::new(), hash, unconfirmed: true })
+            }
             Err(e) => Err(e),
         }
     }
@@ -419,6 +501,7 @@ mod torbox {
         Submitted {
             id: id_of(data, "usenetdownload_id").unwrap_or_default(),
             hash: if h.is_empty() { hash.to_string() } else { h },
+            unconfirmed: false,
         }
     }
 
@@ -434,18 +517,25 @@ mod torbox {
             return Ok(Status {
                 id: None,
                 state: item.map(|v| parse_item(&v)).unwrap_or_else(|| RemoteState::Failed(t!("debrid.gone", name = "TorBox"))),
+                missing: false,
             });
         }
         let data = send(API.get(&url).bearer_auth(key).query(&[("bypass_cache", "true")])).await?;
         let found = data
             .as_array()
             .and_then(|a| a.iter().find(|x| !hash.is_empty() && str_of(x, "hash").eq_ignore_ascii_case(hash)));
-        Ok(match found {
-            Some(v) => Status { id: id_of(v, "id"), state: parse_item(v) },
-            None => Status {
-                id: None,
-                state: RemoteState::Working { percent: 0.0, speed: 0, eta: 0, state: t!("remote.queued") },
-            },
+        if let Some(v) = found {
+            return Ok(Status { id: id_of(v, "id"), state: parse_item(v), missing: false });
+        }
+        // Sin id todavía: o está en la cola de TorBox (sin hueco libre) o aún no lo ha añadido.
+        let queued = match send(API.get(format!("{}/queued/getqueued", base())).bearer_auth(key).query(&[("type", "usenet"), ("bypass_cache", "true")])).await {
+            Ok(Value::Array(a)) => a.iter().any(|x| !hash.is_empty() && str_of(x, "hash").eq_ignore_ascii_case(hash)),
+            _ => false,
+        };
+        Ok(Status {
+            id: None,
+            state: RemoteState::Working { percent: 0.0, speed: 0, eta: 0, state: t!("remote.queued") },
+            missing: !queued,
         })
     }
 
@@ -638,10 +728,14 @@ mod premiumize {
     pub async fn submit(key: &str, up: &Upload<'_>) -> Result<Submitted, DebridError> {
         let hash = nzb_hash(up.nzb);
         let form = reqwest::multipart::Form::new().part("src", nzb_part(up)?);
-        let req = API.post(format!("{}/transfer/create", base())).query(&[("apikey", key)]).multipart(form);
-        match send(req).await {
+        let req = UPLOAD.post(format!("{}/transfer/create", base())).query(&[("apikey", key)]).multipart(form);
+        let res = match upload(LABEL, req, &up.sent, up.nzb.len() as u64).await {
+            Ok((status, body)) => envelope(status, &body),
+            Err(e) => Err(e),
+        };
+        match res {
             Ok(v) => match id_of(&v, "id") {
-                Some(id) => Ok(Submitted { id, hash }),
+                Some(id) => Ok(Submitted { id, hash, unconfirmed: false }),
                 None => Err(DebridError::new(ErrKind::Transient, t!("premiumize.noId"))),
             },
             Err(e) if e.code == "DUPLICATE" => {
@@ -655,7 +749,7 @@ mod premiumize {
                         n == up.name || n == fname
                     })
                     .and_then(|t| id_of(t, "id"))
-                    .map(|id| Submitted { id, hash })
+                    .map(|id| Submitted { id, hash, unconfirmed: false })
                     .ok_or(e)
             }
             Err(e) => Err(e),
@@ -670,7 +764,7 @@ mod premiumize {
     pub async fn status(key: &str, id: &str) -> Result<Status, DebridError> {
         let list = transfers(key).await?;
         let Some(t) = list.iter().find(|t| id_of(t, "id").as_deref() == Some(id)) else {
-            return Ok(Status { id: None, state: RemoteState::Failed(t!("premiumize.gone")) });
+            return Ok(Status { id: None, state: RemoteState::Failed(t!("premiumize.gone")), missing: false });
         };
         let state = match parse_transfer(t) {
             Transfer::Folder(folder) => {
@@ -689,7 +783,7 @@ mod premiumize {
             }
             Transfer::State(s) => s,
         };
-        Ok(Status { id: None, state })
+        Ok(Status { id: None, state, missing: false })
     }
 
     pub(super) enum Transfer {
@@ -815,6 +909,37 @@ mod premiumize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Pasarela que recibe la subida entera y contesta 504 (lo que hace TorBox con NZB grandes).
+    #[tokio::test]
+    async fn torbox_gateway_timeout_is_unconfirmed() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = vec![0u8; 64 * 1024];
+            let mut got = Vec::new();
+            loop {
+                let n = sock.read(&mut buf).await.unwrap();
+                got.extend_from_slice(&buf[..n]);
+                if n == 0 || got.windows(4).any(|w| w == b"--\r\n") {
+                    break;
+                }
+            }
+            let body = "<html>504 Gateway Time-out</html>";
+            let resp = format!("HTTP/1.1 504 Gateway Time-out\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}", body.len(), body);
+            sock.write_all(resp.as_bytes()).await.unwrap();
+        });
+        std::env::set_var("NEBULA_TORBOX_URL", format!("http://{}/v1/api", addr));
+        let nzb = vec![b'x'; 3 * 1024 * 1024 + 123];
+        let up = Upload { nzb: &nzb, name: "grande", password: None, post_processing: -1, sent: Arc::default() };
+        let r = torbox::submit("k", &up).await.unwrap();
+        std::env::remove_var("NEBULA_TORBOX_URL");
+        assert!(r.unconfirmed);
+        assert_eq!(r.hash, nzb_hash(&nzb));
+        assert_eq!(up.sent.load(Ordering::Relaxed), nzb.len() as u64);
+    }
     use serde_json::json;
 
     #[test]
@@ -845,9 +970,9 @@ mod tests {
     #[test]
     fn torbox_envelope() {
         let ok = torbox::envelope(200, br#"{"success":true,"error":null,"detail":"ok","data":{"usenetdownload_id":42,"hash":"abc"}}"#).unwrap();
-        assert_eq!(torbox::parse_created(&ok, "x"), Submitted { id: "42".into(), hash: "abc".into() });
+        assert_eq!(torbox::parse_created(&ok, "x"), Submitted { id: "42".into(), hash: "abc".into(), unconfirmed: false });
         let queued = json!({ "queued_id": 7, "hash": "" });
-        assert_eq!(torbox::parse_created(&queued, "h"), Submitted { id: String::new(), hash: "h".into() });
+        assert_eq!(torbox::parse_created(&queued, "h"), Submitted { id: String::new(), hash: "h".into(), unconfirmed: false });
         let e = torbox::envelope(403, br#"{"success":false,"error":"PLAN_RESTRICTED_FEATURE","detail":"x","data":null}"#).unwrap_err();
         assert_eq!(e.kind, ErrKind::Fatal);
         assert!(e.msg.contains("plan Pro"));

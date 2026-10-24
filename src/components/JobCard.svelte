@@ -25,6 +25,16 @@
       : ({ downloading: 'accent', queued: 'muted', paused: 'paused', verifying: 'info', repairing: 'warn', extracting: 'teal', moving: 'teal' }[job.status] ?? 'accent')
   );
   const waiting = $derived(pp && job.post?.stage === 'waiting');
+  // Debrid: una barra por fase (subida del NZB, descarga en el servicio y bajada al dispositivo).
+  const steps = $derived.by(() => {
+    if (!job.debrid || pp) return [];
+    const ph = job.debrid.phase;
+    return [
+      { label: t('job.stepUpload'), value: job.debrid.upload ?? (ph === 'submit' ? 0 : 100), current: ph === 'submit' },
+      { label: t('job.stepRemote', { provider: job.debrid.provider }), value: job.debrid.remote ?? (ph === 'fetch' ? 100 : 0), current: ph === 'remote' },
+      { label: t('job.stepFetch'), value: ph === 'fetch' ? job.percent : 0, current: ph === 'fetch' },
+    ];
+  });
 
   $effect(() => {
     if (!expanded) return;
@@ -196,6 +206,22 @@
     <span class="pct">{percent.toFixed(1)}%</span>
   </div>
 
+  {#if steps.length}
+    <div class="steps">
+      {#each steps as s}
+        <div class="step" class:current={s.current}>
+          <div class="step-head"><span class="truncate">{s.label}</span><span class="step-pct">{s.value.toFixed(0)}%</span></div>
+          <ProgressBar
+            value={s.value}
+            height={4}
+            kind={s.current ? barKind : s.value >= 100 ? 'ok' : 'muted'}
+            active={s.current && job.status === 'downloading' && !ui.queue.paused}
+          />
+        </div>
+      {/each}
+    </div>
+  {/if}
+
   {#if job.error}
     <div class="alert err" transition:slide={{ duration: d(200) }}><Icon name="x-circle" size={16} /><span class="selectable">{job.error}</span></div>
   {/if}
@@ -287,6 +313,10 @@
   .chevron.open :global(svg) { transform: rotate(180deg); }
   .bar-row { display: flex; align-items: center; gap: 12px; margin-top: 13px; }
   .pct { width: 52px; text-align: right; font-size: 12.5px; font-weight: 650; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 10px; padding-right: 64px; }
+  .step-head { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 4px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .step.current .step-head { color: var(--text-2); }
+  .step-pct { font-variant-numeric: tabular-nums; }
   .alert { margin-top: 12px; }
   .details { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
   .d-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px 18px; margin-bottom: 12px; }
@@ -325,6 +355,7 @@
     .actions { order: 5; width: 100%; justify-content: space-between; padding-top: 2px; border-top: 1px solid var(--border); margin-top: 2px; }
     .actions .icon-btn { opacity: 1; }
     .bar-row { margin-top: 10px; }
+    .steps { padding-right: 0; gap: 10px; }
     .d-grid { grid-template-columns: 1fr 1fr; }
     .d-grid > div:first-child { grid-column: span 2; }
     .file { grid-template-columns: 16px 1fr auto 64px; row-gap: 4px; }

@@ -287,7 +287,10 @@
     "waitingServer": "S'està esperant la connexió amb algun servidor… Revisa la pestanya Servidors.",
     "hideDetails": "Amaga els detalls",
     "more": "Més accions",
-    "serverTitle": "Es baixa només amb aquest servidor"
+    "serverTitle": "Es baixa només amb aquest servidor",
+    "stepUpload": "Enviament",
+    "stepRemote": "A {provider}",
+    "stepFetch": "Baixada"
   },
   "logs": {
     "all": "Tot",

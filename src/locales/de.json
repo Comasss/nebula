@@ -287,7 +287,10 @@
     "waitingServer": "Warte auf Verbindung zu einem Server … Sieh im Tab „Server“ nach.",
     "hideDetails": "Details ausblenden",
     "more": "Weitere Aktionen",
-    "serverTitle": "Lädt nur von diesem Server"
+    "serverTitle": "Lädt nur von diesem Server",
+    "stepUpload": "Upload",
+    "stepRemote": "Bei {provider}",
+    "stepFetch": "Download"
   },
   "logs": {
     "all": "Alle",
