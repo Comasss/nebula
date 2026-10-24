@@ -1,7 +1,8 @@
 <script>
   import { t, tn, th, locale, num } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
-  import { pickNzbFiles } from '../lib/platform.js';
+  import { pickNzbFiles, isAndroid } from '../lib/platform.js';
+  import { haptic } from '../lib/feedback.js';
   import { fly, fade, scale } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
@@ -53,6 +54,12 @@
     }
   }
 
+  // El botón flotante se monta en <body> para que la animación de cambio de vista no lo mueva.
+  function portal(node) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
+  }
+
   async function addFiles() {
     let arr;
     try {
@@ -92,6 +99,7 @@
         {/if}
       </p>
     </div>
+    {#if !isAndroid}
     <div class="head-actions">
       <button class="btn" onclick={() => invoke('set_paused', { paused: !ui.queue.paused })} disabled={!jobs.length && !ui.queue.paused}>
         <Icon name={ui.queue.paused ? 'play' : 'pause'} size={16} />
@@ -101,6 +109,7 @@
         <Icon name="file-plus" size={17} /> {t('downloads.addNzb')}
       </button>
     </div>
+    {/if}
   </header>
 
   <form class="url-bar" onsubmit={(e) => { e.preventDefault(); submitUrl(); }}>
@@ -214,6 +223,11 @@
       </div>
     {/each}
   </section>
+  {#if isAndroid}
+    <button use:portal class="fab" class:idle={!jobs.length} onclick={() => { haptic('tap'); addFiles(); }} aria-label={t('downloads.addNzb')}>
+      <Icon name="plus" size={26} stroke={2.6} />
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -222,6 +236,26 @@
   h1 { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
   .subtitle { margin: 4px 0 0; color: var(--text-2); font-variant-numeric: tabular-nums; }
   .head-actions { display: flex; gap: 10px; }
+  .fab {
+    position: fixed;
+    right: 20px;
+    bottom: calc(var(--nav-space) + 6px);
+    z-index: 57;
+    width: 58px; height: 58px;
+    border-radius: 20px;
+    border: none;
+    display: grid; place-items: center;
+    color: #fff;
+    background: var(--grad-diag);
+    box-shadow: 0 14px 30px -10px rgba(var(--accent-rgb), 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    animation: fab-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.2s var(--ease), border-radius 0.3s var(--ease);
+  }
+  .fab:active { transform: scale(0.9) rotate(90deg); border-radius: 50%; }
+  .fab.idle { animation: fab-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), breathe 2.6s ease-in-out 0.6s infinite; }
+  @keyframes fab-in { from { transform: scale(0.4) rotate(-90deg); opacity: 0; } }
+  @keyframes breathe { 50% { box-shadow: 0 14px 40px -6px rgba(var(--accent-rgb), 1), 0 0 0 8px rgba(var(--accent-rgb), 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.3); } }
 
   .url-bar {
     margin-top: 20px;
@@ -338,8 +372,8 @@
     .stat.speed { padding: 14px 14px 10px; }
     .graph { margin: 6px -14px 0; }
     .st-icon { width: 28px; height: 28px; margin-bottom: 8px; }
-    .st-label { font-size: 9.5px; letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .st-value { font-size: 17px; }
+    .st-label { font-size: 9.5px; letter-spacing: 0.06em; line-height: 1.25; }
+    .st-value { font-size: 16px; white-space: nowrap; }
     .st-foot { font-size: 11px; }
     .list { margin-top: 16px; gap: 10px; }
     .empty { padding: 36px 8px 24px; }

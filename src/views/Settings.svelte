@@ -9,6 +9,10 @@
   import { ui, saveSettings, toast, d } from '../lib/state.svelte.js';
   import { usableDebrid, debridLabel, hasNntp } from '../lib/debrid.js';
 
+  // `only`: muestra solo esa sección (el móvil abre cada sección como una página).
+  let { only = null } = $props();
+  const show = (id) => !only || only === id;
+
   const s = $derived(ui.settings);
   const debridList = $derived(usableDebrid(s));
   let newPattern = $state('');
@@ -98,7 +102,8 @@
 </script>
 
 {#if s}
-  <div class="wrap">
+  <div class="wrap" class:single={!!only}>
+    {#if !only}
     <aside class="toc">
       <h1>{t('nav.settings')}</h1>
       <p class="saved"><Icon name="check" size={13} /> {t('settings.autosave')}</p>
@@ -110,8 +115,10 @@
         {/each}
       </nav>
     </aside>
+    {/if}
 
     <div class="content" onscroll={onScroll}>
+      {#if show('features')}
       <section id="sec-features">
         <h2><Icon name="sparkles" size={18} /> {t('settings.section.features')}</h2>
         <div class="card group">
@@ -119,7 +126,9 @@
           <SettingRow icon="server" label={t('settings.featNntp')} description={t('settings.featNntpDesc')} checked={s.featureNntp} onchange={(v) => setFeature('featureNntp', v)} />
         </div>
       </section>
+      {/if}
 
+      {#if show('language')}
       <section id="sec-language">
         <h2><Icon name="globe" size={18} /> {t('settings.section.language')}</h2>
         <div class="card group">
@@ -129,7 +138,9 @@
           </SettingRow>
         </div>
       </section>
+      {/if}
 
+      {#if show('debrid')}
       <section id="sec-debrid" class:dim={!s.featureNntp}>
         <h2><Icon name="cloud" size={18} /> {t('settings.downloadMethod')}</h2>
         <div class="card group">
@@ -157,7 +168,9 @@
           </SettingRow>
         </div>
       </section>
+      {/if}
 
+      {#if show('search')}
       <section id="sec-search" class:dim={!s.featureIndexers}>
         <h2><Icon name="search" size={18} /> {t('settings.searchTitle')}</h2>
         <div class="card group">
@@ -176,7 +189,9 @@
           </SettingRow>
         </div>
       </section>
+      {/if}
 
+      {#if show('folders')}
       <section id="sec-folders">
         <h2><Icon name="folder" size={18} /> {t('settings.section.folders')}</h2>
         <div class="card group">
@@ -193,7 +208,9 @@
           <SettingRow label={t('add.paused')} description={t('settings.addPausedDesc')} checked={s.addPaused} onchange={set('addPaused')} />
         </div>
       </section>
+      {/if}
 
+      {#if show('post')}
       <section id="sec-post">
         <h2><Icon name="package" size={18} /> {t('settings.section.post')}</h2>
         <div class="card group">
@@ -204,7 +221,9 @@
           <SettingRow icon="zap" label={t('settings.abortHopeless')} description={t('settings.abortHopelessDesc')} checked={s.abortHopeless} onchange={set('abortHopeless')} />
         </div>
       </section>
+      {/if}
 
+      {#if show('links')}
       <section id="sec-links">
         <h2><Icon name="clipboard" size={18} /> {t('settings.section.links')}</h2>
         <div class="card group">
@@ -235,7 +254,9 @@
           </div>
         </div>
       </section>
+      {/if}
 
+      {#if show('windows')}
       <section id="sec-windows">
         {#if isAndroid}
           <h2><Icon name="smartphone" size={18} /> {t('mobile.appTitle')}</h2>
@@ -263,7 +284,9 @@
           <SettingRow label={t('settings.confirmDelete')} checked={s.confirmDelete} onchange={set('confirmDelete')} />
         </div>
       </section>
+      {/if}
 
+      {#if show('network')}
       <section id="sec-network">
         <h2><Icon name="wifi" size={18} /> {t('settings.section.network')}</h2>
         <div class="card group">
@@ -287,7 +310,9 @@
           </SettingRow>
         </div>
       </section>
+      {/if}
 
+      {#if show('look')}
       <section id="sec-look">
         <h2><Icon name="palette" size={18} /> {t('settings.section.look')}</h2>
         <div class="card group">
@@ -301,12 +326,17 @@
             </div>
           </SettingRow>
           <SettingRow icon="sparkles" label={t('settings.animations')} description={t('settings.animationsDesc')} checked={s.animations} onchange={set('animations')} />
+          {#if isAndroid}
+            <SettingRow icon="smartphone" label={t('settings.haptics')} description={t('settings.hapticsDesc')} checked={s.haptics !== false} onchange={set('haptics')} />
+          {/if}
           <SettingRow icon="rocket" label={t('settings.wizard')} description={t('settings.wizardDesc')}>
             <button class="btn sm" onclick={() => (ui.setupOpen = true)}>{t('common.open')}</button>
           </SettingRow>
         </div>
       </section>
+      {/if}
 
+      {#if show('about')}
       <section id="sec-about">
         <h2><Icon name="info" size={18} /> {t('settings.section.about')}</h2>
         <div class="card about">
@@ -326,6 +356,7 @@
           <p class="legal">{@html th('settings.legal')}</p>
         </div>
       </section>
+      {/if}
     </div>
   </div>
 {/if}
@@ -396,6 +427,9 @@
   .links { display: flex; gap: 8px; margin-top: 16px; }
   .legal { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 16px 0 0; }
 
+  .single .content { padding-top: 6px; overflow: visible; }
+  .single section { margin-bottom: 0; }
+  .single section > h2 { display: none; }
   @media (max-width: 720px) {
     .wrap { flex-direction: column; }
     .toc { width: auto; padding: 16px 14px 0; }

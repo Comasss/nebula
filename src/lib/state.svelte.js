@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { t, setLanguage } from './i18n.svelte.js';
+import { haptic } from './feedback.js';
 
 export const ui = $state({
   ready: false,
@@ -27,9 +28,15 @@ export const ui = $state({
   setupOpen: false,
   dragging: false,
   dialog: null,
-  // Solo en Android: selector de carpetas propio, menú "Más" y acceso a los archivos.
+  // Menú "Descargar con" (pulsación larga en Descargar).
+  viaMenu: null,
+  // Hoja de acciones del móvil (pulsación larga en una descarga).
+  actionSheet: null,
+  // Solo en Android: selector de carpetas propio, página abierta dentro de Configuración, barra
+  // inferior reducida al desplazarse y acceso a los archivos.
   folderPicker: null,
-  moreOpen: false,
+  settingsPage: null,
+  navCompact: false,
   storage: true,
 });
 
@@ -41,6 +48,7 @@ export function d(ms) {
 let toastSeq = 0;
 export function toast(kind, message, timeout = 5500) {
   const id = ++toastSeq;
+  if (kind === 'error') haptic('error');
   ui.toasts.push({ id, kind, message });
   if (ui.toasts.length > 5) ui.toasts.splice(0, ui.toasts.length - 5);
   if (timeout) setTimeout(() => dismissToast(id), timeout);
@@ -153,7 +161,10 @@ export async function init() {
     ui.logs.push(e.payload);
     if (ui.logs.length > 2000) ui.logs.splice(0, ui.logs.length - 2000);
   });
-  await listen('toast', (e) => toast(e.payload.kind, e.payload.message));
+  await listen('toast', (e) => {
+    toast(e.payload.kind, e.payload.message);
+    if (e.payload.kind === 'success') haptic('success');
+  });
   await listen('open-items', (e) => handleOpenItems(e.payload));
   await listen('clipboard-nzb', (e) => {
     for (const u of e.payload) if (!ui.clipboard.includes(u)) ui.clipboard.push(u);
@@ -171,7 +182,9 @@ export async function init() {
     });
   }
 
-  ui.view = settings.featureNntp ? 'downloads' : 'search';
+  // En el móvil se abre en la primera pestaña: Buscar si los indexadores están activos.
+  const mobile = /android/i.test(navigator.userAgent);
+  ui.view = mobile ? (settings.featureIndexers ? 'search' : 'downloads') : settings.featureNntp ? 'downloads' : 'search';
   if (!settings.firstRunDone || !settings.featuresChosen) ui.setupOpen = true;
   ui.ready = true;
   await invoke('app_ready');

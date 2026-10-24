@@ -115,7 +115,8 @@
     "size": "Größe",
     "test": "Testen",
     "testing": "Wird getestet …",
-    "whereSaveNzb": "Wo möchtest du die .nzb speichern?"
+    "whereSaveNzb": "Wo möchtest du die .nzb speichern?",
+    "back": "Zurück"
   },
   "debrid": {
     "keyHelpPremiumize": "Auf premiumize.me → Account → API Key. Ein Premium-Konto ist erforderlich.",
@@ -283,7 +284,10 @@
     "removeTitle": "Aus der Warteschlange entfernen?",
     "removed": "Entfernt: {name}",
     "viaTitle": "Wird über {provider} heruntergeladen",
-    "waitingServer": "Warte auf Verbindung zu einem Server … Sieh im Tab „Server“ nach."
+    "waitingServer": "Warte auf Verbindung zu einem Server … Sieh im Tab „Server“ nach.",
+    "hideDetails": "Details ausblenden",
+    "more": "Weitere Aktionen",
+    "serverTitle": "Lädt nur von diesem Server"
   },
   "logs": {
     "all": "Alle",
@@ -542,7 +546,9 @@
     "version": "Version {version} · Usenet-Client für Windows",
     "windowsTitle": "Windows-Integration",
     "wizard": "Einrichtungsassistent",
-    "wizardDesc": "Zeigt die Ersteinrichtung erneut an."
+    "wizardDesc": "Zeigt die Ersteinrichtung erneut an.",
+    "haptics": "Vibration beim Tippen",
+    "hapticsDesc": "Eine kurze Vibration bestätigt Tippen und langes Drücken."
   },
   "sidebar": {
     "activeConns": {
@@ -744,5 +750,38 @@
     "error": "Ordner kann nicht geöffnet werden: {error}",
     "storage": "Interner Speicher",
     "downloads": "Download"
+  },
+  "via": {
+    "title": "Herunterladen mit",
+    "allServers": "Alle deine Server, nach Priorität",
+    "primary": "Hauptserver",
+    "backup": "Backup · Priorität {n}",
+    "hint": "Gedrückt halten, um die Download-Methode zu wählen",
+    "onlyOne": "Du hast nur eine Download-Methode eingerichtet."
+  },
+  "msettings": {
+    "active": {
+      "one": "{n} aktiv",
+      "other": "{n} aktiv"
+    },
+    "noneYet": "Nicht eingerichtet",
+    "sources": "Download-Quellen",
+    "prefs": "Einstellungen",
+    "system": "System",
+    "version": "Version {version}",
+    "desc": {
+      "features": "Suche, Download oder beides",
+      "language": "Sprache der App",
+      "debrid": "NNTP oder Debrid und ihre Nutzung",
+      "search": "Ergebnisse, Duplikate und .nzb",
+      "folders": "Wo Downloads gespeichert werden",
+      "post": "PAR2-Reparatur und Entpacken",
+      "links": "Zwischenablage und .nzb-Links",
+      "windows": "Berechtigungen, Hinweise und Bestätigungen",
+      "network": "Geschwindigkeit, Wiederholungen und Verlauf",
+      "look": "Farbe, Animationen und Vibration",
+      "logs": "Was Nebula gerade macht",
+      "about": "Version und Lizenzen"
+    }
   }
 }

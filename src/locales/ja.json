@@ -111,7 +111,8 @@
     "size": "サイズ",
     "test": "テスト",
     "testing": "テスト中…",
-    "whereSaveNzb": ".nzb をどこに保存しますか？"
+    "whereSaveNzb": ".nzb をどこに保存しますか？",
+    "back": "戻る"
   },
   "debrid": {
     "keyHelpPremiumize": "premiumize.me → Account → API Key で確認できます。プレミアムアカウントが必要です。",
@@ -275,7 +276,10 @@
     "removeTitle": "キューから削除しますか？",
     "removed": "削除しました：{name}",
     "viaTitle": "{provider} 経由でダウンロードします",
-    "waitingServer": "サーバーへの接続を待っています… 「サーバー」タブを確認してください。"
+    "waitingServer": "サーバーへの接続を待っています… 「サーバー」タブを確認してください。",
+    "hideDetails": "詳細を隠す",
+    "more": "その他の操作",
+    "serverTitle": "このサーバーからのみダウンロード"
   },
   "logs": {
     "all": "すべて",
@@ -524,7 +528,9 @@
     "version": "バージョン {version} · Windows 向け Usenet クライアント",
     "windowsTitle": "Windows との統合",
     "wizard": "ようこそウィザード",
-    "wizardDesc": "初期設定をもう一度表示します。"
+    "wizardDesc": "初期設定をもう一度表示します。",
+    "haptics": "タップ時に振動",
+    "hapticsDesc": "タップや長押しを短い振動で知らせます。"
   },
   "sidebar": {
     "activeConns": {
@@ -724,5 +730,37 @@
     "error": "このフォルダーを開けません: {error}",
     "storage": "内部ストレージ",
     "downloads": "Download"
+  },
+  "via": {
+    "title": "ダウンロード方法",
+    "allServers": "すべてのサーバー（優先度順）",
+    "primary": "メインサーバー",
+    "backup": "予備 · 優先度 {n}",
+    "hint": "長押しでダウンロード方法を選べます",
+    "onlyOne": "設定済みのダウンロード方法は1つだけです。"
+  },
+  "msettings": {
+    "active": {
+      "other": "{n} 件有効"
+    },
+    "noneYet": "未設定",
+    "sources": "ダウンロード元",
+    "prefs": "設定項目",
+    "system": "システム",
+    "version": "バージョン {version}",
+    "desc": {
+      "features": "検索、ダウンロード、またはその両方",
+      "language": "アプリの言語",
+      "debrid": "NNTP か debrid と使い方",
+      "search": "結果、重複、.nzb",
+      "folders": "ダウンロードの保存先",
+      "post": "PAR2 修復と展開",
+      "links": "クリップボードと .nzb リンク",
+      "windows": "権限、通知、確認",
+      "network": "速度、再試行、履歴",
+      "look": "色、アニメーション、振動",
+      "logs": "Nebula の動作記録",
+      "about": "バージョンとライセンス"
+    }
   }
 }

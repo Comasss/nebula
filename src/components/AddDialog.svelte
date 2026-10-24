@@ -8,7 +8,8 @@
   import Switch from './Switch.svelte';
   import { ui, toast, d } from '../lib/state.svelte.js';
   import * as f from '../lib/format.js';
-  import { usableDebrid, debridLabel, defaultVia, hasNntp, kindInfo } from '../lib/debrid.js';
+  import { usableDebrid, debridLabel, defaultVia, hasNntp, kindInfo, nntpServers, serverLabel, viaLabel } from '../lib/debrid.js';
+  import { haptic, flyTo } from '../lib/feedback.js';
 
   const current = $derived(ui.addItems[0]);
   let phase = $state('idle'); // loading | preview | error
@@ -52,7 +53,7 @@
         password: p.password ?? '',
         paused: s.addPaused,
         top: false,
-        via: defaultVia(s),
+        via: it.via ?? defaultVia(s),
         options: {
           par2: s.par2Enabled,
           extract: s.extractEnabled,
@@ -115,8 +116,10 @@
           options: $state.snapshot(form.options),
         },
       });
-      const viaName = debridOptions.find((p) => p.id === form.via);
-      toast('success', viaName ? t('add.queuedVia', { provider: debridLabel(viaName), name: form.name }) : t('add.queued', { name: form.name }), 3500);
+      const viaName = form.via !== 'nntp' ? viaLabel(ui.settings, form.via) : '';
+      haptic('success');
+      flyTo(document.querySelector('.add-confirm'), 'downloads');
+      toast('success', viaName ? t('add.queuedVia', { provider: viaName, name: form.name }) : t('add.queued', { name: form.name }), 3500);
       if (ui.view !== 'downloads') ui.view = 'downloads';
       next();
     } catch (e) {
@@ -133,6 +136,7 @@
 
   const nntp = $derived(ui.settings?.featureNntp !== false);
   const debridOptions = $derived(usableDebrid(ui.settings));
+  const servers = $derived(nntpServers(ui.settings));
   const noServers = $derived(!hasNntp(ui.settings));
 
   async function saveNzb() {
@@ -233,14 +237,22 @@
             <span>{t('add.nntpDisabled', { dir: ui.settings.nzbAskSaveDir ? t('add.askFolder') : ui.settings.nzbSaveDir })}</span>
           </div>
         {:else}
-        {#if debridOptions.length}
+        {#if debridOptions.length || servers.length > 1}
           <div class="field">
             <span class="label">{t('add.downloadWith')}</span>
             <div class="via">
               <button type="button" class="via-btn" class:sel={form.via === 'nntp'} onclick={() => (form.via = 'nntp')}>
                 <Icon name="server" size={15} />
-                <span class="via-text"><strong>Usenet (NNTP)</strong><small>{noServers ? t('add.noServersConfigured') : t('add.yourServers')}</small></span>
+                <span class="via-text"><strong>Usenet (NNTP)</strong><small>{noServers ? t('add.noServersConfigured') : servers.length > 1 ? t('via.allServers') : t('add.yourServers')}</small></span>
               </button>
+              {#if servers.length > 1}
+                {#each servers as srv (srv.id)}
+                  <button type="button" class="via-btn" class:sel={form.via === `nntp:${srv.id}`} onclick={() => (form.via = `nntp:${srv.id}`)}>
+                    <Icon name="server" size={15} />
+                    <span class="via-text"><strong>{serverLabel(srv)}</strong><small>{srv.priority === servers[0].priority ? t('via.primary') : t('via.backup', { n: srv.priority })}</small></span>
+                  </button>
+                {/each}
+              {/if}
               {#each debridOptions as p (p.id)}
                 <button type="button" class="via-btn" class:sel={form.via === p.id} onclick={() => (form.via = p.id)}>
                   <Icon name="cloud" size={15} />
@@ -324,7 +336,7 @@
         {#if !nntp}
           <button class="btn primary" onclick={saveNzb} disabled={phase !== 'preview' || adding}><Icon name="file" size={16} /> {t('common.saveNzb')}</button>
         {:else}
-        <button class="btn primary" onclick={confirm} disabled={phase !== 'preview' || adding || !form.dest.trim()}>
+        <button class="btn primary add-confirm" onclick={confirm} disabled={phase !== 'preview' || adding || !form.dest.trim()}>
           {#if adding}<Icon name="loader" size={15} class="spin" />{:else}<Icon name="download" size={16} />{/if}
           {t('common.download')}
         </button>

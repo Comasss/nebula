@@ -15,6 +15,10 @@
   import FolderPicker from './components/FolderPicker.svelte';
   import MobileHeader from './components/MobileHeader.svelte';
   import MobileNav from './components/MobileNav.svelte';
+  import ViaMenu from './components/ViaMenu.svelte';
+  import ActionSheet from './components/ActionSheet.svelte';
+  import MobileSettings from './views/MobileSettings.svelte';
+  import { installRipples } from './lib/feedback.js';
   import Icon from './components/Icon.svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { isAndroid } from './lib/platform.js';
@@ -63,6 +67,7 @@
 
   onMount(() => {
     let unlistenDrop;
+    installRipples();
     init().catch((e) => {
       console.error(e);
       toast('error', t('app.startError', { error: e }));
@@ -88,9 +93,11 @@
     let backListener;
     if (isAndroid) {
       onBackButtonPress(() => {
-        const home = ui.settings?.featureNntp !== false ? 'downloads' : 'search';
-        if (ui.moreOpen) ui.moreOpen = false;
+        const home = ui.settings?.featureIndexers ? 'search' : 'downloads';
+        if (ui.viaMenu) ui.viaMenu.resolve(null);
+        else if (ui.actionSheet) ui.actionSheet.resolve(null);
         else if (document.querySelector('[role="dialog"], [role="listbox"]')) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        else if (ui.view === 'settings' && ui.settingsPage) ui.settingsPage = null;
         else if (ui.view !== home) ui.view = home;
         else invoke('app_background');
       })
@@ -110,7 +117,35 @@
     };
   });
 
-  const View = $derived(VIEWS[ui.view] ?? Downloads);
+  // En el móvil, indexadores, servidores, debrid y el registro se abren dentro de Configuración.
+  const IN_SETTINGS = ['indexers', 'servers', 'debrid', 'logs'];
+  $effect(() => {
+    if (isAndroid && IN_SETTINGS.includes(ui.view)) {
+      ui.settingsPage = ui.view;
+      ui.view = 'settings';
+    }
+  });
+
+  // La barra inferior se reduce al bajar por una lista y vuelve al subir.
+  let lastScroll = 0;
+  function onPageScroll(e) {
+    if (!isAndroid) return;
+    const el = e.target;
+    if (!(el instanceof HTMLElement) || el.scrollHeight - el.clientHeight < 120) return;
+    const y = el.scrollTop;
+    if (y < 40) ui.navCompact = false;
+    else if (y > lastScroll + 6) ui.navCompact = true;
+    else if (y < lastScroll - 10) ui.navCompact = false;
+    lastScroll = y;
+  }
+  $effect(() => {
+    ui.view;
+    ui.settingsPage;
+    ui.navCompact = false;
+    lastScroll = 0;
+  });
+
+  const View = $derived(isAndroid && ui.view === 'settings' ? MobileSettings : (VIEWS[ui.view] ?? Downloads));
 </script>
 
 <div class="app">
@@ -137,7 +172,7 @@
       {/if}
       {#if ui.ready}
         {#key ui.view}
-          <div class="page" in:fly={{ y: 14 * direction, duration: d(320), easing: cubicOut, opacity: 0 }}>
+          <div class="page" onscrollcapture={onPageScroll} in:fly={{ y: 14 * direction, duration: d(320), easing: cubicOut, opacity: 0 }}>
             <View />
           </div>
         {/key}
@@ -156,6 +191,8 @@
     <SetupWizard />
   {/if}
   <FolderPicker />
+  <ViaMenu />
+  <ActionSheet />
   <Dialog />
 {/if}
 <DropOverlay />
@@ -179,6 +216,7 @@
     overflow: hidden;
   }
   .page { grid-area: 2 / 1; overflow-y: auto; min-height: 0; height: 100%; }
+  :global(html.mobile) .page { padding-bottom: var(--nav-space); scroll-padding-bottom: var(--nav-space); }
   main { grid-template-rows: auto minmax(0, 1fr); }
   .boot { grid-area: 2 / 1; }
   .storage { grid-area: 1 / 1; margin: 12px 12px 0; }

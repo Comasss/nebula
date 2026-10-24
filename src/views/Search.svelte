@@ -9,6 +9,8 @@
   import { ui, toast, queueAdd, d } from '../lib/state.svelte.js';
   import { CATEGORIES, SORTS, groupResults, sortGroups } from '../lib/search.js';
   import * as f from '../lib/format.js';
+  import { haptic, longpress, flyTo, chooseVia } from '../lib/feedback.js';
+  import { viaOptions, viaLabel } from '../lib/debrid.js';
 
   const STORE = 'nebula.search';
   function loadPrefs() {
@@ -137,8 +139,37 @@
     throw last;
   }
 
-  async function download(g, sources = g.sources) {
+  const vias = $derived(viaOptions(ui.settings));
+
+  // Aviso (solo hasta que se usa una vez) de que se puede mantener pulsado Descargar.
+  let viaHint = $state((() => {
+    try {
+      return localStorage.getItem('nebula.viaHint') !== 'seen';
+    } catch {
+      return true;
+    }
+  })());
+  function seenViaHint() {
+    viaHint = false;
+    try {
+      localStorage.setItem('nebula.viaHint', 'seen');
+    } catch {}
+  }
+
+  // Mantener pulsado Descargar: elegir con qué se descarga (si hay más de una forma).
+  async function downloadWith(g, sources, el) {
+    if (vias.length < 2) {
+      toast('info', t('via.onlyOne'), 3000);
+      return;
+    }
+    seenViaHint();
+    const via = await chooseVia({ title: g.title, anchor: el, options: vias });
+    if (via) download(g, sources, via, el);
+  }
+
+  async function download(g, sources = g.sources, via = null, el = null) {
     setAct(g, 'working');
+    haptic('tap');
     const s = ui.settings;
     try {
       await tryEach(sources, async (src) => {
@@ -153,17 +184,22 @@
               paused: s.addPaused,
               top: false,
               options: { par2: s.par2Enabled, extract: s.extractEnabled, deleteArchives: s.deleteArchives, deletePar2: s.deletePar2, createFolder: s.createJobFolder },
+              via,
             },
           });
           setAct(g, 'queued');
-          toast('success', t('add.queued', { name: g.title }), 3000);
+          haptic('success');
+          flyTo(el, 'downloads');
+          const label = via ? viaLabel(s, via) : '';
+          toast('success', label ? t('add.queuedVia', { provider: label, name: g.title }) : t('add.queued', { name: g.title }), 3000);
         } else {
           setAct(g, null);
-          queueAdd([{ kind: 'url', value: src.link, preview: { ...p, name: g.title } }]);
+          queueAdd([{ kind: 'url', value: src.link, preview: { ...p, name: g.title }, via }]);
         }
       });
     } catch (e) {
       setAct(g, 'error');
+      haptic('error');
       toast('error', `${g.title}: ${e}`);
     }
   }
@@ -270,6 +306,14 @@
         <Select class="sort" bind:value={sort} options={SORTS.map((s) => ({ value: s.id, label: s.label }))} />
       </div>
 
+      {#if nntp && vias.length > 1 && viaHint && groups.length}
+        <div class="via-hint" out:slide={{ duration: d(200) }}>
+          <Icon name="zap" size={15} />
+          <span>{t('via.hint')}</span>
+          <button class="icon-btn" onclick={() => seenViaHint()} aria-label={t('common.close')}><Icon name="x" size={14} /></button>
+        </div>
+      {/if}
+
       <div class="list">
         {#each groups as g, i (g.key)}
           {@const a = actOf(g)}
@@ -291,7 +335,8 @@
               </div>
               <div class="r-actions">
                 {#if nntp}
-                  <button class="btn sm {a === 'queued' ? '' : 'primary'}" onclick={() => download(g)} disabled={a === 'working' || a === 'saving'}>
+                  <button class="btn sm hold-ring dl {a === 'queued' ? 'done' : 'primary'}" onclick={(e) => download(g, g.sources, null, e.currentTarget)} disabled={a === 'working' || a === 'saving'}
+                    use:longpress={{ onlong: (el) => downloadWith(g, g.sources, el) }} title={vias.length > 1 ? t('via.hint') : undefined}>
                     {#if a === 'working'}<Icon name="loader" size={14} class="spin" /> {t('search.adding')}
                     {:else if a === 'queued'}<Icon name="check" size={14} /> {t('status.queued')}
                     {:else}<Icon name="download" size={14} /> {t('common.download')}{/if}
@@ -317,7 +362,7 @@
                     <span class="muted">{s.grabs != null ? t('search.grabsShort', { n: num(s.grabs) }) : ''}</span>
                     <span class="s-act">
                       {#if s.details}<button class="icon-btn" title={t('search.openInIndexer')} onclick={() => invoke('open_url', { url: s.details })}><Icon name="external" size={14} /></button>{/if}
-                      {#if nntp}<button class="icon-btn" title={t('search.downloadFrom')} onclick={() => download(g, [s])}><Icon name="download" size={14} /></button>{/if}
+                      {#if nntp}<button class="icon-btn hold-ring" title={t('search.downloadFrom')} onclick={(e) => download(g, [s], null, e.currentTarget)} use:longpress={{ onlong: (el) => downloadWith(g, [s], el) }}><Icon name="download" size={14} /></button>{/if}
                       <button class="icon-btn" title={t('search.saveFrom')} onclick={() => saveNzb(g, [s])}><Icon name="file" size={14} /></button>
                     </span>
                   </div>
@@ -412,6 +457,16 @@
   :global(.select.sort) { width: 180px; height: 34px; }
 
   .list { display: flex; flex-direction: column; gap: 8px; }
+  .via-hint {
+    display: none; align-items: center; gap: 10px;
+    margin-top: 12px; padding: 10px 8px 10px 14px;
+    border-radius: 14px; font-size: 12.5px; color: var(--text-2);
+    background: rgba(var(--accent-rgb), 0.1); border: 1px solid rgba(var(--accent-rgb), 0.25);
+    animation: hint-in 0.45s var(--ease);
+  }
+  .via-hint > :global(svg) { color: var(--accent-2); flex-shrink: 0; }
+  .via-hint span { flex: 1; }
+  @keyframes hint-in { from { opacity: 0; transform: translateY(-6px); } }
   .res { padding: 12px 12px 12px 16px; transition: border-color 0.2s, background 0.2s; }
   .res:hover { border-color: var(--border-2); }
   .res.open { border-color: rgba(var(--accent-rgb), 0.35); }
@@ -468,6 +523,9 @@
     .r-main { flex-basis: 100%; }
     .r-title { white-space: normal; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
     .r-actions { width: 100%; justify-content: flex-end; }
+    .r-actions .dl { flex: 1; height: 40px; border-radius: 12px; font-size: 14px; }
+    .r-actions .dl.done { background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.35); color: #6ee7b7; }
+    .via-hint { display: flex; }
     .src { grid-template-columns: auto 1fr auto auto; row-gap: 4px; }
     .ist { max-width: 100%; }
     .empty, .hint { padding: 30px 8px; }

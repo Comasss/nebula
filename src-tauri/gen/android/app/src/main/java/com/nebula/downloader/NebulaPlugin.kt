@@ -13,6 +13,7 @@ import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.webkit.MimeTypeMap
+import android.view.HapticFeedbackConstants
 import android.webkit.WebView
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -48,6 +49,11 @@ class PathArgs {
 @InvokeArg
 class UrlArgs {
   var url: String = ""
+}
+
+@InvokeArg
+class HapticArgs {
+  var kind: String = "tap"
 }
 
 @InvokeArg
@@ -237,6 +243,21 @@ class NebulaPlugin(private val activity: Activity) : Plugin(activity) {
   @Command
   fun moveToBack(invoke: Invoke) {
     activity.runOnUiThread { activity.moveTaskToBack(true) }
+    invoke.resolve()
+  }
+
+  /** Vibración breve de respuesta al tocar (respeta el ajuste de vibración táctil del sistema). */
+  @Command
+  fun haptic(invoke: Invoke) {
+    val kind = invoke.parseArgs(HapticArgs::class.java).kind
+    val effect = when (kind) {
+      "long" -> HapticFeedbackConstants.LONG_PRESS
+      "tick" -> HapticFeedbackConstants.CLOCK_TICK
+      "success" -> if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.CONTEXT_CLICK
+      "error" -> if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS
+      else -> HapticFeedbackConstants.KEYBOARD_TAP
+    }
+    activity.runOnUiThread { activity.window.decorView.performHapticFeedback(effect) }
     invoke.resolve()
   }
 

@@ -55,7 +55,7 @@
   <div class="nav" style="--h:{ITEM_H}px; --gap:{GAP}px">
     <div class="pill" style="transform: translateY({active * (ITEM_H + GAP)}px)"></div>
     {#each items as it (it.id)}
-      <button class="item" class:active={ui.view === it.id} onclick={() => (ui.view = it.id)}>
+      <button class="item" data-nav={it.id} class:active={ui.view === it.id} onclick={() => (ui.view = it.id)}>
         <Icon name={it.icon} size={18} />
         <span class="label">{t(`nav.${it.id}`)}</span>
         {#if it.id === 'downloads' && queueCount}
