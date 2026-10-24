@@ -191,6 +191,11 @@ pub async fn submit(cfg: &DebridConfig, up: &Upload<'_>) -> Result<Submitted, De
     }
 }
 
+/// ¿Se puede localizar un NZB recién subido por su hash (sin id)? Solo TorBox.
+pub fn finds_by_hash(cfg: &DebridConfig) -> bool {
+    cfg.kind == "torbox"
+}
+
 /// Estado de una descarga enviada.
 pub async fn status(cfg: &DebridConfig, id: &str, hash: &str) -> Result<Status, DebridError> {
     let k = key(cfg)?;
