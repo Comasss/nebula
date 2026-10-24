@@ -539,7 +539,8 @@
       "search": "Pesquisa",
       "windows": "Windows",
       "updates": "Atualizações",
-      "api": "API"
+      "api": "API",
+      "transfer": "Passar para outro dispositivo"
     },
     "speedLimitDesc": "Em MB/s. 0 = sem limite.",
     "startMinimized": "Iniciar minimizado na bandeja",
@@ -790,7 +791,8 @@
       "logs": "O que o Nebula está fazendo",
       "about": "Versão e licenças",
       "updates": "Procurar e instalar novas versões",
-      "api": "Newznab para Sonarr, Radarr…"
+      "api": "Newznab para Sonarr, Radarr…",
+      "transfer": "Envie ou receba as suas configurações com um QR"
     }
   },
   "update": {
@@ -847,5 +849,46 @@
     "docs": "Documentação",
     "docsDesc": "Como ligá-la ao Sonarr, Radarr ou Prowlarr e o que suporta.",
     "androidNote": "No Android a API só responde enquanto o Nebula está aberto ou a descarregar."
+  },
+  "transfer": {
+    "scanLabel": "Ler código QR",
+    "scanDesc": "Leia o QR que o Nebula mostra no outro dispositivo para receber as configurações dele ou enviar-lhe as suas.",
+    "scan": "Ler",
+    "sendLabel": "Enviar as minhas configurações",
+    "sendDesc": "Mostra um QR com os seus servidores, indexadores, serviços debrid e preferências para ler com o outro dispositivo.",
+    "receiveLabel": "Receber configurações",
+    "receiveDesc": "Mostra um QR para o telemóvel lhe enviar as configurações dele pela Wi-Fi.",
+    "pasteLabel": "Colar código",
+    "pasteDescShort": "Se não puder ler o QR, cole o código copiado no outro dispositivo.",
+    "pasteDesc": "No outro dispositivo, abra «Enviar as minhas configurações», toque em «Copiar código» e passe-o para aqui (por exemplo, numa mensagem para si). Depois cole-o aqui.",
+    "paste": "Colar",
+    "showQr": "Mostrar QR",
+    "sendTitle": "Leia-o com o outro dispositivo",
+    "sendHint": "No Nebula do outro dispositivo: Configurações › Passar para outro dispositivo › Ler código QR.",
+    "secret": "O QR e o código incluem as suas palavras-passe e API keys: não os partilhe com ninguém.",
+    "copyCode": "Copiar código",
+    "copied": "Código copiado",
+    "tooBig": "As suas configurações não cabem num QR. Copie o código e cole-o no outro dispositivo.",
+    "receiveTitle": "Leia-o com o telemóvel",
+    "receiveHint": "No Nebula do telemóvel: Configurações › Passar para outro dispositivo › Ler código QR. Os dois têm de estar na mesma Wi-Fi.",
+    "waiting": "À espera das configurações…",
+    "expired": "O QR expirou. Gere outro para continuar.",
+    "firewall": "Se o Windows perguntar pela firewall, permita o acesso para o telemóvel se poder ligar.",
+    "pasteTitle": "Colar código de configurações",
+    "continue": "Continuar",
+    "importTitle": "Importar estas configurações?",
+    "fromAndroid": "De um telemóvel Android",
+    "fromWindows": "De um PC com Windows",
+    "importNote": "Substitui os servidores, indexadores, serviços debrid e preferências deste dispositivo. As pastas, o histórico e as opções próprias de cada sistema não mudam.",
+    "import": "Importar",
+    "imported": "Configurações importadas",
+    "pushTitle": "Enviar as suas configurações?",
+    "pushText": "Serão enviadas cifradas pela Wi-Fi para o dispositivo {address}. Lá terá de confirmar a importação.",
+    "send": "Enviar",
+    "sending": "A enviar…",
+    "sent": "Configurações enviadas. Confirme-as no outro dispositivo.",
+    "cameraDenied": "O Nebula precisa de permissão para usar a câmara e ler o QR.",
+    "scanHint": "Aponte para o QR que o Nebula mostra no outro dispositivo",
+    "wizardLink": "Já usa o Nebula noutro dispositivo? Passe as configurações com um QR"
   }
 }

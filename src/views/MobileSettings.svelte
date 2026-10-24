@@ -45,6 +45,7 @@
     { id: 'network', icon: 'wifi', hue: 140 },
     { id: 'look', icon: 'palette', hue: 300 },
     { id: 'api', icon: 'plug', hue: 100 },
+    { id: 'transfer', icon: 'qr', hue: 50 },
   ];
   const prefs = $derived(SECTION_ROWS.filter((r) => (!r.nntp || s?.featureNntp !== false) && (!r.indexers || s?.featureIndexers)));
 

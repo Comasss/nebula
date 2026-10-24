@@ -8,6 +8,8 @@
   import Sidebar from './components/Sidebar.svelte';
   import Toasts from './components/Toasts.svelte';
   import Dialog from './components/Dialog.svelte';
+  import TransferDialog from './components/TransferDialog.svelte';
+  import { tr, cancelScan } from './lib/transfer.svelte.js';
   import AddDialog from './components/AddDialog.svelte';
   import SetupWizard from './components/SetupWizard.svelte';
   import ClipboardPrompt from './components/ClipboardPrompt.svelte';
@@ -98,7 +100,8 @@
     if (isAndroid) {
       onBackButtonPress(() => {
         const home = ui.settings?.featureIndexers ? 'search' : 'downloads';
-        if (ui.viaMenu) ui.viaMenu.resolve(null);
+        if (tr.scanning) cancelScan();
+        else if (ui.viaMenu) ui.viaMenu.resolve(null);
         else if (ui.actionSheet) ui.actionSheet.resolve(null);
         else if (document.querySelector('[role="dialog"], [role="listbox"]')) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
         else if (ui.view === 'settings' && ui.settingsPage) ui.settingsPage = null;
@@ -198,6 +201,7 @@
   <ViaMenu />
   <ActionSheet />
   <UpdatePrompt />
+  <TransferDialog />
   <Dialog />
 {/if}
 <DropOverlay />

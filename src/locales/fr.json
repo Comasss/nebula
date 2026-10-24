@@ -539,7 +539,8 @@
       "search": "Recherche",
       "windows": "Windows",
       "updates": "Mises à jour",
-      "api": "API"
+      "api": "API",
+      "transfer": "Transférer vers un autre appareil"
     },
     "speedLimitDesc": "En MB/s. 0 = illimitée.",
     "startMinimized": "Démarrer réduit dans la zone de notification",
@@ -790,7 +791,8 @@
       "logs": "Ce que fait Nebula",
       "about": "Version et licences",
       "updates": "Rechercher et installer les nouvelles versions",
-      "api": "Newznab pour Sonarr, Radarr…"
+      "api": "Newznab pour Sonarr, Radarr…",
+      "transfer": "Envoyez ou recevez vos réglages avec un QR code"
     }
   },
   "update": {
@@ -847,5 +849,46 @@
     "docs": "Documentation",
     "docsDesc": "Comment la connecter à Sonarr, Radarr ou Prowlarr et ce qu'elle prend en charge.",
     "androidNote": "Sur Android, l'API ne répond que lorsque Nebula est ouvert ou télécharge."
+  },
+  "transfer": {
+    "scanLabel": "Scanner un QR code",
+    "scanDesc": "Scannez le QR code affiché par Nebula sur l'autre appareil pour récupérer ses réglages ou lui envoyer les vôtres.",
+    "scan": "Scanner",
+    "sendLabel": "Envoyer mes réglages",
+    "sendDesc": "Affiche un QR code avec vos serveurs, indexeurs, services debrid et préférences, à scanner avec l'autre appareil.",
+    "receiveLabel": "Recevoir des réglages",
+    "receiveDesc": "Affiche un QR code pour que le téléphone vous envoie ses réglages par Wi-Fi.",
+    "pasteLabel": "Coller un code",
+    "pasteDescShort": "Si vous ne pouvez pas scanner, collez le code copié sur l'autre appareil.",
+    "pasteDesc": "Sur l'autre appareil, ouvrez « Envoyer mes réglages », touchez « Copier le code » et faites-le venir ici (par exemple dans un message à vous-même). Puis collez-le ici.",
+    "paste": "Coller",
+    "showQr": "Afficher le QR",
+    "sendTitle": "Scannez-le avec l'autre appareil",
+    "sendHint": "Dans Nebula sur l'autre appareil : Réglages › Transférer vers un autre appareil › Scanner un QR code.",
+    "secret": "Le QR code et le code contiennent vos mots de passe et clés API : ne les partagez avec personne.",
+    "copyCode": "Copier le code",
+    "copied": "Code copié",
+    "tooBig": "Vos réglages ne tiennent pas dans un QR code. Copiez le code et collez-le sur l'autre appareil.",
+    "receiveTitle": "Scannez-le avec le téléphone",
+    "receiveHint": "Dans Nebula sur le téléphone : Réglages › Transférer vers un autre appareil › Scanner un QR code. Les deux doivent être sur le même Wi-Fi.",
+    "waiting": "En attente des réglages…",
+    "expired": "Le QR code a expiré. Générez-en un autre pour continuer.",
+    "firewall": "Si Windows vous interroge sur le pare-feu, autorisez l'accès pour que le téléphone puisse se connecter.",
+    "pasteTitle": "Coller le code des réglages",
+    "continue": "Continuer",
+    "importTitle": "Importer ces réglages ?",
+    "fromAndroid": "Depuis un téléphone Android",
+    "fromWindows": "Depuis un PC Windows",
+    "importNote": "Remplace les serveurs, indexeurs, services debrid et préférences de cet appareil. Les dossiers, l'historique et les options propres à chaque système ne changent pas.",
+    "import": "Importer",
+    "imported": "Réglages importés",
+    "pushTitle": "Envoyer vos réglages ?",
+    "pushText": "Ils seront envoyés chiffrés par Wi-Fi à l'appareil {address}. Vous confirmerez l'importation là-bas.",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "sent": "Réglages envoyés. Confirmez-les sur l'autre appareil.",
+    "cameraDenied": "Nebula a besoin d'accéder à la caméra pour scanner le QR code.",
+    "scanHint": "Visez le QR code affiché par Nebula sur l'autre appareil",
+    "wizardLink": "Vous utilisez déjà Nebula sur un autre appareil ? Récupérez vos réglages avec un QR code"
   }
 }

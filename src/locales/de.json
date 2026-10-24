@@ -539,7 +539,8 @@
       "search": "Suche",
       "windows": "Windows",
       "updates": "Updates",
-      "api": "API"
+      "api": "API",
+      "transfer": "Auf anderes Gerät übertragen"
     },
     "speedLimitDesc": "In MB/s. 0 = kein Limit.",
     "startMinimized": "Minimiert im Infobereich starten",
@@ -790,7 +791,8 @@
       "logs": "Was Nebula gerade macht",
       "about": "Version und Lizenzen",
       "updates": "Neue Versionen suchen und installieren",
-      "api": "Newznab für Sonarr, Radarr…"
+      "api": "Newznab für Sonarr, Radarr…",
+      "transfer": "Einstellungen per QR-Code senden oder empfangen"
     }
   },
   "update": {
@@ -847,5 +849,46 @@
     "docs": "Dokumentation",
     "docsDesc": "Wie du sie mit Sonarr, Radarr oder Prowlarr verbindest und was sie unterstützt.",
     "androidNote": "Unter Android antwortet die API nur, solange Nebula geöffnet ist oder herunterlädt."
+  },
+  "transfer": {
+    "scanLabel": "QR-Code scannen",
+    "scanDesc": "Scanne den QR-Code, den Nebula auf dem anderen Gerät zeigt, um dessen Einstellungen zu übernehmen oder ihm deine zu senden.",
+    "scan": "Scannen",
+    "sendLabel": "Meine Einstellungen senden",
+    "sendDesc": "Zeigt einen QR-Code mit deinen Servern, Indexern, Debrid-Diensten und Einstellungen zum Scannen mit dem anderen Gerät.",
+    "receiveLabel": "Einstellungen empfangen",
+    "receiveDesc": "Zeigt einen QR-Code, damit dein Handy dir seine Einstellungen über WLAN schickt.",
+    "pasteLabel": "Code einfügen",
+    "pasteDescShort": "Wenn du nicht scannen kannst, füge den auf dem anderen Gerät kopierten Code ein.",
+    "pasteDesc": "Öffne auf dem anderen Gerät „Meine Einstellungen senden“, tippe auf „Code kopieren“ und bring ihn hierher (z. B. per Nachricht an dich selbst). Dann hier einfügen.",
+    "paste": "Einfügen",
+    "showQr": "QR anzeigen",
+    "sendTitle": "Mit dem anderen Gerät scannen",
+    "sendHint": "In Nebula auf dem anderen Gerät: Einstellungen › Auf anderes Gerät übertragen › QR-Code scannen.",
+    "secret": "QR-Code und Code enthalten deine Passwörter und API-Keys: teile sie mit niemandem.",
+    "copyCode": "Code kopieren",
+    "copied": "Code kopiert",
+    "tooBig": "Deine Einstellungen passen nicht in einen QR-Code. Kopiere den Code und füge ihn auf dem anderen Gerät ein.",
+    "receiveTitle": "Mit dem Handy scannen",
+    "receiveHint": "In Nebula auf dem Handy: Einstellungen › Auf anderes Gerät übertragen › QR-Code scannen. Beide müssen im selben WLAN sein.",
+    "waiting": "Warte auf die Einstellungen…",
+    "expired": "Der QR-Code ist abgelaufen. Erstelle einen neuen, um weiterzumachen.",
+    "firewall": "Wenn Windows nach der Firewall fragt, erlaube den Zugriff, damit sich das Handy verbinden kann.",
+    "pasteTitle": "Einstellungscode einfügen",
+    "continue": "Weiter",
+    "importTitle": "Diese Einstellungen importieren?",
+    "fromAndroid": "Von einem Android-Handy",
+    "fromWindows": "Von einem Windows-PC",
+    "importNote": "Ersetzt Server, Indexer, Debrid-Dienste und Einstellungen auf diesem Gerät. Ordner, Verlauf und systemspezifische Optionen bleiben unverändert.",
+    "import": "Importieren",
+    "imported": "Einstellungen importiert",
+    "pushTitle": "Deine Einstellungen senden?",
+    "pushText": "Sie werden verschlüsselt per WLAN an das Gerät {address} gesendet. Dort bestätigst du den Import.",
+    "send": "Senden",
+    "sending": "Wird gesendet…",
+    "sent": "Einstellungen gesendet. Bestätige sie auf dem anderen Gerät.",
+    "cameraDenied": "Nebula braucht Zugriff auf die Kamera, um den QR-Code zu scannen.",
+    "scanHint": "Richte die Kamera auf den QR-Code, den Nebula auf dem anderen Gerät zeigt",
+    "wizardLink": "Nutzt du Nebula schon auf einem anderen Gerät? Übertrage deine Einstellungen per QR-Code"
   }
 }
