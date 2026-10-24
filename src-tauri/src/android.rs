@@ -76,6 +76,20 @@ pub fn open_url(url: &str) -> Result<(), String> {
 
 #[derive(Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+struct ApkInstall {
+    started: bool,
+    needs_permission: bool,
+}
+
+/// Abre el APK de una actualización con el instalador del sistema. Si Nebula aún no tiene permiso
+/// para instalar apps, abre la pantalla de Ajustes donde se concede y lo indica.
+pub async fn install_apk(path: &str) -> Result<crate::updater::InstallResult, String> {
+    let r: ApkInstall = call("installApk", json!({ "path": path })).await?;
+    Ok(crate::updater::InstallResult { started: r.started, needs_permission: r.needs_permission })
+}
+
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 struct Resume {
     files: Vec<String>,
     urls: Vec<String>,

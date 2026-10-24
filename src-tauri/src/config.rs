@@ -254,6 +254,10 @@ pub struct Settings {
     pub api_port: u16,
     /// Escuchar en la red local (0.0.0.0) y no solo en este equipo (127.0.0.1).
     pub api_lan: bool,
+    /// Buscar actualizaciones al abrir Nebula (y cada pocas horas).
+    pub update_check: bool,
+    /// Versión que el usuario decidió omitir: no se vuelve a avisar de ella.
+    pub update_skipped: String,
 }
 
 impl Default for Settings {
@@ -313,6 +317,8 @@ impl Default for Settings {
             api_key_enc: String::new(),
             api_port: crate::api::DEFAULT_PORT,
             api_lan: false,
+            update_check: true,
+            update_skipped: String::new(),
         }
     }
 }

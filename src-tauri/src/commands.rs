@@ -491,3 +491,27 @@ pub fn app_background() {
     #[cfg(target_os = "android")]
     crate::android::move_to_back();
 }
+
+/// Busca una versión nueva en las Releases de GitHub.
+#[tauri::command]
+pub async fn update_check() -> Result<crate::updater::UpdateInfo, String> {
+    crate::updater::check().await
+}
+
+/// Descarga la actualización encontrada (avance en el evento `update-progress`).
+#[tauri::command]
+pub async fn update_download(app: AppHandle, e: Eng<'_>) -> Result<(), String> {
+    let data = e.paths.data.clone();
+    crate::updater::download(&app, &data).await
+}
+
+#[tauri::command]
+pub fn update_cancel() {
+    crate::updater::cancel();
+}
+
+/// Instala la actualización descargada. En Windows Nebula se cierra y se vuelve a abrir.
+#[tauri::command]
+pub async fn update_install(app: AppHandle) -> Result<crate::updater::InstallResult, String> {
+    crate::updater::install(&app).await
+}

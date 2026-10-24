@@ -53,6 +53,15 @@ The Android app is the same program: the Rust engine and the Svelte interface ru
 - Data: `%APPDATA%\Nebula` (settings, queue, history, statistics, logs). Server passwords are encrypted with DPAPI.
   The `NEBULA_DATA_DIR` environment variable lets you use another folder (portable mode or testing).
 
+## Updates
+
+Nebula checks the latest [Release](../../releases) on GitHub when it opens and every 6 hours (**Settings → Updates** turns this off). When there's a newer version a window shows what's new; you can update right away, close it ("Not now", it comes back on the next launch) or skip that version. **Settings → Updates** always lets you check by hand and install the version found.
+
+- The file is downloaded inside the app and checked against `SHA256SUMS.txt` before installing.
+- Windows installer: the new `-setup.exe` runs silently, closes Nebula and reopens it updated. Portable exe: the running `.exe` is swapped for the new one and Nebula restarts.
+- Android: the new APK is downloaded and the system installer opens. The first time, Android asks to allow Nebula to install apps.
+- Only a higher version number counts as an update, so a rebuild published under the same version isn't offered.
+
 ## Automatic builds (GitHub Actions)
 
 `.github/workflows/build.yml` builds Nebula on `windows-latest` (and the Android APK on `ubuntu-latest`) on every push and pull request:

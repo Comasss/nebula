@@ -1,5 +1,5 @@
 <script>
-  import { t, th, LANGUAGES, setLanguage, systemLanguage } from '../lib/i18n.svelte.js';
+  import { t, th, LANGUAGES, setLanguage, systemLanguage, locale } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { pickFolder, isAndroid } from '../lib/platform.js';
@@ -9,6 +9,9 @@
   import Select from '../components/Select.svelte';
   import { ui, saveSettings, toast, d } from '../lib/state.svelte.js';
   import { usableDebrid, debridLabel, hasNntp } from '../lib/debrid.js';
+  import ProgressBar from '../components/ProgressBar.svelte';
+  import * as f from '../lib/format.js';
+  import { upd, checkUpdates, startUpdate, cancelDownload } from '../lib/updater.svelte.js';
 
   // `only`: muestra solo esa sección (el móvil abre cada sección como una página).
   let { only = null } = $props();
@@ -30,6 +33,7 @@
     { id: 'network', icon: 'wifi' },
     { id: 'look', icon: 'palette' },
     { id: 'api', icon: 'plug' },
+    { id: 'updates', icon: 'refresh' },
     { id: 'about', icon: 'info' },
   ];
   let section = $state('features');
@@ -122,6 +126,16 @@
       toast('error', String(e));
     }
   }
+
+  const updInfo = $derived(upd.info);
+  const updDesc = $derived.by(() => {
+    if (upd.phase === 'downloading') return t('update.downloadingPct', { pct: Math.round(upd.total ? (upd.downloaded / upd.total) * 100 : 0) });
+    if (upd.phase === 'error') return upd.error;
+    if (updInfo?.available) return t('update.availableDesc');
+    if (upd.checking) return t('update.checking');
+    if (upd.checkedAt) return t('update.upToDateDesc', { time: new Date(upd.checkedAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) });
+    return t('update.neverChecked');
+  });
 
   function scrollTo(id) {
     section = id;
@@ -417,6 +431,45 @@
       </section>
       {/if}
 
+      {#if show('updates')}
+      <section id="sec-updates">
+        <h2><Icon name="refresh" size={18} /> {t('settings.section.updates')}</h2>
+        <div class="card group">
+          <SettingRow
+            icon="rocket"
+            label={updInfo?.available ? t('update.availableLabel', { version: updInfo.version }) : t('update.currentLabel', { version: ui.info?.version })}
+            description={updDesc}>
+            {#if updInfo?.available}
+              {#if upd.phase === 'downloading'}
+                <button class="btn sm ghost" onclick={cancelDownload}>{t('common.cancel')}</button>
+              {:else}
+                <button class="btn sm ghost" onclick={() => (upd.open = true)}>{t('update.whatsNew')}</button>
+              {/if}
+              <button class="btn sm primary" onclick={startUpdate} disabled={upd.phase === 'downloading' || upd.phase === 'installing'}>
+                <Icon name={updInfo.kind ? 'download' : 'external'} size={14} /> {updInfo.kind ? t('update.now') : t('update.openPage')}
+              </button>
+            {:else}
+              <button class="btn sm" onclick={() => checkUpdates({ manual: true })} disabled={upd.checking}>
+                <span class="spin-wrap" class:spin={upd.checking}><Icon name="refresh" size={14} /></span> {t('update.check')}
+              </button>
+            {/if}
+          </SettingRow>
+          {#if upd.phase === 'downloading'}
+            <div class="upd-progress">
+              <ProgressBar value={upd.total ? (upd.downloaded / upd.total) * 100 : 0} active height={6} />
+              <span>{f.bytes(upd.downloaded)} / {f.bytes(upd.total)}{#if upd.speed > 0}{' · '}{f.speed(upd.speed)}{/if}</span>
+            </div>
+          {/if}
+          <SettingRow label={t('update.auto')} description={t('update.autoDesc')} checked={s.updateCheck !== false} onchange={set('updateCheck')} />
+          {#if s.updateSkipped}
+            <SettingRow label={t('update.skipped', { version: s.updateSkipped })} description={t('update.skippedDesc')}>
+              <button class="btn sm" onclick={() => saveSettings({ updateSkipped: '' })}>{t('update.unskip')}</button>
+            </SettingRow>
+          {/if}
+        </div>
+      </section>
+      {/if}
+
       {#if show('about')}
       <section id="sec-about">
         <h2><Icon name="info" size={18} /> {t('settings.section.about')}</h2>
@@ -512,6 +565,9 @@
   .logo-big { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--grad-diag); color: #fff; box-shadow: 0 10px 30px -10px rgba(var(--accent-rgb), 0.9); }
   .app-name { font-family: var(--font-display); font-size: 22px; font-weight: 750; }
   .links { display: flex; gap: 8px; margin-top: 16px; }
+  .upd-progress { display: flex; align-items: center; gap: 12px; padding: 0 18px 14px 64px; margin-top: -4px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .upd-progress span { flex-shrink: 0; }
+  .spin-wrap { display: inline-flex; }
   .legal { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 16px 0 0; }
 
   .single .content { padding-top: 6px; overflow: visible; }
@@ -533,6 +589,7 @@
     .urls { align-items: stretch; width: 100%; }
     .url code { flex: 1; }
     .key { flex: 1; width: auto; min-width: 0; }
+    .upd-progress { padding: 0 14px 14px; flex-direction: column; align-items: stretch; gap: 6px; }
     .patterns { padding: 14px; }
     .p-head { flex-direction: column; }
     .links { flex-wrap: wrap; }

@@ -18,6 +18,7 @@ mod postproc;
 mod stats;
 #[cfg(windows)]
 mod tools;
+mod updater;
 mod util;
 #[cfg(windows)]
 mod winint;
@@ -154,6 +155,8 @@ fn boot(paths: config::AppPaths) -> (config::AppPaths, config::Settings) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Tras una actualización portable, la versión anterior tiene que cerrarse antes de seguir.
+    updater::wait_previous();
     // En Android la carpeta de datos la da el sistema y solo se conoce ya dentro de `setup`.
     #[cfg(not(target_os = "android"))]
     let mut early = Some(boot(config::AppPaths::init()));
@@ -187,6 +190,7 @@ pub fn run() {
                 early = Some(boot(config::AppPaths::init(data)));
             }
             let (paths, settings) = early.take().expect("arranque");
+            updater::cleanup(&paths.data);
             logger::set_app(app.handle().clone());
             #[cfg(desktop)]
             build_tray(app)?;
@@ -270,6 +274,10 @@ pub fn run() {
             commands::app_background,
             commands::haptic,
             commands::api_status,
+            commands::update_check,
+            commands::update_download,
+            commands::update_cancel,
+            commands::update_install,
         ])
         .build(tauri::generate_context!())
         .expect("no se pudo iniciar Nebula");
