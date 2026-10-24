@@ -4,3 +4,6 @@ src-tauri/target/
 src-tauri/gen/schemas/
 release/
 *.log
+
+# Capturas de pruebas sueltas en la raíz
+/*.png

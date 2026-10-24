@@ -38,7 +38,7 @@ The Android app is the same program: the Rust engine and the Svelte interface ru
 - While something is downloading, Nebula keeps a notification visible so Android doesn't stop it in the background.
 - Add NZBs with the **Add NZB** button, by opening a `.nzb` from a file manager or browser, by sharing a file or link to Nebula, or by copying a link (Nebula offers it when you come back to the app if clipboard watching is enabled).
 - PAR2 and 7-Zip are compiled for Android and ship inside the APK (`lib7zz.so`, `libpar2.so`).
-- The APK is signed with the key in `src-tauri/gen/android/nebula-release.jks`. To sign with your own key, set the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` repository secrets (switching keys means uninstalling the old APK once).
+- The APK is signed with a key kept only in the repository secrets `ANDROID_KEYSTORE_BASE64` (the `.jks` in base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Builds on `main` and `v*` tags fail without them. Without the secrets (pull requests from forks, local builds) the APK is signed with the Android debug key: it works for testing but won't install over the official app.
 
 ## Usage
 

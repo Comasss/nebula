@@ -153,16 +153,23 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      # Clave de firma propia (opcional): secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
-      # ANDROID_KEY_ALIAS y ANDROID_KEY_PASSWORD. Sin ellos se firma con src-tauri/gen/android/nebula-release.jks.
+      # Clave de firma: secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS y
+      # ANDROID_KEY_PASSWORD. Son obligatorios para publicar (main y etiquetas). Sin ellos (PRs de forks) el APK
+      # se firma con la clave de depuración: sirve para probar, pero no se instala encima del oficial.
       - name: Clave de firma
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PUBLISHES: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
         run: |
+          set -euo pipefail
           if [ -n "$KEYSTORE_B64" ]; then
+            if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+              echo "::error::Falta ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS o ANDROID_KEY_PASSWORD"
+              exit 1
+            fi
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/nebula.jks"
             {
               echo "NEBULA_KEYSTORE=$RUNNER_TEMP/nebula.jks"
@@ -171,12 +178,19 @@ jobs:
               echo "NEBULA_KEY_PASSWORD=$KEY_PASSWORD"
             } >> "$GITHUB_ENV"
             echo "Firma con la clave de los secretos"
+          elif [ "$PUBLISHES" = "true" ]; then
+            echo "::error::Faltan los secretos ANDROID_KEYSTORE_*: no se publica un APK sin la clave de firma oficial"
+            exit 1
           else
-            echo "Firma con nebula-release.jks"
+            echo "::warning::Sin secretos ANDROID_KEYSTORE_*: el APK se firma con la clave de depuración (solo para pruebas)"
           fi
 
       - name: Compilar (tauri android build)
         run: npx tauri android build --apk --target aarch64 --ci
+
+      - name: Borrar la clave de firma
+        if: always()
+        run: rm -f "$RUNNER_TEMP/nebula.jks"
 
       - name: Preparar APK
         run: |
