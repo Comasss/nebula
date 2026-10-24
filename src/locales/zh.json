@@ -279,7 +279,10 @@
     "waitingServer": "正在等待连接服务器… 请检查“服务器”标签页。",
     "hideDetails": "隐藏详情",
     "more": "更多操作",
-    "serverTitle": "仅从此服务器下载"
+    "serverTitle": "仅从此服务器下载",
+    "stepUpload": "上传",
+    "stepRemote": "在 {provider}",
+    "stepFetch": "下载"
   },
   "logs": {
     "all": "全部",

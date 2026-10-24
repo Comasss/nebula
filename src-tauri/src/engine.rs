@@ -497,7 +497,14 @@ impl Job {
         let mut warning = self.warning.clone();
         let debrid = self.debrid.as_ref().map(|d| {
             // Mientras el servicio lo descarga, se muestra su progreso y su velocidad.
-            if d.phase != DebridPhase::Fetch {
+            // Mientras se sube el NZB, el progreso y la velocidad de la subida.
+            if d.phase == DebridPhase::Submit {
+                percent = d.upload_percent();
+                done = 0;
+                speed = if downloading { d.upload_speed } else { 0 };
+                let left = d.upload_total.saturating_sub(d.upload_sent.load(Ordering::Relaxed));
+                eta = if speed > 0 { left / speed } else { 0 };
+            } else if d.phase != DebridPhase::Fetch {
                 percent = d.remote_percent;
                 done = (self.total_bytes as f64 * percent / 100.0) as u64;
                 speed = if downloading { d.remote_speed } else { 0 };

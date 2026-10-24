@@ -287,7 +287,10 @@
     "waitingServer": "Waiting to connect to a server… Check the Servers tab.",
     "hideDetails": "Hide details",
     "more": "More actions",
-    "serverTitle": "Downloads only from this server"
+    "serverTitle": "Downloads only from this server",
+    "stepUpload": "Upload",
+    "stepRemote": "On {provider}",
+    "stepFetch": "Download"
   },
   "logs": {
     "all": "All",

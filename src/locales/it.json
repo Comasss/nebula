@@ -287,7 +287,10 @@
     "waitingServer": "In attesa di connessione a un server… Controlla la scheda Server.",
     "hideDetails": "Nascondi dettagli",
     "more": "Altre azioni",
-    "serverTitle": "Scarica solo da questo server"
+    "serverTitle": "Scarica solo da questo server",
+    "stepUpload": "Invio",
+    "stepRemote": "Su {provider}",
+    "stepFetch": "Download"
   },
   "logs": {
     "all": "Tutto",
