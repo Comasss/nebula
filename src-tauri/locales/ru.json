@@ -1,4 +1,6 @@
 {
+  "api.bindFailed": "Не удалось запустить API на порту {port}: {error}",
+  "api.portInUse": "Порт {port} уже занят: выберите другой для API",
   "debrid.badResponse": "Некорректный ответ от {name}.",
   "debrid.connect": "Не удалось подключиться к {name}",
   "debrid.connected": "Подключено",
@@ -108,6 +110,9 @@
   "indexer.unsupported": "Индексатор не поддерживает эту функцию",
   "job.defaultName": "Загрузка",
   "log.added": "Добавлено в очередь: {name}",
+  "log.api.search": "API: поиск «{query}» от {from} · результатов: {results}",
+  "log.api.started": "API работает на {url}",
+  "log.api.stopped": "API отключён",
   "log.badCrc": "Неверная CRC в {id}, будет повтор на другом сервере",
   "log.badYenc": "Статья {id} не содержит корректных данных yEnc",
   "log.closed": "Nebula закрыта",

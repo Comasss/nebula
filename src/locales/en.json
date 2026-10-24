@@ -535,7 +535,8 @@
       "post": "Post-processing",
       "search": "Search",
       "windows": "Windows",
-      "updates": "Updates"
+      "updates": "Updates",
+      "api": "API"
     },
     "speedLimitDesc": "In MB/s. 0 = no limit.",
     "startMinimized": "Start minimized to tray",
@@ -783,7 +784,8 @@
       "look": "Color, animations and vibration",
       "logs": "What Nebula is doing",
       "about": "Version and licenses",
-      "updates": "Find and install new versions"
+      "updates": "Find and install new versions",
+      "api": "Newznab for Sonarr, Radarr…"
     }
   },
   "update": {
@@ -818,5 +820,27 @@
     "skipped": "Version {version} skipped",
     "skippedDesc": "You won't be notified about this version; you can still install it from here.",
     "unskip": "Notify me again"
+  },
+  "api": {
+    "title": "Newznab API",
+    "enable": "Enable API",
+    "enableDesc": "Newznab and NZBHydra2 compatible: Sonarr, Radarr, Prowlarr and other apps can search all your indexers through Nebula.",
+    "stopped": "Stopped",
+    "address": "Address",
+    "addressDesc": "Add it to Sonarr, Radarr or Prowlarr as a Newznab indexer, together with the API key.",
+    "key": "API key",
+    "keyDesc": "Apps send it with every request. If you change it, update it there too.",
+    "regenerate": "Generate new",
+    "regenerated": "New API key generated: update it in the apps that use the API.",
+    "copy": "Copy",
+    "copied": "Copied to clipboard",
+    "port": "Port",
+    "portDesc": "Port the API listens on (5077 by default).",
+    "lan": "Allow connections from the local network",
+    "lanDesc": "Other devices (a NAS, another PC…) can use it with the API key. When off, only this computer can.",
+    "noIndexers": "Enable at least one indexer: the API searches them.",
+    "docs": "Documentation",
+    "docsDesc": "How to connect it to Sonarr, Radarr or Prowlarr and what it supports.",
+    "androidNote": "On Android the API only answers while Nebula is open or downloading."
   }
 }

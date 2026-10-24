@@ -1051,6 +1051,7 @@ impl Engine {
         }
         let e = self.clone();
         tauri::async_runtime::spawn(async move { e.sampler().await });
+        crate::api::restart(self);
         linfo!("{}", t!("log.started", version = env!("CARGO_PKG_VERSION")));
     }
 
@@ -2464,7 +2465,11 @@ impl Engine {
         self.limiter.set(new.speed_limit_kbps * 1024);
         let servers_changed = serde_json::to_string(&old.servers).ok() != serde_json::to_string(&new.servers).ok()
             || old.timeout_secs != new.timeout_secs;
+        let api_changed = old.api_enabled != new.api_enabled || old.api_port != new.api_port || old.api_lan != new.api_lan;
         *self.settings.write() = new;
+        if api_changed {
+            crate::api::restart(self);
+        }
         if servers_changed {
             linfo!("{}", t!("log.serversUpdated"));
             self.restart_workers();

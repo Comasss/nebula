@@ -1,4 +1,6 @@
 {
+  "api.bindFailed": "تعذّر تشغيل الواجهة البرمجية على المنفذ {port}: {error}",
+  "api.portInUse": "المنفذ {port} مستخدم بالفعل: اختر منفذًا آخر للواجهة البرمجية",
   "debrid.badResponse": "استجابة غير صالحة من {name}.",
   "debrid.connect": "تعذّر الاتصال بـ {name}",
   "debrid.connected": "متصل",
@@ -108,6 +110,9 @@
   "indexer.unsupported": "لا يدعم المفهرس هذه الميزة",
   "job.defaultName": "تنزيل",
   "log.added": "أُضيف إلى قائمة الانتظار: {name}",
+  "log.api.search": "الواجهة البرمجية: بحث «{query}» من {from} · {results} نتيجة",
+  "log.api.started": "الواجهة البرمجية تعمل على {url}",
+  "log.api.stopped": "تم إيقاف الواجهة البرمجية",
   "log.badCrc": "CRC غير صحيح في {id}، ستُعاد المحاولة على خادم آخر",
   "log.badYenc": "المقالة {id} لا تحتوي على بيانات yEnc صالحة",
   "log.closed": "أُغلق Nebula",

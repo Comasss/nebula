@@ -535,7 +535,8 @@
       "post": "Post-traitement",
       "search": "Recherche",
       "windows": "Windows",
-      "updates": "Mises à jour"
+      "updates": "Mises à jour",
+      "api": "API"
     },
     "speedLimitDesc": "En MB/s. 0 = illimitée.",
     "startMinimized": "Démarrer réduit dans la zone de notification",
@@ -783,7 +784,8 @@
       "look": "Couleur, animations et vibrations",
       "logs": "Ce que fait Nebula",
       "about": "Version et licences",
-      "updates": "Rechercher et installer les nouvelles versions"
+      "updates": "Rechercher et installer les nouvelles versions",
+      "api": "Newznab pour Sonarr, Radarr…"
     }
   },
   "update": {
@@ -818,5 +820,27 @@
     "skipped": "Version {version} ignorée",
     "skippedDesc": "Vous ne serez pas averti pour cette version ; vous pouvez toujours l'installer d'ici.",
     "unskip": "M'avertir à nouveau"
+  },
+  "api": {
+    "title": "API Newznab",
+    "enable": "Activer l'API",
+    "enableDesc": "Compatible Newznab et NZBHydra2 : Sonarr, Radarr, Prowlarr et d'autres logiciels peuvent chercher dans tous vos indexeurs via Nebula.",
+    "stopped": "Arrêtée",
+    "address": "Adresse",
+    "addressDesc": "Ajoutez-la dans Sonarr, Radarr ou Prowlarr comme indexeur Newznab, avec la clé API.",
+    "key": "Clé API",
+    "keyDesc": "Les logiciels l'envoient à chaque requête. Si vous la changez, mettez-la à jour chez eux.",
+    "regenerate": "Générer une nouvelle",
+    "regenerated": "Nouvelle clé API générée : mettez-la à jour dans les logiciels qui utilisent l'API.",
+    "copy": "Copier",
+    "copied": "Copié dans le presse-papiers",
+    "port": "Port",
+    "portDesc": "Port d'écoute de l'API (5077 par défaut).",
+    "lan": "Autoriser les connexions du réseau local",
+    "lanDesc": "D'autres appareils (un NAS, un autre PC…) pourront l'utiliser avec la clé API. Désactivé : seulement cet ordinateur.",
+    "noIndexers": "Activez au moins un indexeur : l'API cherche dedans.",
+    "docs": "Documentation",
+    "docsDesc": "Comment la connecter à Sonarr, Radarr ou Prowlarr et ce qu'elle prend en charge.",
+    "androidNote": "Sur Android, l'API ne répond que lorsque Nebula est ouvert ou télécharge."
   }
 }

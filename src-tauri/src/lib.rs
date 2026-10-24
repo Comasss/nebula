@@ -2,6 +2,7 @@
 mod i18n;
 #[cfg(target_os = "android")]
 mod android;
+mod api;
 mod commands;
 mod config;
 mod debrid;
@@ -272,6 +273,7 @@ pub fn run() {
             commands::make_dir,
             commands::app_background,
             commands::haptic,
+            commands::api_status,
             commands::update_check,
             commands::update_download,
             commands::update_cancel,

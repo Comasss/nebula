@@ -1,4 +1,6 @@
 {
+  "api.bindFailed": "ポート {port} で API を開始できませんでした: {error}",
+  "api.portInUse": "ポート {port} は使用中です。API には別のポートを選んでください",
   "debrid.badResponse": "{name} から無効な応答がありました。",
   "debrid.connect": "{name} に接続できませんでした",
   "debrid.connected": "接続済み",
@@ -108,6 +110,9 @@
   "indexer.unsupported": "インデクサーはこの機能に対応していません",
   "job.defaultName": "ダウンロード",
   "log.added": "キューに追加しました：{name}",
+  "log.api.search": "API: {from} からの検索「{query}」· {results} 件",
+  "log.api.started": "API は {url} で稼働中",
+  "log.api.stopped": "API をオフにしました",
   "log.badCrc": "{id} の CRC が正しくありません。別のサーバーで再試行します",
   "log.badYenc": "アーティクル {id} に有効な yEnc データが含まれていません",
   "log.closed": "Nebula を終了しました",

@@ -535,7 +535,8 @@
       "post": "Post-elaborazione",
       "search": "Ricerca",
       "windows": "Windows",
-      "updates": "Aggiornamenti"
+      "updates": "Aggiornamenti",
+      "api": "API"
     },
     "speedLimitDesc": "In MB/s. 0 = nessun limite.",
     "startMinimized": "Avvia ridotto nell'area di notifica",
@@ -783,7 +784,8 @@
       "look": "Colore, animazioni e vibrazione",
       "logs": "Cosa sta facendo Nebula",
       "about": "Versione e licenze",
-      "updates": "Cerca e installa nuove versioni"
+      "updates": "Cerca e installa nuove versioni",
+      "api": "Newznab per Sonarr, Radarr…"
     }
   },
   "update": {
@@ -818,5 +820,27 @@
     "skipped": "Versione {version} saltata",
     "skippedDesc": "Non riceverai avvisi per questa versione; puoi comunque installarla da qui.",
     "unskip": "Avvisami di nuovo"
+  },
+  "api": {
+    "title": "API Newznab",
+    "enable": "Attiva API",
+    "enableDesc": "Compatibile con Newznab e NZBHydra2: Sonarr, Radarr, Prowlarr e altri programmi possono cercare in tutti i tuoi indexer tramite Nebula.",
+    "stopped": "Ferma",
+    "address": "Indirizzo",
+    "addressDesc": "Aggiungilo in Sonarr, Radarr o Prowlarr come indexer Newznab, insieme alla chiave API.",
+    "key": "Chiave API",
+    "keyDesc": "I programmi la inviano a ogni richiesta. Se la cambi, aggiornala anche lì.",
+    "regenerate": "Genera nuova",
+    "regenerated": "Nuova chiave API generata: aggiornala nei programmi che usano l'API.",
+    "copy": "Copia",
+    "copied": "Copiato negli appunti",
+    "port": "Porta",
+    "portDesc": "Porta su cui ascolta l'API (5077 per impostazione predefinita).",
+    "lan": "Consenti connessioni dalla rete locale",
+    "lanDesc": "Altri dispositivi (un NAS, un altro PC…) potranno usarla con la chiave API. Se disattivato, solo questo computer.",
+    "noIndexers": "Attiva almeno un indexer: l'API cerca in essi.",
+    "docs": "Documentazione",
+    "docsDesc": "Come collegarla a Sonarr, Radarr o Prowlarr e cosa supporta.",
+    "androidNote": "Su Android l'API risponde solo mentre Nebula è aperta o sta scaricando."
   }
 }

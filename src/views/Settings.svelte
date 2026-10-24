@@ -1,6 +1,7 @@
 <script>
   import { t, th, LANGUAGES, setLanguage, systemLanguage, locale } from '../lib/i18n.svelte.js';
   import { invoke } from '@tauri-apps/api/core';
+  import { listen } from '@tauri-apps/api/event';
   import { pickFolder, isAndroid } from '../lib/platform.js';
   import { fly, scale } from 'svelte/transition';
   import Icon from '../components/Icon.svelte';
@@ -31,6 +32,7 @@
     { id: 'windows', icon: isAndroid ? 'smartphone' : 'monitor' },
     { id: 'network', icon: 'wifi' },
     { id: 'look', icon: 'palette' },
+    { id: 'api', icon: 'plug' },
     { id: 'updates', icon: 'refresh' },
     { id: 'about', icon: 'info' },
   ];
@@ -87,6 +89,42 @@
 
   async function resetPatterns() {
     saveSettings({ clipboardPatterns: await invoke('default_patterns') });
+  }
+
+  // ---- API Newznab ----
+  const DOCS_URL = 'https://github.com/Comasss/nebula/blob/main/docs/API.md';
+  let apiStatus = $state(null);
+  let showKey = $state(false);
+  const apiIndexers = $derived((s?.indexers ?? []).filter((i) => i.enabled).length);
+
+  $effect(() => {
+    if (!show('api')) return;
+    let off = null;
+    invoke('api_status').then((st) => (apiStatus = st)).catch(() => {});
+    listen('api-status', (e) => (apiStatus = e.payload)).then((fn) => (off = fn));
+    return () => off?.();
+  });
+
+  function newKey() {
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  }
+
+  function setApi(v) {
+    saveSettings(v && !s.apiKey ? { apiEnabled: true, apiKey: newKey() } : { apiEnabled: v });
+  }
+
+  async function regenerateKey() {
+    if (await saveSettings({ apiKey: newKey() })) toast('success', t('api.regenerated'));
+  }
+
+  async function copy(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('success', t('api.copied'), 2500);
+    } catch (e) {
+      toast('error', String(e));
+    }
   }
 
   const updInfo = $derived(upd.info);
@@ -350,6 +388,49 @@
       </section>
       {/if}
 
+      {#if show('api')}
+      <section id="sec-api">
+        <h2><Icon name="plug" size={18} /> {t('api.title')}</h2>
+        <div class="card group">
+          <SettingRow icon="plug" label={t('api.enable')} description={t('api.enableDesc')} checked={!!s.apiEnabled} onchange={setApi} />
+          {#if s.apiEnabled}
+            {#if apiStatus?.error}
+              <div class="note err"><Icon name="alert-triangle" size={14} /> {apiStatus.error}</div>
+            {:else if !apiIndexers}
+              <div class="note"><Icon name="info" size={14} /> {t('api.noIndexers')}</div>
+            {/if}
+            <SettingRow label={t('api.address')} description={t('api.addressDesc')}>
+              <div class="urls">
+                {#if apiStatus?.running}
+                  {#each apiStatus.urls as url}
+                    <span class="url"><code>{url}</code><button class="btn ghost sm icon" onclick={() => copy(url)} aria-label={t('api.copy')} title={t('api.copy')}><Icon name="copy" size={13} /></button></span>
+                  {/each}
+                {:else}
+                  <span class="chip">{t('api.stopped')}</span>
+                {/if}
+              </div>
+            </SettingRow>
+            <SettingRow icon="key" label={t('api.key')} description={t('api.keyDesc')}>
+              <input class="input key" readonly type={showKey ? 'text' : 'password'} value={s.apiKey} onfocus={(e) => e.target.select()} />
+              <button class="btn ghost sm icon" onclick={() => (showKey = !showKey)} aria-label={t('common.showApiKey')} title={t('common.showApiKey')}><Icon name={showKey ? 'eye-off' : 'eye'} size={14} /></button>
+              <button class="btn ghost sm icon" onclick={() => copy(s.apiKey)} aria-label={t('api.copy')} title={t('api.copy')}><Icon name="copy" size={14} /></button>
+              <button class="btn sm" onclick={regenerateKey}><Icon name="refresh" size={13} /> {t('api.regenerate')}</button>
+            </SettingRow>
+            <SettingRow label={t('api.port')} description={t('api.portDesc')}>
+              <input class="input small" type="number" min="1024" max="65535" value={s.apiPort} onchange={num('apiPort', 1024, 65535)} />
+            </SettingRow>
+            <SettingRow icon="wifi" label={t('api.lan')} description={t('api.lanDesc')} checked={!!s.apiLan} onchange={set('apiLan')} />
+            {#if isAndroid}
+              <div class="note"><Icon name="smartphone" size={14} /> {t('api.androidNote')}</div>
+            {/if}
+          {/if}
+          <SettingRow icon="external" label={t('api.docs')} description={t('api.docsDesc')}>
+            <button class="btn sm" onclick={() => invoke('open_url', { url: DOCS_URL })}>{t('common.open')} <Icon name="chevron-right" size={14} /></button>
+          </SettingRow>
+        </div>
+      </section>
+      {/if}
+
       {#if show('updates')}
       <section id="sec-updates">
         <h2><Icon name="refresh" size={18} /> {t('settings.section.updates')}</h2>
@@ -463,6 +544,12 @@
   .seg button.sel { background: rgba(var(--accent-rgb), 0.2); color: var(--text); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.45); }
   .seg button:disabled { opacity: 0.4; cursor: not-allowed; }
   .note { display: flex; align-items: center; gap: 8px; padding: 0 18px 12px 64px; margin-top: -4px; font-size: 12.5px; color: var(--muted); }
+  .note.err { color: var(--err); }
+  .urls { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
+  .url { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+  .url code { padding: 4px 8px; border-radius: 7px; background: var(--panel-3); border: 1px solid var(--border-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: all; }
+  .key { width: 230px; height: 32px; font-family: var(--mono); font-size: 12px; }
+  .icon { width: 32px; padding: 0; justify-content: center; }
   .swatches { display: flex; gap: 10px; }
   .swatch {
     width: 30px; height: 30px; border-radius: 50%;
@@ -499,6 +586,9 @@
     :global(.select.lang) { min-width: 0; width: 100%; }
     .path { width: 100%; }
     .note { padding: 0 14px 12px; }
+    .urls { align-items: stretch; width: 100%; }
+    .url code { flex: 1; }
+    .key { flex: 1; width: auto; min-width: 0; }
     .upd-progress { padding: 0 14px 14px; flex-direction: column; align-items: stretch; gap: 6px; }
     .patterns { padding: 14px; }
     .p-head { flex-direction: column; }

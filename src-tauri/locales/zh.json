@@ -1,4 +1,6 @@
 {
+  "api.bindFailed": "无法在端口 {port} 上启动 API：{error}",
+  "api.portInUse": "端口 {port} 已被占用：请为 API 选择其他端口",
   "debrid.badResponse": "{name} 返回的响应无效。",
   "debrid.connect": "无法连接到 {name}",
   "debrid.connected": "已连接",
@@ -108,6 +110,9 @@
   "indexer.unsupported": "索引器不支持此功能",
   "job.defaultName": "下载",
   "log.added": "已加入队列：{name}",
+  "log.api.search": "API：来自 {from} 的搜索“{query}” · {results} 个结果",
+  "log.api.started": "API 已在 {url} 运行",
+  "log.api.stopped": "API 已关闭",
   "log.badCrc": "{id} 的 CRC 错误，将在其他服务器上重试",
   "log.badYenc": "文章 {id} 不包含有效的 yEnc 数据",
   "log.closed": "Nebula 已关闭",

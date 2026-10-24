@@ -145,6 +145,32 @@ pub async fn search(ix: &IndexerConfig, query: &str, category: Option<&str>, off
     Ok(SearchResult { items, total, offset, ms: start.elapsed().as_millis() as u64 })
 }
 
+/// Búsqueda con los parámetros Newznab que pide un cliente de la API (Sonarr, Radarr…):
+/// `func` es la función ("search", "tvsearch", "movie"…) y `params` el resto, ya filtrados.
+/// Si el indexador no admite la función, se repite como búsqueda de texto.
+pub async fn query(ix: &IndexerConfig, func: &str, params: &[(&str, String)], offset: u32, limit: u32) -> Result<SearchResult, String> {
+    let start = Instant::now();
+    let base: Vec<(&str, String)> = vec![
+        ("extended", "1".into()),
+        ("limit", limit.clamp(1, 500).to_string()),
+        ("offset", offset.to_string()),
+    ];
+    let mut first = base.clone();
+    first.push(("t", func.to_string()));
+    first.extend(params.iter().cloned());
+    let body = match get(ix, &first).await {
+        Err(e) if func != "search" && e == t!("indexer.unsupported") && params.iter().any(|(k, v)| *k == "q" && !v.is_empty()) => {
+            let mut retry = base;
+            retry.push(("t", "search".into()));
+            retry.extend(params.iter().filter(|(k, _)| matches!(*k, "q" | "cat" | "maxage" | "minsize" | "maxsize")).cloned());
+            get(ix, &retry).await?
+        }
+        r => r?,
+    };
+    let (items, total) = parse_rss(&body, &ix.id, &ix.label())?;
+    Ok(SearchResult { items, total, offset, ms: start.elapsed().as_millis() as u64 })
+}
+
 pub async fn test(ix: &IndexerConfig) -> IndexerTest {
     let start = Instant::now();
     let caps = match get(ix, &[("t", "caps".into())]).await {
