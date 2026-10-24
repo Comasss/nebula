@@ -79,9 +79,13 @@ export function longpress(node, opts) {
     if (o?.enabled === false) return;
     e.preventDefault();
     cancel();
+    // En Android el WebView cancela el toque (pointercancel) al detectar su propia pulsación larga,
+    // a veces antes de que salte el temporizador: el menú contextual que llega después es la
+    // pulsación larga. En escritorio es el clic derecho.
     if (!fired) {
-      fired = isAndroid; // en Android el menú contextual llega tras la pulsación larga: no repetir
-      if (!isAndroid) o?.onlong?.(node);
+      fired = isAndroid; // tras la pulsación larga no debe colarse el clic
+      if (isAndroid) haptic('long');
+      o?.onlong?.(node);
     }
   };
   node.addEventListener('pointerdown', down);

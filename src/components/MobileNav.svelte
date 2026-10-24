@@ -6,6 +6,15 @@
   import Icon from './Icon.svelte';
   import { ui } from '../lib/state.svelte.js';
   import { haptic } from '../lib/feedback.js';
+  import { onMount } from 'svelte';
+
+  // La barra entra cuando la primera vista ya está pintada, así el cristal no compite con el
+  // arranque de la app.
+  let shown = $state(false);
+  onMount(() => {
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => (shown = true)));
+    return () => cancelAnimationFrame(id);
+  });
 
   const ALL = [
     { id: 'search', icon: 'search', feature: 'indexers' },
@@ -110,6 +119,7 @@
 <div class="fade" aria-hidden="true"></div>
 <nav
   class="mnav glass"
+  class:shown
   class:compact={ui.navCompact && !drag}
   bind:this={bar}
   bind:clientWidth={width}
@@ -155,9 +165,15 @@
     padding: 0 6px;
     border-radius: 999px;
     touch-action: pan-y;
-    transition: height 0.35s var(--ease), left 0.35s var(--ease), right 0.35s var(--ease), bottom 0.35s var(--ease);
+    /* Capa propia y solo transform/opacity: el desenfoque no se recalcula con cada cambio. */
+    contain: layout style;
+    will-change: transform;
+    opacity: 0;
+    transform: translateY(calc(100% + 24px));
+    transition: transform 0.45s var(--ease), opacity 0.3s;
   }
-  .mnav.compact { height: 54px; left: 44px; right: 44px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .mnav.shown { opacity: 1; transform: none; }
+  .mnav.shown.compact { transform: translateY(6px) scale(0.88); }
   /* Brillo del borde superior, como el canto de un cristal. */
   .mnav::before {
     content: '';
@@ -174,7 +190,8 @@
       radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.16), transparent 60%),
       linear-gradient(135deg, rgba(var(--accent-rgb), 0.38), rgba(var(--accent-rgb), 0.16));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(var(--accent-rgb), 0.35), 0 6px 18px -6px rgba(var(--accent-rgb), 0.8);
-    transition: transform 0.5s cubic-bezier(0.34, 1.36, 0.64, 1), width 0.45s var(--ease), scale 0.25s var(--ease), background 0.2s;
+    transition: transform 0.45s cubic-bezier(0.34, 1.36, 0.64, 1), width 0.35s var(--ease), scale 0.25s var(--ease);
+    will-change: transform;
     pointer-events: none;
   }
   .lens.squish { animation: squish 0.42s var(--ease); }
@@ -207,7 +224,7 @@
     font-weight: 650;
     letter-spacing: -0.01em;
     cursor: pointer;
-    transition: color 0.25s, flex-grow 0.45s var(--ease);
+    transition: color 0.25s;
     -webkit-tap-highlight-color: transparent;
   }
   .tab.wide { flex-grow: 2; }
@@ -232,7 +249,6 @@
     transition: opacity 0.25s, max-height 0.3s var(--ease), transform 0.3s var(--ease);
   }
   .tab.wide .label { max-height: 16px; opacity: 1; transform: none; }
-  .compact .tab.wide .label { opacity: 0; max-height: 0; }
   .badge {
     position: absolute; top: -4px; left: 13px;
     min-width: 17px; height: 17px; padding: 0 5px;
