@@ -1,4 +1,6 @@
 {
+  "api.bindFailed": "No se pudo abrir la API en el puerto {port}: {error}",
+  "api.portInUse": "El puerto {port} ya está en uso: elige otro para la API",
   "debrid.badResponse": "Respuesta no válida de {name}.",
   "debrid.connect": "No se pudo conectar con {name}",
   "debrid.connected": "Conectado",
@@ -108,6 +110,9 @@
   "indexer.unsupported": "El indexador no admite esta función",
   "job.defaultName": "Descarga",
   "log.added": "Añadido a la cola: {name}",
+  "log.api.search": "API: búsqueda «{query}» desde {from} · {results} resultados",
+  "log.api.started": "API activa en {url}",
+  "log.api.stopped": "API desactivada",
   "log.badCrc": "CRC incorrecto en {id}, se reintentará en otro servidor",
   "log.badYenc": "Artículo {id} no contiene datos yEnc válidos",
   "log.closed": "Nebula cerrado",

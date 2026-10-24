@@ -516,7 +516,8 @@
       "network": "连接",
       "post": "后期处理",
       "search": "搜索",
-      "windows": "Windows"
+      "windows": "Windows",
+      "api": "API"
     },
     "speedLimitDesc": "单位为 MB/s。0 = 不限速。",
     "startMinimized": "启动时最小化到托盘",
@@ -760,7 +761,30 @@
       "network": "速度、重试和历史记录",
       "look": "颜色、动画和振动",
       "logs": "Nebula 正在做什么",
-      "about": "版本和许可证"
+      "about": "版本和许可证",
+      "api": "供 Sonarr、Radarr 使用的 Newznab"
     }
+  },
+  "api": {
+    "title": "Newznab API",
+    "enable": "启用 API",
+    "enableDesc": "兼容 Newznab 和 NZBHydra2：Sonarr、Radarr、Prowlarr 等程序可以通过 Nebula 搜索你的所有索引器。",
+    "stopped": "已停止",
+    "address": "地址",
+    "addressDesc": "在 Sonarr、Radarr 或 Prowlarr 中将其添加为 Newznab 索引器，并填写 API 密钥。",
+    "key": "API 密钥",
+    "keyDesc": "程序在每次请求时发送它。如果更改，请在这些程序中同步更新。",
+    "regenerate": "生成新密钥",
+    "regenerated": "已生成新的 API 密钥：请在使用 API 的程序中更新。",
+    "copy": "复制",
+    "copied": "已复制到剪贴板",
+    "port": "端口",
+    "portDesc": "API 监听的端口（默认 5077）。",
+    "lan": "允许来自局域网的连接",
+    "lanDesc": "其他设备（NAS、另一台电脑…）可使用 API 密钥访问。关闭时仅限本机。",
+    "noIndexers": "请至少启用一个索引器：API 会在其中搜索。",
+    "docs": "文档",
+    "docsDesc": "如何连接 Sonarr、Radarr 或 Prowlarr，以及支持哪些功能。",
+    "androidNote": "在 Android 上，API 仅在 Nebula 打开或正在下载时响应。"
   }
 }

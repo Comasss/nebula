@@ -246,6 +246,14 @@ pub struct Settings {
     pub add_paused: bool,
     pub history_limit: u32,
     pub first_run_done: bool,
+    /// API compatible con Newznab/NZBHydra2 para Sonarr, Radarr, Prowlarr…
+    pub api_enabled: bool,
+    pub api_key: String,
+    /// API key cifrada con DPAPI (solo en disco).
+    pub api_key_enc: String,
+    pub api_port: u16,
+    /// Escuchar en la red local (0.0.0.0) y no solo en este equipo (127.0.0.1).
+    pub api_lan: bool,
 }
 
 impl Default for Settings {
@@ -300,6 +308,11 @@ impl Default for Settings {
             add_paused: false,
             history_limit: 300,
             first_run_done: false,
+            api_enabled: false,
+            api_key: String::new(),
+            api_key_enc: String::new(),
+            api_port: crate::api::DEFAULT_PORT,
+            api_lan: false,
         }
     }
 }
@@ -338,6 +351,12 @@ impl Settings {
             }
             d.api_key_enc.clear();
         }
+        if !s.api_key_enc.is_empty() {
+            if let Some(k) = unprotect(&s.api_key_enc) {
+                s.api_key = k;
+            }
+        }
+        s.api_key_enc.clear();
         // Siempre debe quedar al menos una función activa.
         if !s.feature_nntp && !s.feature_indexers {
             s.feature_nntp = true;
@@ -363,6 +382,8 @@ impl Settings {
             d.api_key_enc = if d.api_key.is_empty() { String::new() } else { protect(&d.api_key).unwrap_or_default() };
             d.api_key.clear();
         }
+        disk.api_key_enc = if disk.api_key.is_empty() { String::new() } else { protect(&disk.api_key).unwrap_or_default() };
+        disk.api_key.clear();
         let json = serde_json::to_string_pretty(&disk).map_err(|e| e.to_string())?;
         write_atomic(&paths.config_file(), json.as_bytes())
     }

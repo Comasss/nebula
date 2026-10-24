@@ -534,7 +534,8 @@
       "network": "Verbindung",
       "post": "Nachbearbeitung",
       "search": "Suche",
-      "windows": "Windows"
+      "windows": "Windows",
+      "api": "API"
     },
     "speedLimitDesc": "In MB/s. 0 = kein Limit.",
     "startMinimized": "Minimiert im Infobereich starten",
@@ -781,7 +782,30 @@
       "network": "Geschwindigkeit, Wiederholungen und Verlauf",
       "look": "Farbe, Animationen und Vibration",
       "logs": "Was Nebula gerade macht",
-      "about": "Version und Lizenzen"
+      "about": "Version und Lizenzen",
+      "api": "Newznab für Sonarr, Radarr…"
     }
+  },
+  "api": {
+    "title": "Newznab-API",
+    "enable": "API aktivieren",
+    "enableDesc": "Kompatibel mit Newznab und NZBHydra2: Sonarr, Radarr, Prowlarr und andere Programme können über Nebula in allen deinen Indexern suchen.",
+    "stopped": "Gestoppt",
+    "address": "Adresse",
+    "addressDesc": "Füge sie in Sonarr, Radarr oder Prowlarr als Newznab-Indexer hinzu, zusammen mit dem API-Schlüssel.",
+    "key": "API-Schlüssel",
+    "keyDesc": "Programme senden ihn bei jeder Anfrage. Wenn du ihn änderst, aktualisiere ihn dort.",
+    "regenerate": "Neu erzeugen",
+    "regenerated": "Neuer API-Schlüssel erzeugt: aktualisiere ihn in den Programmen, die die API nutzen.",
+    "copy": "Kopieren",
+    "copied": "In die Zwischenablage kopiert",
+    "port": "Port",
+    "portDesc": "Port, auf dem die API lauscht (Standard 5077).",
+    "lan": "Verbindungen aus dem lokalen Netzwerk erlauben",
+    "lanDesc": "Andere Geräte (ein NAS, ein anderer PC…) können sie mit dem API-Schlüssel nutzen. Aus: nur dieser Computer.",
+    "noIndexers": "Aktiviere mindestens einen Indexer: Die API sucht darin.",
+    "docs": "Dokumentation",
+    "docsDesc": "Wie du sie mit Sonarr, Radarr oder Prowlarr verbindest und was sie unterstützt.",
+    "androidNote": "Unter Android antwortet die API nur, solange Nebula geöffnet ist oder herunterlädt."
   }
 }

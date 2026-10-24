@@ -1,4 +1,6 @@
 {
+  "api.bindFailed": "पोर्ट {port} पर API शुरू नहीं हो सका: {error}",
+  "api.portInUse": "पोर्ट {port} पहले से उपयोग में है: API के लिए दूसरा चुनें",
   "debrid.badResponse": "{name} से अमान्य जवाब मिला।",
   "debrid.connect": "{name} से कनेक्ट नहीं हो सका",
   "debrid.connected": "कनेक्टेड",
@@ -108,6 +110,9 @@
   "indexer.unsupported": "इंडेक्सर इस सुविधा का समर्थन नहीं करता",
   "job.defaultName": "डाउनलोड",
   "log.added": "कतार में जोड़ा गया: {name}",
+  "log.api.search": "API: {from} से खोज “{query}” · {results} परिणाम",
+  "log.api.started": "API {url} पर चल रहा है",
+  "log.api.stopped": "API बंद किया गया",
   "log.badCrc": "{id} में गलत CRC, दूसरे सर्वर पर फिर से कोशिश की जाएगी",
   "log.badYenc": "आर्टिकल {id} में मान्य yEnc डेटा नहीं है",
   "log.closed": "Nebula बंद हुआ",

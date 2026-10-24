@@ -67,6 +67,10 @@ const settings = {
   addPaused: false,
   historyLimit: 300,
   firstRunDone: !params.has('setup'),
+  apiEnabled: params.has('api'),
+  apiKey: '3f9c2a7e51d84b6a9c0e7f1d2b3a4c5d',
+  apiPort: 5077,
+  apiLan: true,
 };
 if (params.has('setup')) settings.servers = [];
 
@@ -282,6 +286,7 @@ mockIPC(
         return { path: p, parent: p.replace(/\/[^/]+$/, '') || '/', dirs: tree[p] ?? [] };
       }
       case 'make_dir': return null;
+      case 'api_status': return settings.apiEnabled ? { running: true, error: null, port: 5077, urls: ['http://localhost:5077/api', 'http://192.168.1.20:5077/api'] } : { running: false, error: null, port: 5077, urls: [] };
       default: return null;
     }
   },

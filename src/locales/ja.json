@@ -516,7 +516,8 @@
       "network": "接続",
       "post": "後処理",
       "search": "検索",
-      "windows": "Windows"
+      "windows": "Windows",
+      "api": "API"
     },
     "speedLimitDesc": "MB/s 単位。0 = 制限なし。",
     "startMinimized": "トレイに最小化した状態で起動",
@@ -760,7 +761,30 @@
       "network": "速度、再試行、履歴",
       "look": "色、アニメーション、振動",
       "logs": "Nebula の動作記録",
-      "about": "バージョンとライセンス"
+      "about": "バージョンとライセンス",
+      "api": "Sonarr、Radarr 向け Newznab"
     }
+  },
+  "api": {
+    "title": "Newznab API",
+    "enable": "API を有効にする",
+    "enableDesc": "Newznab・NZBHydra2 互換：Sonarr、Radarr、Prowlarr などが Nebula 経由ですべてのインデクサーを検索できます。",
+    "stopped": "停止中",
+    "address": "アドレス",
+    "addressDesc": "Sonarr、Radarr、Prowlarr に Newznab インデクサーとして API キーと一緒に追加します。",
+    "key": "API キー",
+    "keyDesc": "アプリはリクエストごとにこれを送信します。変更したらアプリ側も更新してください。",
+    "regenerate": "新しく生成",
+    "regenerated": "新しい API キーを生成しました：API を使うアプリで更新してください。",
+    "copy": "コピー",
+    "copied": "クリップボードにコピーしました",
+    "port": "ポート",
+    "portDesc": "API が待ち受けるポート（既定は 5077）。",
+    "lan": "ローカルネットワークからの接続を許可",
+    "lanDesc": "他のデバイス（NAS、別の PC など）も API キーで利用できます。オフならこの PC のみ。",
+    "noIndexers": "インデクサーを少なくとも 1 つ有効にしてください：API はそこを検索します。",
+    "docs": "ドキュメント",
+    "docsDesc": "Sonarr、Radarr、Prowlarr との接続方法と対応機能。",
+    "androidNote": "Android では Nebula が開いているかダウンロード中のときだけ API が応答します。"
   }
 }

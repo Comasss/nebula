@@ -534,7 +534,8 @@
       "network": "कनेक्शन",
       "post": "पोस्ट-प्रोसेसिंग",
       "search": "खोज",
-      "windows": "Windows"
+      "windows": "Windows",
+      "api": "API"
     },
     "speedLimitDesc": "MB/s में। 0 = कोई सीमा नहीं।",
     "startMinimized": "ट्रे में छोटा करके शुरू करें",
@@ -781,7 +782,30 @@
       "network": "गति, दोबारा कोशिश और इतिहास",
       "look": "रंग, एनिमेशन और कंपन",
       "logs": "Nebula क्या कर रहा है",
-      "about": "संस्करण और लाइसेंस"
+      "about": "संस्करण और लाइसेंस",
+      "api": "Sonarr, Radarr के लिए Newznab"
     }
+  },
+  "api": {
+    "title": "Newznab API",
+    "enable": "API चालू करें",
+    "enableDesc": "Newznab और NZBHydra2 के अनुकूल: Sonarr, Radarr, Prowlarr और अन्य ऐप Nebula के ज़रिए आपके सभी इंडेक्सर खोज सकते हैं।",
+    "stopped": "रुका हुआ",
+    "address": "पता",
+    "addressDesc": "इसे Sonarr, Radarr या Prowlarr में API key के साथ Newznab इंडेक्सर के रूप में जोड़ें।",
+    "key": "API key",
+    "keyDesc": "ऐप हर अनुरोध के साथ इसे भेजते हैं। बदलने पर वहाँ भी अपडेट करें।",
+    "regenerate": "नई बनाएँ",
+    "regenerated": "नई API key बनाई गई: API इस्तेमाल करने वाले ऐप में इसे अपडेट करें।",
+    "copy": "कॉपी करें",
+    "copied": "क्लिपबोर्ड पर कॉपी किया गया",
+    "port": "पोर्ट",
+    "portDesc": "वह पोर्ट जिस पर API सुनता है (डिफ़ॉल्ट 5077)।",
+    "lan": "लोकल नेटवर्क से कनेक्शन की अनुमति दें",
+    "lanDesc": "अन्य डिवाइस (NAS, दूसरा PC…) API key से इसका उपयोग कर सकेंगे। बंद होने पर केवल यही कंप्यूटर।",
+    "noIndexers": "कम से कम एक इंडेक्सर चालू करें: API उन्हीं में खोजता है।",
+    "docs": "दस्तावेज़",
+    "docsDesc": "इसे Sonarr, Radarr या Prowlarr से कैसे जोड़ें और यह क्या समर्थित करता है।",
+    "androidNote": "Android पर API केवल तभी जवाब देता है जब Nebula खुला हो या डाउनलोड कर रहा हो।"
   }
 }

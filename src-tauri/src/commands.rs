@@ -50,7 +50,7 @@ pub async fn inspect_nzb_file(e: Eng<'_>, path: String) -> Result<NzbPreview, St
 
 /// Descarga un NZB de un enlace y devuelve sus datos y nombre. Si viene de un indexador,
 /// anota en las estadísticas si se pudo obtener y cuánto tardó.
-async fn grab_nzb(e: &Engine, url: &str, indexer_id: Option<&str>) -> Result<(Vec<u8>, fetch::Fetched), String> {
+pub(crate) async fn grab_nzb(e: &Engine, url: &str, indexer_id: Option<&str>) -> Result<(Vec<u8>, fetch::Fetched), String> {
     let start = std::time::Instant::now();
     let res = async {
         let f = fetch::fetch(url).await?;
@@ -307,6 +307,12 @@ pub async fn search_indexer(
         crate::lwarn!("{}: {}", ix.label(), err);
         err
     })
+}
+
+/// Estado de la API Newznab (si está escuchando, en qué direcciones o por qué no arrancó).
+#[tauri::command]
+pub fn api_status() -> crate::api::ApiStatus {
+    crate::api::status()
 }
 
 #[tauri::command]

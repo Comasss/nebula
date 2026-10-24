@@ -2,6 +2,7 @@
 mod i18n;
 #[cfg(target_os = "android")]
 mod android;
+mod api;
 mod commands;
 mod config;
 mod debrid;
@@ -268,6 +269,7 @@ pub fn run() {
             commands::make_dir,
             commands::app_background,
             commands::haptic,
+            commands::api_status,
         ])
         .build(tauri::generate_context!())
         .expect("no se pudo iniciar Nebula");

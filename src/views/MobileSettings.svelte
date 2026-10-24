@@ -42,6 +42,7 @@
     { id: 'windows', icon: 'smartphone', hue: 200 },
     { id: 'network', icon: 'wifi', hue: 140 },
     { id: 'look', icon: 'palette', hue: 300 },
+    { id: 'api', icon: 'plug', hue: 100, indexers: true },
   ];
   const prefs = $derived(SECTION_ROWS.filter((r) => (!r.nntp || s?.featureNntp !== false) && (!r.indexers || s?.featureIndexers)));
 
@@ -49,6 +50,7 @@
     if (id === 'debrid') return t('settings.downloadMethod');
     if (id === 'search') return t('settings.searchTitle');
     if (id === 'windows') return t('mobile.appTitle');
+    if (id === 'api') return t('api.title');
     return t(`settings.section.${id}`);
   }
 
