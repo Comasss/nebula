@@ -282,6 +282,29 @@ mockIPC(
         return { path: p, parent: p.replace(/\/[^/]+$/, '') || '/', dirs: tree[p] ?? [] };
       }
       case 'make_dir': return null;
+      // Actualizaciones (con ?update hay una versión nueva)
+      case 'update_check':
+        await sleep(500);
+        return {
+          available: params.has('update'),
+          current: '1.0.0',
+          version: '1.6.0',
+          notes: '<!-- nebula-autobuild -->\n## Cambios\n- Actualizador integrado con aviso y descarga desde la app\n- API compatible con NZBHydra2\n- Corrige la reanudación de descargas en Android\n\n| File | What |\n|---|---|',
+          url: 'https://github.com/Comasss/nebula/releases/tag/v1.6.0',
+          publishedAt: new Date().toISOString(),
+          kind: /android/i.test(navigator.userAgent) ? 'apk' : 'installer',
+          assetName: 'Nebula_1.6.0_x64-setup.exe',
+          assetSize: 14.2 * MB,
+        };
+      case 'update_download': {
+        const total = 14.2 * MB;
+        for (let i = 1; i <= 40; i++) {
+          await sleep(120);
+          emit('update-progress', { downloaded: Math.round((total * i) / 40), total });
+        }
+        return null;
+      }
+      case 'update_install': await sleep(300); return { started: true, needsPermission: false };
       default: return null;
     }
   },

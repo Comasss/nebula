@@ -271,6 +271,36 @@ class NebulaPlugin(private val activity: Activity) : Plugin(activity) {
     }
   }
 
+  /**
+   * Abre el APK de una actualización con el instalador de Android. La primera vez Android pide
+   * permitir que Nebula instale apps: se abre esa pantalla y la interfaz deja volver a intentarlo.
+   */
+  @Command
+  fun installApk(invoke: Invoke) {
+    val path = invoke.parseArgs(PathArgs::class.java).path
+    val res = JSObject()
+    try {
+      if (Build.VERSION.SDK_INT >= 26 && !ctx.packageManager.canRequestPackageInstalls()) {
+        val settings = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + ctx.packageName))
+        activity.startActivity(settings)
+        res.put("started", false)
+        res.put("needsPermission", true)
+        invoke.resolve(res)
+        return
+      }
+      val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", File(path))
+      val intent = Intent(Intent.ACTION_VIEW)
+        .setDataAndType(uri, "application/vnd.android.package-archive")
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+      activity.startActivity(intent)
+      res.put("started", true)
+      res.put("needsPermission", false)
+      invoke.resolve(res)
+    } catch (e: Exception) {
+      invoke.reject(e.message ?: "installApk")
+    }
+  }
+
   @Command
   fun moveToBack(invoke: Invoke) {
     activity.runOnUiThread { activity.moveTaskToBack(true) }

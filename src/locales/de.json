@@ -534,7 +534,8 @@
       "network": "Verbindung",
       "post": "Nachbearbeitung",
       "search": "Suche",
-      "windows": "Windows"
+      "windows": "Windows",
+      "updates": "Updates"
     },
     "speedLimitDesc": "In MB/s. 0 = kein Limit.",
     "startMinimized": "Minimiert im Infobereich starten",
@@ -781,7 +782,41 @@
       "network": "Geschwindigkeit, Wiederholungen und Verlauf",
       "look": "Farbe, Animationen und Vibration",
       "logs": "Was Nebula gerade macht",
-      "about": "Version und Lizenzen"
+      "about": "Version und Lizenzen",
+      "updates": "Neue Versionen suchen und installieren"
     }
+  },
+  "update": {
+    "title": "Neue Nebula-Version",
+    "upToDate": "Nebula ist aktuell (v{version}).",
+    "downloading": "Update wird heruntergeladen…",
+    "downloadedReady": "Update heruntergeladen",
+    "permission": "Erlaube Nebula auf dem gerade geöffneten Bildschirm, Apps zu installieren, und kehre dann zurück.",
+    "androidHint": "Wenn du das Android-Installationsprogramm geschlossen hast, tippe auf Installieren, um es erneut zu öffnen.",
+    "openingInstaller": "Android-Installationsprogramm wird geöffnet…",
+    "restarting": "Wird installiert… Nebula wird geschlossen und aktualisiert neu gestartet.",
+    "whatsNew": "Neuigkeiten",
+    "activeDownloads": "Laufende Downloads werden fortgesetzt, wenn Nebula wieder geöffnet wird.",
+    "manualOnly": "Für dieses System gibt es keine automatische Installation: Die Release-Seite wird geöffnet.",
+    "background": "Im Hintergrund fortfahren",
+    "dontClose": "Nebula nicht schließen",
+    "later": "Später",
+    "install": "Installieren",
+    "skip": "Diese Version überspringen",
+    "now": "Jetzt aktualisieren",
+    "openPage": "Seite öffnen",
+    "downloadingPct": "Update wird heruntergeladen… {pct} %",
+    "availableDesc": "Du kannst es jetzt oder später hier installieren.",
+    "checking": "Suche nach Updates…",
+    "upToDateDesc": "Du hast die neueste Version. Zuletzt geprüft: {time}.",
+    "neverChecked": "Auf GitHub nach einer neuen Version suchen.",
+    "availableLabel": "Nebula {version} verfügbar",
+    "currentLabel": "Nebula {version}",
+    "check": "Nach Updates suchen",
+    "auto": "Automatisch nach Updates suchen",
+    "autoDesc": "Beim Öffnen von Nebula und alle paar Stunden. Ein Fenster, das du schließen kannst, weist dich darauf hin.",
+    "skipped": "Version {version} übersprungen",
+    "skippedDesc": "Du wirst über diese Version nicht benachrichtigt; du kannst sie trotzdem hier installieren.",
+    "unskip": "Wieder benachrichtigen"
   }
 }
