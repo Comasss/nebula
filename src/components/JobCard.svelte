@@ -6,6 +6,8 @@
   import ProgressBar from './ProgressBar.svelte';
   import { ui, ask, toast, d } from '../lib/state.svelte.js';
   import * as f from '../lib/format.js';
+  import { isAndroid } from '../lib/platform.js';
+  import { haptic, longpress, actionSheet } from '../lib/feedback.js';
 
   let { job, index, count } = $props();
   let expanded = $state(false);
@@ -42,7 +44,34 @@
   });
 
   function togglePause() {
+    haptic('tap');
     invoke(job.status === 'paused' ? 'resume_job' : 'pause_job', { id: job.id });
+  }
+
+  // Móvil: todas las acciones en una hoja (botón ⋯ o mantener pulsada la tarjeta).
+  async function openMenu() {
+    const paused = job.status === 'paused';
+    const actions = [
+      ...(!pp
+        ? [
+            { id: 'pause', label: paused ? t('common.resume') : t('common.pause'), icon: paused ? 'play' : 'pause' },
+            { id: 'top', label: t('job.moveTop'), icon: 'arrow-up-to-line', disabled: index === 0 },
+            { id: 'up', label: t('job.moveUp'), icon: 'chevron-up', disabled: index === 0 },
+            { id: 'down', label: t('job.moveDown'), icon: 'chevron-down', disabled: index >= count - 1 },
+          ]
+        : []),
+      { id: 'details', label: expanded ? t('job.hideDetails') : t('common.details'), icon: 'info' },
+      { id: 'open', label: t('job.openDest'), icon: 'folder' },
+      { id: 'remove', label: t('common.remove'), icon: 'trash', danger: true },
+    ];
+    const a = await actionSheet({ title: job.name, subtitle: `${f.bytes(job.total)} · ${st.label}`, actions });
+    if (a === 'pause') togglePause();
+    else if (a === 'top') move(0);
+    else if (a === 'up') move(index - 1);
+    else if (a === 'down') move(index + 1);
+    else if (a === 'details') expanded = !expanded;
+    else if (a === 'open') invoke('open_path', { path: job.dest });
+    else if (a === 'remove') remove();
   }
 
   async function remove() {
@@ -87,7 +116,7 @@
   }
 </script>
 
-<article class="job card {job.status}" class:expanded>
+<article class="job card {job.status}" class:expanded use:longpress={{ enabled: isAndroid, onlong: openMenu, ms: 520 }}>
   <div class="top">
     <div class="s-icon {st.kind}" class:spinning={pp && !waiting}>
       {#if pp && !waiting}
@@ -102,6 +131,9 @@
         <span class="chip {st.kind}">{waiting ? t('stage.waiting') : st.label}</span>
         {#if job.debrid}
           <span class="chip info" title={t('job.viaTitle', { provider: job.debrid.provider })}><Icon name="cloud" size={11} stroke={2.4} /> {job.debrid.provider}</span>
+        {/if}
+        {#if job.server}
+          <span class="chip accent" title={t('job.serverTitle')}><Icon name="server" size={11} stroke={2.4} /> {job.server}</span>
         {/if}
         <span class="sub truncate">{subline()}</span>
         {#if job.heldPar2 > 0 && ['queued', 'downloading', 'paused'].includes(job.status)}
@@ -131,6 +163,18 @@
       {/if}
     </div>
 
+    {#if isAndroid}
+      <div class="m-actions">
+        {#if !pp}
+          <button class="m-btn" class:resume={job.status === 'paused'} onclick={togglePause}>
+            <Icon name={job.status === 'paused' ? 'play' : 'pause'} size={15} stroke={2.4} />
+            {job.status === 'paused' ? t('common.resume') : t('common.pause')}
+          </button>
+        {/if}
+        <button class="icon-btn chevron" class:open={expanded} onclick={() => { haptic('tap'); expanded = !expanded; }} aria-label={t('common.details')}><Icon name="chevron-down" size={18} /></button>
+        <button class="icon-btn" onclick={openMenu} aria-label={t('job.more')}><Icon name="more" size={18} stroke={2.6} /></button>
+      </div>
+    {:else}
     <div class="actions">
       {#if !pp}
         <button class="icon-btn" onclick={() => move(0)} disabled={index === 0} title={t('job.moveTop')}><Icon name="arrow-up-to-line" size={16} /></button>
@@ -144,6 +188,7 @@
       <button class="icon-btn danger" onclick={remove} title={t('common.remove')}><Icon name="trash" size={16} /></button>
       <button class="icon-btn chevron" class:open={expanded} onclick={() => (expanded = !expanded)} title={t('common.details')}><Icon name="chevron-down" size={17} /></button>
     </div>
+    {/if}
   </div>
 
   <div class="bar-row">
@@ -171,6 +216,8 @@
         <div><span class="k">{t('common.added')}</span><span class="v">{f.ago(job.addedAt)}</span></div>
         {#if job.debrid}
           <div><span class="k">{t('job.method')}</span><span class="v">{job.debrid.provider} (debrid)</span></div>
+        {:else if job.server}
+          <div><span class="k">{t('job.method')}</span><span class="v">{job.server} (NNTP)</span></div>
         {/if}
         {#if job.heldPar2 > 0}
           <div><span class="k">{t('job.heldPar2')}</span><span class="v">{tn('job.heldVolumes', job.heldPar2)}</span></div>
@@ -252,6 +299,19 @@
   .file.held { opacity: 0.55; }
   .fname { color: var(--text); }
   .fsize { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .m-actions { order: 5; width: 100%; display: flex; align-items: center; gap: 6px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+  .m-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 36px; padding: 0 14px; margin-right: auto;
+    border-radius: 999px; border: 1px solid var(--border-2);
+    background: var(--panel-2); color: var(--text);
+    font-size: 13px; font-weight: 620; cursor: pointer;
+    transition: transform 0.15s var(--ease), background 0.2s;
+  }
+  .m-btn:active { transform: scale(0.94); }
+  .m-btn.resume { border-color: transparent; background: var(--grad-diag); color: #fff; box-shadow: 0 6px 18px -8px rgba(var(--accent-rgb), 0.9); }
+  :global(.job.holding) { transform: scale(0.985); }
 
   /* Móvil: las acciones bajan a su propia fila y la información se reparte en varias líneas. */
   @media (max-width: 720px) {

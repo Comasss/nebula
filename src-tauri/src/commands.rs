@@ -470,6 +470,15 @@ pub fn make_dir(path: String) -> Result<(), String> {
     std::fs::create_dir_all(&path).map_err(|err| err.to_string())
 }
 
+/// Android: vibración breve al tocar ("tap", "tick", "long", "success" o "error").
+#[tauri::command]
+pub fn haptic(kind: String) {
+    #[cfg(target_os = "android")]
+    crate::android::haptic(&kind);
+    #[cfg(not(target_os = "android"))]
+    let _ = kind;
+}
+
 /// Android: el botón Atrás desde la vista principal deja la app en segundo plano.
 #[tauri::command]
 pub fn app_background() {

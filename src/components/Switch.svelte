@@ -1,4 +1,5 @@
 <script>
+  import { haptic } from '../lib/feedback.js';
   let { checked = false, disabled = false, onchange = null, label = '' } = $props();
 </script>
 
@@ -12,6 +13,7 @@
   aria-label={label}
   onclick={(e) => {
     e.stopPropagation();
+    haptic('tick');
     onchange?.(!checked);
   }}>
   <span class="knob"></span>

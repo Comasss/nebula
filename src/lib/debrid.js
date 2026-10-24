@@ -51,3 +51,38 @@ export function defaultVia(settings) {
   if (usable.length && (settings.downloadVia === 'debrid' || !hasNntp(settings))) return usable[0].id;
   return 'nntp';
 }
+
+/** Servidores NNTP activos, por prioridad. */
+export function nntpServers(settings) {
+  return (settings?.servers ?? []).filter((s) => s.enabled && s.host?.trim()).sort((a, b) => a.priority - b.priority);
+}
+
+export function serverLabel(s) {
+  return s?.name?.trim() || s?.host || '';
+}
+
+/**
+ * Formas de descargar un NZB para el menú "Descargar con": todos los servidores NNTP, cada
+ * servidor por separado (si hay varios) y cada servicio debrid. `value` es lo que espera add_job.
+ */
+export function viaOptions(settings) {
+  const servers = nntpServers(settings);
+  const out = [];
+  if (servers.length) {
+    out.push({ value: 'nntp', group: 'nntp', icon: 'server', label: 'Usenet (NNTP)', sub: servers.length > 1 ? t('via.allServers') : serverLabel(servers[0]) });
+    if (servers.length > 1) {
+      for (const s of servers) {
+        out.push({ value: `nntp:${s.id}`, group: 'nntp', icon: 'server', label: serverLabel(s), sub: s.priority === servers[0].priority ? t('via.primary') : t('via.backup', { n: s.priority }), child: true });
+      }
+    }
+  }
+  for (const p of usableDebrid(settings)) {
+    out.push({ value: p.id, group: 'debrid', icon: 'cloud', label: debridLabel(p), sub: t('add.remoteDownload') });
+  }
+  return out;
+}
+
+/** Nombre corto de un método elegido en el menú (para los avisos). */
+export function viaLabel(settings, via) {
+  return viaOptions(settings).find((o) => o.value === via)?.label ?? '';
+}

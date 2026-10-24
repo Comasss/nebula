@@ -60,6 +60,7 @@ const settings = {
   maxRetries: 3,
   timeoutSecs: 30,
   animations: true,
+  haptics: true,
   accent: params.get('accent') || 'nebula',
   language: params.get('lang') || '',
   confirmDelete: true,

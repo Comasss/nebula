@@ -111,7 +111,8 @@
     "size": "大小",
     "test": "测试",
     "testing": "正在测试…",
-    "whereSaveNzb": "要将 .nzb 保存到哪里？"
+    "whereSaveNzb": "要将 .nzb 保存到哪里？",
+    "back": "返回"
   },
   "debrid": {
     "keyHelpPremiumize": "在 premiumize.me → Account → API Key 中获取。需要高级账户。",
@@ -275,7 +276,10 @@
     "removeTitle": "从队列中删除？",
     "removed": "已删除：{name}",
     "viaTitle": "通过 {provider} 下载",
-    "waitingServer": "正在等待连接服务器… 请检查“服务器”标签页。"
+    "waitingServer": "正在等待连接服务器… 请检查“服务器”标签页。",
+    "hideDetails": "隐藏详情",
+    "more": "更多操作",
+    "serverTitle": "仅从此服务器下载"
   },
   "logs": {
     "all": "全部",
@@ -524,7 +528,9 @@
     "version": "版本 {version} · Windows 版 Usenet 客户端",
     "windowsTitle": "Windows 集成",
     "wizard": "欢迎向导",
-    "wizardDesc": "重新显示初始设置。"
+    "wizardDesc": "重新显示初始设置。",
+    "haptics": "触摸振动",
+    "hapticsDesc": "轻触或长按时以短暂振动确认。"
   },
   "sidebar": {
     "activeConns": {
@@ -724,5 +730,37 @@
     "error": "无法打开此文件夹：{error}",
     "storage": "内部存储",
     "downloads": "Download"
+  },
+  "via": {
+    "title": "下载方式",
+    "allServers": "所有服务器，按优先级",
+    "primary": "主服务器",
+    "backup": "备用 · 优先级 {n}",
+    "hint": "长按可选择下载方式",
+    "onlyOne": "你只设置了一种下载方式。"
+  },
+  "msettings": {
+    "active": {
+      "other": "{n} 个已启用"
+    },
+    "noneYet": "未设置",
+    "sources": "下载来源",
+    "prefs": "偏好设置",
+    "system": "系统",
+    "version": "版本 {version}",
+    "desc": {
+      "features": "搜索、下载或两者",
+      "language": "应用语言",
+      "debrid": "NNTP 或 debrid 及其用法",
+      "search": "结果、重复项和 .nzb",
+      "folders": "下载保存位置",
+      "post": "PAR2 修复和解压",
+      "links": "剪贴板和 .nzb 链接",
+      "windows": "权限、通知和确认",
+      "network": "速度、重试和历史记录",
+      "look": "颜色、动画和振动",
+      "logs": "Nebula 正在做什么",
+      "about": "版本和许可证"
+    }
   }
 }

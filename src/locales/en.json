@@ -115,7 +115,8 @@
     "size": "Size",
     "test": "Test",
     "testing": "Testing…",
-    "whereSaveNzb": "Where do you want to save the .nzb?"
+    "whereSaveNzb": "Where do you want to save the .nzb?",
+    "back": "Back"
   },
   "debrid": {
     "keyHelpPremiumize": "On premiumize.me → Account → API Key. Requires a premium account.",
@@ -283,7 +284,10 @@
     "removeTitle": "Remove from queue?",
     "removed": "Removed: {name}",
     "viaTitle": "Downloading via {provider}",
-    "waitingServer": "Waiting to connect to a server… Check the Servers tab."
+    "waitingServer": "Waiting to connect to a server… Check the Servers tab.",
+    "hideDetails": "Hide details",
+    "more": "More actions",
+    "serverTitle": "Downloads only from this server"
   },
   "logs": {
     "all": "All",
@@ -542,7 +546,9 @@
     "version": "Version {version} · Usenet client for Windows",
     "windowsTitle": "Windows integration",
     "wizard": "Welcome wizard",
-    "wizardDesc": "Shows the initial setup again."
+    "wizardDesc": "Shows the initial setup again.",
+    "haptics": "Vibrate on touch",
+    "hapticsDesc": "A short vibration confirms what you tap and what you press and hold."
   },
   "sidebar": {
     "activeConns": {
@@ -744,5 +750,38 @@
     "error": "Can't open this folder: {error}",
     "storage": "Internal storage",
     "downloads": "Download"
+  },
+  "via": {
+    "title": "Download with",
+    "allServers": "All your servers, by priority",
+    "primary": "Primary server",
+    "backup": "Backup · priority {n}",
+    "hint": "Press and hold to choose how to download",
+    "onlyOne": "You only have one download method set up."
+  },
+  "msettings": {
+    "active": {
+      "one": "{n} active",
+      "other": "{n} active"
+    },
+    "noneYet": "Not set up",
+    "sources": "Download sources",
+    "prefs": "Preferences",
+    "system": "System",
+    "version": "Version {version}",
+    "desc": {
+      "features": "Search, download or both",
+      "language": "App language",
+      "debrid": "NNTP or debrid and how they are used",
+      "search": "Results, duplicates and .nzb files",
+      "folders": "Where downloads are saved",
+      "post": "PAR2 repair and extraction",
+      "links": "Clipboard and .nzb links",
+      "windows": "Permissions, alerts and confirmations",
+      "network": "Speed, retries and history",
+      "look": "Color, animations and vibration",
+      "logs": "What Nebula is doing",
+      "about": "Version and licenses"
+    }
   }
 }

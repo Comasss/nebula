@@ -24,7 +24,14 @@ For Android 7+ on 64-bit ARM phones (practically all of them) there is `Nebula_<
 
 ## Android
 
-The Android app is the same program: the Rust engine and the Svelte interface run through Tauri's Android support, so it has the same features (NNTP, PAR2 repair and extraction, indexers, debrid, statistics, 12 languages) with a touch layout (bottom tab bar, bottom sheets, its own folder picker).
+The Android app is the same program: the Rust engine and the Svelte interface run through Tauri's Android support, so it has the same features (NNTP, PAR2 repair and extraction, indexers, debrid, statistics, 12 languages) with a layout designed for phones:
+
+- A floating "liquid glass" tab bar (Search, Downloads, History, Stats, Settings). Slide your finger along it to switch tabs, and it shrinks while you scroll.
+- Settings is one place with sections: indexers, servers, debrid and the log live there next to the preferences.
+- Press and hold **Download** on a search result to choose how to get it: all your NNTP servers, one specific server, or one of your debrid services.
+- Press and hold a download or a history entry for its actions (pause, move, retry, remove...).
+- Ripples, a hold ring, haptic feedback (can be turned off in Settings › Look), swipe-to-dismiss notifications and a floating add button.
+- The launcher icon is the same as on Windows (`dev/android-icons.mjs` regenerates it from `app-icon.svg`).
 
 - Downloads go to `Download/` by default. To save to any other folder, grant **access to all files** when Nebula asks (or in **Settings → App and notifications**).
 - While something is downloading, Nebula keeps a notification visible so Android doesn't stop it in the background.

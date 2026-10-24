@@ -165,6 +165,10 @@ pub struct Job {
     pub server_use: Vec<ServerUse>,
     /// Indexador del que se obtuvo el NZB.
     pub indexer: Option<String>,
+    /// Servidor NNTP elegido para este trabajo (id); sin él se usan todos por prioridad.
+    pub server: Option<String>,
+    /// Nombre de ese servidor (para el historial).
+    pub server_name: Option<String>,
 }
 
 impl Job {
@@ -229,6 +233,8 @@ impl Job {
             stats_id: id.clone(),
             server_use: Vec::new(),
             indexer: None,
+            server: None,
+            server_name: None,
             id,
             name,
             nzb_path,
@@ -277,6 +283,8 @@ impl Job {
             stats_id: id.clone(),
             server_use: Vec::new(),
             indexer: None,
+            server: None,
+            server_name: None,
             id,
             name,
             nzb_path,
@@ -341,6 +349,8 @@ impl Job {
             stats_id: e.stats_id.clone().unwrap_or_else(|| e.id.clone()),
             server_use: Vec::new(),
             indexer: e.indexer.clone(),
+            server: None,
+            server_name: None,
         }
     }
 
@@ -521,6 +531,7 @@ impl Job {
             post: self.post.clone(),
             added_at: self.added_at,
             debrid,
+            server: self.server_name.clone(),
         }
     }
 
@@ -668,6 +679,8 @@ pub struct JobView {
     pub post: Option<PostInfo>,
     pub added_at: u64,
     pub debrid: Option<DebridView>,
+    /// Servidor NNTP elegido para este trabajo, si se eligió uno.
+    pub server: Option<String>,
 }
 
 #[derive(Serialize, Clone, PartialEq)]
@@ -799,6 +812,10 @@ struct SavedJob {
     servers: Vec<ServerUse>,
     #[serde(default)]
     indexer: Option<String>,
+    #[serde(default)]
+    server: Option<String>,
+    #[serde(default)]
+    server_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -921,6 +938,21 @@ pub struct Engine {
 pub struct OpenItem {
     pub kind: String,
     pub value: String,
+}
+
+/// Servidor NNTP pedido con `via` = "nntp:<id>", si existe y está activo: (id, nombre).
+pub fn pinned_server(s: &Settings, via: Option<&str>) -> Option<(String, String)> {
+    let id = via?.trim().strip_prefix("nntp:")?;
+    s.servers
+        .iter()
+        .find(|x| x.id == id && x.enabled && !x.host.trim().is_empty())
+        .map(|x| (x.id.clone(), if x.name.trim().is_empty() { x.host.clone() } else { x.name.clone() }))
+}
+
+/// Índice (en `servers`) del servidor al que está limitado un trabajo, si sigue disponible en la lista.
+fn pin_index(servers: &[ServerRt], job: &Job) -> Option<usize> {
+    let id = job.server.as_deref()?;
+    servers.iter().position(|r| r.id == id).filter(|i| *i < 64)
 }
 
 fn avail_mask(servers: &[ServerRt]) -> u64 {
@@ -1105,10 +1137,17 @@ impl Engine {
         }
         let (_avail, higher, top) = eligibility(&st.servers, s)?;
         let bit = 1u64 << s;
+        let servers = &st.servers;
         for job in st.jobs.iter_mut() {
             if !job.status.is_download() || job.debrid.is_some() {
                 continue;
             }
+            // Un trabajo limitado a un servidor solo lo descarga ese servidor, sea cual sea su prioridad.
+            let pinned = pin_index(servers, job);
+            if pinned.is_some_and(|p| p != s) {
+                continue;
+            }
+            let (higher, top) = if pinned.is_some() { (0, true) } else { (higher, top) };
             let mut i = 0;
             while i < job.retry.len() {
                 let (fi, si) = job.retry[i];
@@ -1170,6 +1209,10 @@ impl Engine {
             }
             let avail = avail_mask(&st.servers);
             let Some(job) = st.jobs.iter_mut().find(|j| j.id == t.job_id) else { return };
+            let avail = match pin_index(&st.servers, job) {
+                Some(p) => 1u64 << p,
+                None => avail,
+            };
             if let (Some(ok), Some(r)) = (counted, st.servers.get(s)) {
                 stats::count(&mut job.server_use, &r.id, &r.name, ok, t.bytes);
             }
@@ -1519,6 +1562,15 @@ impl Engine {
             }
             None => Job::build(id.clone(), name.clone(), nzb_path, dest, work_dir, password, req.options, &pending.nzb),
         };
+        let pin = if job.debrid.is_none() { pinned_server(&self.settings.read(), req.via.as_deref()) } else { None };
+        let via_label = match &pin {
+            Some((_, n)) => format!(" ({})", t!("log.via", name = n)),
+            None => via_label,
+        };
+        if let Some((sid, sname)) = pin {
+            job.server = Some(sid);
+            job.server_name = Some(sname);
+        }
         if req.paused {
             job.status = JobStatus::Paused;
         }
@@ -1786,8 +1838,12 @@ impl Engine {
             completed_at: now,
             download_secs: secs,
             avg_speed: if secs > 0 { job.done_bytes / secs } else { 0 },
-            via: Some(job.debrid.as_ref().map(|d| d.provider.clone()).unwrap_or_else(|| "nntp".into())),
-            via_name: job.debrid.as_ref().map(|d| d.label.clone()),
+            via: Some(match (&job.debrid, &job.server) {
+                (Some(d), _) => d.provider.clone(),
+                (None, Some(srv)) => format!("nntp:{}", srv),
+                (None, None) => "nntp".into(),
+            }),
+            via_name: job.debrid.as_ref().map(|d| d.label.clone()).or_else(|| job.server_name.clone()),
             stats_id: Some(job.stats_id.clone()),
             indexer: job.indexer.clone(),
         }
@@ -1948,6 +2004,12 @@ impl Engine {
         job.added_at = util::now_secs();
         job.stats_id = entry.stats_id.clone().unwrap_or_else(|| entry.id.clone());
         job.indexer = entry.indexer.clone();
+        if job.debrid.is_none() {
+            if let Some((sid, sname)) = pinned_server(&self.settings.read(), entry.via.as_deref()) {
+                job.server = Some(sid);
+                job.server_name = Some(sname);
+            }
+        }
         {
             let mut st = self.st.lock();
             st.history.retain(|h| h.id != id);
@@ -2073,6 +2135,10 @@ impl Engine {
                 return;
             }
             for job in st.jobs.iter_mut().filter(|j| j.status.is_download() && j.debrid.is_none()) {
+                let avail = match pin_index(&st.servers, job) {
+                    Some(p) => 1u64 << p,
+                    None => avail,
+                };
                 let mut i = 0;
                 while i < job.retry.len() {
                     let (fi, si) = job.retry[i];
@@ -2169,6 +2235,8 @@ impl Engine {
                         stats_id: Some(j.stats_id.clone()),
                         servers: j.server_use.clone(),
                         indexer: j.indexer.clone(),
+                        server: j.server.clone(),
+                        server_name: j.server_name.clone(),
                         files: j
                             .files
                             .iter()
@@ -2290,6 +2358,8 @@ impl Engine {
             job.stats_id = sj.stats_id.clone().unwrap_or_else(|| sj.id.clone());
             job.server_use = sj.servers.clone();
             job.indexer = sj.indexer.clone();
+            job.server = sj.server.clone();
+            job.server_name = sj.server_name.clone();
             if sj.files.len() == job.files.len() {
                 for (f, sf) in job.files.iter_mut().zip(sj.files.iter()) {
                     let n = f.segments.len();

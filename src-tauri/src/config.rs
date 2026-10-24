@@ -237,6 +237,8 @@ pub struct Settings {
     pub max_retries: u32,
     pub timeout_secs: u64,
     pub animations: bool,
+    /// Android: vibración breve al tocar botones y pestañas.
+    pub haptics: bool,
     pub accent: String,
     /// Idioma de la interfaz ("es", "en"…). Vacío = el del sistema.
     pub language: String,
@@ -291,6 +293,7 @@ impl Default for Settings {
             max_retries: 3,
             timeout_secs: 30,
             animations: true,
+            haptics: true,
             accent: "nebula".into(),
             language: String::new(),
             confirm_delete: true,

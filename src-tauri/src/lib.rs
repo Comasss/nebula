@@ -267,6 +267,7 @@ pub fn run() {
             commands::list_dirs,
             commands::make_dir,
             commands::app_background,
+            commands::haptic,
         ])
         .build(tauri::generate_context!())
         .expect("no se pudo iniciar Nebula");

@@ -115,7 +115,8 @@
     "size": "Tamanho",
     "test": "Testar",
     "testing": "Testando…",
-    "whereSaveNzb": "Onde você quer salvar o .nzb?"
+    "whereSaveNzb": "Onde você quer salvar o .nzb?",
+    "back": "Voltar"
   },
   "debrid": {
     "keyHelpPremiumize": "Em premiumize.me → Account → API Key. Requer uma conta premium.",
@@ -283,7 +284,10 @@
     "removeTitle": "Remover da fila?",
     "removed": "Removido: {name}",
     "viaTitle": "Baixando via {provider}",
-    "waitingServer": "Aguardando conexão com algum servidor… Confira a aba Servidores."
+    "waitingServer": "Aguardando conexão com algum servidor… Confira a aba Servidores.",
+    "hideDetails": "Ocultar detalhes",
+    "more": "Mais ações",
+    "serverTitle": "Baixa somente deste servidor"
   },
   "logs": {
     "all": "Tudo",
@@ -542,7 +546,9 @@
     "version": "Versão {version} · Cliente Usenet para Windows",
     "windowsTitle": "Integração com o Windows",
     "wizard": "Assistente de boas-vindas",
-    "wizardDesc": "Mostra novamente a configuração inicial."
+    "wizardDesc": "Mostra novamente a configuração inicial.",
+    "haptics": "Vibrar ao tocar",
+    "hapticsDesc": "Uma vibração curta confirma o que você toca e o que segura."
   },
   "sidebar": {
     "activeConns": {
@@ -744,5 +750,38 @@
     "error": "Não é possível abrir esta pasta: {error}",
     "storage": "Armazenamento interno",
     "downloads": "Download"
+  },
+  "via": {
+    "title": "Baixar com",
+    "allServers": "Todos os seus servidores, por prioridade",
+    "primary": "Servidor principal",
+    "backup": "Reserva · prioridade {n}",
+    "hint": "Toque e segure para escolher como baixar",
+    "onlyOne": "Você só tem uma forma de download configurada."
+  },
+  "msettings": {
+    "active": {
+      "one": "{n} ativo",
+      "other": "{n} ativos"
+    },
+    "noneYet": "Não configurado",
+    "sources": "Fontes de download",
+    "prefs": "Preferências",
+    "system": "Sistema",
+    "version": "Versão {version}",
+    "desc": {
+      "features": "Busca, download ou ambos",
+      "language": "Idioma do aplicativo",
+      "debrid": "NNTP ou debrid e como são usados",
+      "search": "Resultados, duplicados e .nzb",
+      "folders": "Onde os downloads são salvos",
+      "post": "Reparo PAR2 e extração",
+      "links": "Área de transferência e links .nzb",
+      "windows": "Permissões, avisos e confirmações",
+      "network": "Velocidade, novas tentativas e histórico",
+      "look": "Cor, animações e vibração",
+      "logs": "O que o Nebula está fazendo",
+      "about": "Versão e licenças"
+    }
   }
 }

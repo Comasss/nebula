@@ -115,7 +115,8 @@
     "size": "Mida",
     "test": "Prova",
     "testing": "S'està provant…",
-    "whereSaveNzb": "On vols desar el .nzb?"
+    "whereSaveNzb": "On vols desar el .nzb?",
+    "back": "Enrere"
   },
   "debrid": {
     "keyHelpPremiumize": "A premiumize.me → Account → API Key. Cal un compte prèmium.",
@@ -283,7 +284,10 @@
     "removeTitle": "Vols eliminar-ho de la cua?",
     "removed": "Eliminat: {name}",
     "viaTitle": "Es baixa a través de {provider}",
-    "waitingServer": "S'està esperant la connexió amb algun servidor… Revisa la pestanya Servidors."
+    "waitingServer": "S'està esperant la connexió amb algun servidor… Revisa la pestanya Servidors.",
+    "hideDetails": "Amaga els detalls",
+    "more": "Més accions",
+    "serverTitle": "Es baixa només amb aquest servidor"
   },
   "logs": {
     "all": "Tot",
@@ -542,7 +546,9 @@
     "version": "Versió {version} · Client Usenet per a Windows",
     "windowsTitle": "Integració amb Windows",
     "wizard": "Assistent de benvinguda",
-    "wizardDesc": "Torna a mostrar la configuració inicial."
+    "wizardDesc": "Torna a mostrar la configuració inicial.",
+    "haptics": "Vibració en tocar",
+    "hapticsDesc": "Una vibració breu confirma el que toques i el que mantens premut."
   },
   "sidebar": {
     "activeConns": {
@@ -744,5 +750,38 @@
     "error": "No es pot obrir aquesta carpeta: {error}",
     "storage": "Emmagatzematge intern",
     "downloads": "Baixades"
+  },
+  "via": {
+    "title": "Baixa amb",
+    "allServers": "Tots els teus servidors, per prioritat",
+    "primary": "Servidor principal",
+    "backup": "Reserva · prioritat {n}",
+    "hint": "Mantén premut per triar amb què baixar",
+    "onlyOne": "Només tens una manera de baixar configurada."
+  },
+  "msettings": {
+    "active": {
+      "one": "{n} actiu",
+      "other": "{n} actius"
+    },
+    "noneYet": "Sense configurar",
+    "sources": "Fonts de baixada",
+    "prefs": "Preferències",
+    "system": "Sistema",
+    "version": "Versió {version}",
+    "desc": {
+      "features": "Cerca, baixada o totes dues",
+      "language": "Idioma de l'aplicació",
+      "debrid": "NNTP o debrid i com s'utilitzen",
+      "search": "Resultats, duplicats i .nzb",
+      "folders": "On es desen les baixades",
+      "post": "Reparació PAR2 i extracció",
+      "links": "Porta-retalls i enllaços .nzb",
+      "windows": "Permisos, avisos i confirmacions",
+      "network": "Velocitat, reintents i historial",
+      "look": "Color, animacions i vibració",
+      "logs": "El que va fent Nebula",
+      "about": "Versió i llicències"
+    }
   }
 }

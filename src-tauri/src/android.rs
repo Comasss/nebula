@@ -65,6 +65,10 @@ pub fn move_to_back() {
     fire("moveToBack", json!({}));
 }
 
+pub fn haptic(kind: &str) {
+    fire("haptic", json!({ "kind": kind }));
+}
+
 pub fn open_url(url: &str) -> Result<(), String> {
     fire("openUrl", json!({ "url": url }));
     Ok(())

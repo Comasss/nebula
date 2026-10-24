@@ -256,7 +256,7 @@ pub fn resolve(s: &Settings, via: Option<&str>) -> Option<(DebridConfig, bool)> 
     let first = || s.debrid.iter().find(|d| d.usable()).cloned().map(|d| (d, true));
     let default = || if s.download_via == "debrid" || !has_nntp(s) { first() } else { None };
     match via.map(str::trim).filter(|v| !v.is_empty()) {
-        Some("nntp") => None,
+        Some(v) if v == "nntp" || v.starts_with("nntp:") => None,
         Some("debrid") => first(),
         Some(id) => s.debrid.iter().find(|d| d.id == id && d.usable()).cloned().map(|d| (d, false)).or_else(default),
         None => default(),
@@ -1150,6 +1150,16 @@ mod tests {
         s.download_via = "debrid".into();
         assert_eq!(resolve(&s, None).map(|(c, _)| c.id), Some("tb".into()));
         assert!(resolve(&s, Some("nntp")).is_none());
+        // Un servidor NNTP concreto nunca pasa a debrid, aunque ese sea el método por defecto.
+        assert!(resolve(&s, Some("nntp:s1")).is_none());
+        s.servers[0].id = "s1".into();
+        s.servers[0].name = "Principal".into();
+        assert_eq!(crate::engine::pinned_server(&s, Some("nntp:s1")), Some(("s1".into(), "Principal".into())));
+        assert_eq!(crate::engine::pinned_server(&s, Some("nntp:otro")), None);
+        assert_eq!(crate::engine::pinned_server(&s, Some("nntp")), None);
+        s.servers[0].enabled = false;
+        assert_eq!(crate::engine::pinned_server(&s, Some("nntp:s1")), None);
+        s.servers[0].enabled = true;
         s.debrid[0].enabled = false;
         assert_eq!(resolve(&s, None).map(|(c, _)| c.id), Some("pm".into()));
         assert_eq!(resolve(&s, Some("tb")).map(|(c, _)| c.id), Some("pm".into()));
