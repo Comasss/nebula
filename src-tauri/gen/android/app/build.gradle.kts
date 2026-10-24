@@ -14,10 +14,10 @@ val tauriProperties = Properties().apply {
     }
 }
 
-// Firma del APK. Si el workflow recibe una clave propia (secretos ANDROID_KEYSTORE_*) se usa esa;
-// si no, la de nebula-release.jks, que es fija para que cada versión se instale encima de la anterior.
+// Firma del APK. La clave de publicación nunca está en el repo: el workflow la saca de los secretos
+// ANDROID_KEYSTORE_* y la pasa en NEBULA_KEYSTORE. Sin ella (PRs de forks, compilaciones locales)
+// el APK de release se firma con la clave de depuración y no se instala encima del oficial.
 val keystoreFile = System.getenv("NEBULA_KEYSTORE")?.takeIf { it.isNotBlank() }?.let { file(it) }
-    ?: rootProject.file("nebula-release.jks")
 
 android {
     compileSdk = 37
@@ -31,11 +31,13 @@ android {
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
     signingConfigs {
-        create("release") {
-            storeFile = keystoreFile
-            storePassword = System.getenv("NEBULA_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "nebula-android"
-            keyAlias = System.getenv("NEBULA_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "nebula"
-            keyPassword = System.getenv("NEBULA_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: "nebula-android"
+        if (keystoreFile != null) {
+            create("release") {
+                storeFile = keystoreFile
+                storePassword = System.getenv("NEBULA_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("NEBULA_KEY_ALIAS")
+                keyPassword = System.getenv("NEBULA_KEY_PASSWORD")
+            }
         }
     }
     // 7-Zip y par2 van como lib*.so: tienen que quedar extraídos en disco para poder ejecutarlos.
@@ -56,7 +58,7 @@ android {
             }
         }
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName(if (keystoreFile != null) "release" else "debug")
             optimization {
                enable = true
             }
