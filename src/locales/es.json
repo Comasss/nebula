@@ -539,7 +539,8 @@
       "search": "Búsqueda",
       "windows": "Windows",
       "updates": "Actualizaciones",
-      "api": "API"
+      "api": "API",
+      "transfer": "Pasar a otro dispositivo"
     },
     "speedLimitDesc": "En MB/s. 0 = sin límite.",
     "startMinimized": "Iniciar minimizado en la bandeja",
@@ -790,7 +791,8 @@
       "logs": "Lo que va haciendo Nebula",
       "about": "Versión y licencias",
       "updates": "Buscar e instalar versiones nuevas",
-      "api": "Newznab para Sonarr, Radarr…"
+      "api": "Newznab para Sonarr, Radarr…",
+      "transfer": "Envía o recibe tus ajustes con un QR"
     }
   },
   "update": {
@@ -847,5 +849,46 @@
     "docs": "Documentación",
     "docsDesc": "Cómo conectarla a Sonarr, Radarr o Prowlarr y qué funciones admite.",
     "androidNote": "En Android la API solo responde mientras Nebula está abierta o descargando."
+  },
+  "transfer": {
+    "scanLabel": "Escanear QR",
+    "scanDesc": "Escanea el QR que muestra Nebula en el otro dispositivo para recibir sus ajustes o enviarle los tuyos.",
+    "scan": "Escanear",
+    "sendLabel": "Enviar mis ajustes",
+    "sendDesc": "Muestra un QR con tus servidores, indexadores, servicios debrid y preferencias para escanearlo con el otro dispositivo.",
+    "receiveLabel": "Recibir ajustes",
+    "receiveDesc": "Muestra un QR para que el móvil te envíe sus ajustes por la Wi-Fi.",
+    "pasteLabel": "Pegar código",
+    "pasteDescShort": "Si no puedes escanear, pega el código copiado en el otro dispositivo.",
+    "pasteDesc": "En el otro dispositivo, abre «Enviar mis ajustes», pulsa «Copiar código» y pásatelo (por ejemplo, en un mensaje a ti mismo). Luego pégalo aquí.",
+    "paste": "Pegar",
+    "showQr": "Mostrar QR",
+    "sendTitle": "Escanéalo con el otro dispositivo",
+    "sendHint": "En Nebula del otro dispositivo: Ajustes › Pasar a otro dispositivo › Escanear QR.",
+    "secret": "El QR y el código incluyen tus contraseñas y API keys: no los compartas con nadie.",
+    "copyCode": "Copiar código",
+    "copied": "Código copiado",
+    "tooBig": "Tus ajustes no caben en un QR. Copia el código y pégalo en el otro dispositivo.",
+    "receiveTitle": "Escanéalo con el móvil",
+    "receiveHint": "En Nebula del móvil: Ajustes › Pasar a otro dispositivo › Escanear QR. Los dos tienen que estar en la misma Wi-Fi.",
+    "waiting": "Esperando los ajustes…",
+    "expired": "El QR ha caducado. Genera otro para seguir.",
+    "firewall": "Si Windows pregunta por el firewall, permite el acceso para que el móvil pueda conectarse.",
+    "pasteTitle": "Pegar código de ajustes",
+    "continue": "Continuar",
+    "importTitle": "¿Importar estos ajustes?",
+    "fromAndroid": "Desde un móvil Android",
+    "fromWindows": "Desde un PC con Windows",
+    "importNote": "Se sustituyen los servidores, indexadores, servicios debrid y preferencias de este dispositivo. Las carpetas, el historial y las opciones propias de cada sistema no cambian.",
+    "import": "Importar",
+    "imported": "Ajustes importados",
+    "pushTitle": "¿Enviar tus ajustes?",
+    "pushText": "Se enviarán cifrados por la Wi-Fi al dispositivo {address}. Allí tendrás que confirmar la importación.",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "sent": "Ajustes enviados. Confírmalos en el otro dispositivo.",
+    "cameraDenied": "Nebula necesita permiso para usar la cámara y escanear el QR.",
+    "scanHint": "Apunta al QR que muestra Nebula en el otro dispositivo",
+    "wizardLink": "¿Ya usas Nebula en otro dispositivo? Pasa tus ajustes con un QR"
   }
 }

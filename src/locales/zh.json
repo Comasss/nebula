@@ -521,7 +521,8 @@
       "search": "搜索",
       "windows": "Windows",
       "updates": "更新",
-      "api": "API"
+      "api": "API",
+      "transfer": "迁移到其他设备"
     },
     "speedLimitDesc": "单位为 MB/s。0 = 不限速。",
     "startMinimized": "启动时最小化到托盘",
@@ -769,7 +770,8 @@
       "logs": "Nebula 正在做什么",
       "about": "版本和许可证",
       "updates": "查找并安装新版本",
-      "api": "供 Sonarr、Radarr 使用的 Newznab"
+      "api": "供 Sonarr、Radarr 使用的 Newznab",
+      "transfer": "用二维码发送或接收设置"
     }
   },
   "update": {
@@ -826,5 +828,46 @@
     "docs": "文档",
     "docsDesc": "如何连接 Sonarr、Radarr 或 Prowlarr，以及支持哪些功能。",
     "androidNote": "在 Android 上，API 仅在 Nebula 打开或正在下载时响应。"
+  },
+  "transfer": {
+    "scanLabel": "扫描二维码",
+    "scanDesc": "扫描另一台设备上 Nebula 显示的二维码，以接收它的设置或把你的设置发给它。",
+    "scan": "扫描",
+    "sendLabel": "发送我的设置",
+    "sendDesc": "显示包含服务器、索引器、Debrid 服务和偏好设置的二维码，用另一台设备扫描。",
+    "receiveLabel": "接收设置",
+    "receiveDesc": "显示二维码，让手机通过 Wi-Fi 把它的设置发给你。",
+    "pasteLabel": "粘贴代码",
+    "pasteDescShort": "如果无法扫描，请粘贴在另一台设备上复制的代码。",
+    "pasteDesc": "在另一台设备上打开“发送我的设置”，点“复制代码”，再把它传过来（例如发消息给自己），然后粘贴到这里。",
+    "paste": "粘贴",
+    "showQr": "显示二维码",
+    "sendTitle": "用另一台设备扫描",
+    "sendHint": "在另一台设备的 Nebula 中：设置 › 迁移到其他设备 › 扫描二维码。",
+    "secret": "二维码和代码包含你的密码和 API 密钥：请勿与他人分享。",
+    "copyCode": "复制代码",
+    "copied": "代码已复制",
+    "tooBig": "设置太多，无法放入二维码。请复制代码并粘贴到另一台设备。",
+    "receiveTitle": "用手机扫描",
+    "receiveHint": "在手机的 Nebula 中：设置 › 迁移到其他设备 › 扫描二维码。两台设备需在同一 Wi-Fi 下。",
+    "waiting": "正在等待设置…",
+    "expired": "二维码已过期。请重新生成。",
+    "firewall": "如果 Windows 弹出防火墙提示，请允许访问，以便手机连接。",
+    "pasteTitle": "粘贴设置代码",
+    "continue": "继续",
+    "importTitle": "导入这些设置？",
+    "fromAndroid": "来自 Android 手机",
+    "fromWindows": "来自 Windows 电脑",
+    "importNote": "将替换此设备上的服务器、索引器、Debrid 服务和偏好设置。文件夹、历史记录和各系统特有的选项保持不变。",
+    "import": "导入",
+    "imported": "设置已导入",
+    "pushTitle": "发送你的设置？",
+    "pushText": "设置将通过 Wi-Fi 加密发送到 {address} 的设备，你需要在那里确认导入。",
+    "send": "发送",
+    "sending": "正在发送…",
+    "sent": "设置已发送。请在另一台设备上确认。",
+    "cameraDenied": "Nebula 需要相机权限才能扫描二维码。",
+    "scanHint": "对准另一台设备上 Nebula 显示的二维码",
+    "wizardLink": "已在其他设备上使用 Nebula？用二维码迁移设置"
   }
 }

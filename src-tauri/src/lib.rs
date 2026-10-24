@@ -18,6 +18,7 @@ mod postproc;
 mod stats;
 #[cfg(windows)]
 mod tools;
+mod transfer;
 mod updater;
 mod util;
 #[cfg(windows)]
@@ -180,6 +181,10 @@ pub fn run() {
     {
         builder = builder.plugin(android::plugin());
     }
+    #[cfg(mobile)]
+    {
+        builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+    }
     let app = builder
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
@@ -278,6 +283,12 @@ pub fn run() {
             commands::update_download,
             commands::update_cancel,
             commands::update_install,
+            commands::transfer_export,
+            commands::transfer_preview,
+            commands::transfer_import,
+            commands::transfer_receive_start,
+            commands::transfer_receive_stop,
+            commands::transfer_send,
         ])
         .build(tauri::generate_context!())
         .expect("no se pudo iniciar Nebula");

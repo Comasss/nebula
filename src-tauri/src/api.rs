@@ -100,7 +100,7 @@ pub fn restart(e: &Arc<Engine>) {
 }
 
 /// IP del equipo en la red local (la de la interfaz con salida; no se envía nada).
-fn lan_ip() -> Option<IpAddr> {
+pub(crate) fn lan_ip() -> Option<IpAddr> {
     let s = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
     s.connect("192.0.2.1:80").ok()?;
     let ip = s.local_addr().ok()?.ip();

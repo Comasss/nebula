@@ -21,6 +21,9 @@
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- Escanear el QR de otro dispositivo (el lector añade el permiso de la cámara); la cámara no es obligatoria. -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false"
+        tools:replace="android:required" />
 
     <!-- Android 11+: para ver qué gestores de archivos hay instalados y dejar elegir uno. -->
     <queries>

@@ -539,7 +539,8 @@
       "search": "Ricerca",
       "windows": "Windows",
       "updates": "Aggiornamenti",
-      "api": "API"
+      "api": "API",
+      "transfer": "Passa a un altro dispositivo"
     },
     "speedLimitDesc": "In MB/s. 0 = nessun limite.",
     "startMinimized": "Avvia ridotto nell'area di notifica",
@@ -790,7 +791,8 @@
       "logs": "Cosa sta facendo Nebula",
       "about": "Versione e licenze",
       "updates": "Cerca e installa nuove versioni",
-      "api": "Newznab per Sonarr, Radarr…"
+      "api": "Newznab per Sonarr, Radarr…",
+      "transfer": "Invia o ricevi le impostazioni con un QR"
     }
   },
   "update": {
@@ -847,5 +849,46 @@
     "docs": "Documentazione",
     "docsDesc": "Come collegarla a Sonarr, Radarr o Prowlarr e cosa supporta.",
     "androidNote": "Su Android l'API risponde solo mentre Nebula è aperta o sta scaricando."
+  },
+  "transfer": {
+    "scanLabel": "Scansiona QR",
+    "scanDesc": "Scansiona il QR che Nebula mostra sull'altro dispositivo per riceverne le impostazioni o inviargli le tue.",
+    "scan": "Scansiona",
+    "sendLabel": "Invia le mie impostazioni",
+    "sendDesc": "Mostra un QR con server, indexer, servizi debrid e preferenze da scansionare con l'altro dispositivo.",
+    "receiveLabel": "Ricevi impostazioni",
+    "receiveDesc": "Mostra un QR perché il telefono ti invii le sue impostazioni via Wi-Fi.",
+    "pasteLabel": "Incolla codice",
+    "pasteDescShort": "Se non puoi scansionare, incolla il codice copiato sull'altro dispositivo.",
+    "pasteDesc": "Sull'altro dispositivo apri «Invia le mie impostazioni», tocca «Copia codice» e portalo qui (ad esempio con un messaggio a te stesso). Poi incollalo qui.",
+    "paste": "Incolla",
+    "showQr": "Mostra QR",
+    "sendTitle": "Scansionalo con l'altro dispositivo",
+    "sendHint": "In Nebula sull'altro dispositivo: Impostazioni › Passa a un altro dispositivo › Scansiona QR.",
+    "secret": "Il QR e il codice contengono password e API key: non condividerli con nessuno.",
+    "copyCode": "Copia codice",
+    "copied": "Codice copiato",
+    "tooBig": "Le tue impostazioni non entrano in un QR. Copia il codice e incollalo sull'altro dispositivo.",
+    "receiveTitle": "Scansionalo con il telefono",
+    "receiveHint": "In Nebula sul telefono: Impostazioni › Passa a un altro dispositivo › Scansiona QR. Devono essere sulla stessa Wi-Fi.",
+    "waiting": "In attesa delle impostazioni…",
+    "expired": "Il QR è scaduto. Generane un altro per continuare.",
+    "firewall": "Se Windows chiede del firewall, consenti l'accesso perché il telefono possa connettersi.",
+    "pasteTitle": "Incolla il codice delle impostazioni",
+    "continue": "Continua",
+    "importTitle": "Importare queste impostazioni?",
+    "fromAndroid": "Da un telefono Android",
+    "fromWindows": "Da un PC Windows",
+    "importNote": "Sostituisce server, indexer, servizi debrid e preferenze di questo dispositivo. Cartelle, cronologia e opzioni specifiche del sistema restano invariate.",
+    "import": "Importa",
+    "imported": "Impostazioni importate",
+    "pushTitle": "Inviare le tue impostazioni?",
+    "pushText": "Saranno inviate cifrate via Wi-Fi al dispositivo {address}. Lì dovrai confermare l'importazione.",
+    "send": "Invia",
+    "sending": "Invio…",
+    "sent": "Impostazioni inviate. Confermale sull'altro dispositivo.",
+    "cameraDenied": "Nebula ha bisogno del permesso della fotocamera per scansionare il QR.",
+    "scanHint": "Inquadra il QR che Nebula mostra sull'altro dispositivo",
+    "wizardLink": "Usi già Nebula su un altro dispositivo? Porta qui le impostazioni con un QR"
   }
 }

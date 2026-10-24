@@ -13,6 +13,7 @@
   import * as f from '../lib/format.js';
   import { upd, checkUpdates, startUpdate, cancelDownload } from '../lib/updater.svelte.js';
   import { setContext, tick } from 'svelte';
+  import { showSend, showReceive, showPaste, scanCode } from '../lib/transfer.svelte.js';
 
   // `only`: muestra solo esa sección (el móvil abre cada sección como una página).
   // `query`: búsqueda que llega de fuera (la portada de Ajustes del móvil); sin ella se usa el buscador propio.
@@ -67,6 +68,7 @@
     { id: 'network', icon: 'wifi' },
     { id: 'look', icon: 'palette' },
     { id: 'api', icon: 'plug' },
+    { id: 'transfer', icon: 'qr' },
     { id: 'updates', icon: 'refresh' },
     { id: 'about', icon: 'info' },
   ];
@@ -467,6 +469,28 @@
           {/if}
           <SettingRow icon="external" label={t('api.docs')} description={t('api.docsDesc')}>
             <button class="btn sm" onclick={() => invoke('open_url', { url: DOCS_URL })}>{t('common.open')} <Icon name="chevron-right" size={14} /></button>
+          </SettingRow>
+        </div>
+      </section>
+      {/if}
+
+      {#if show('transfer')}
+      <section id="sec-transfer" class:hit={secHit('transfer')}>
+        <h2><Icon name="qr" size={18} /> {t('settings.section.transfer')}</h2>
+        <div class="card group">
+          {#if isAndroid}
+            <SettingRow icon="scan" label={t('transfer.scanLabel')} description={t('transfer.scanDesc')}>
+              <button class="btn sm primary" onclick={scanCode}><Icon name="scan" size={14} /> {t('transfer.scan')}</button>
+            </SettingRow>
+          {/if}
+          <SettingRow icon="qr" label={t('transfer.sendLabel')} description={t('transfer.sendDesc')}>
+            <button class="btn sm" onclick={showSend}>{t('transfer.showQr')}</button>
+          </SettingRow>
+          <SettingRow icon="wifi" label={t('transfer.receiveLabel')} description={t('transfer.receiveDesc')}>
+            <button class="btn sm{isAndroid ? '' : ' primary'}" onclick={showReceive}>{t('transfer.showQr')}</button>
+          </SettingRow>
+          <SettingRow icon="clipboard" label={t('transfer.pasteLabel')} description={t('transfer.pasteDescShort')}>
+            <button class="btn sm" onclick={showPaste}>{t('transfer.paste')}</button>
           </SettingRow>
         </div>
       </section>

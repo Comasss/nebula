@@ -515,3 +515,40 @@ pub fn update_cancel() {
 pub async fn update_install(app: AppHandle) -> Result<crate::updater::InstallResult, String> {
     crate::updater::install(&app).await
 }
+
+// ---- Pasar los ajustes a otro dispositivo ----
+
+#[tauri::command]
+pub fn transfer_export(e: Eng) -> Result<crate::transfer::QrCode, String> {
+    crate::transfer::export_qr(&e.settings.read())
+}
+
+#[tauri::command]
+pub fn transfer_preview(code: String) -> Result<crate::transfer::Preview, String> {
+    crate::transfer::preview(&code)
+}
+
+/// Importa un código de ajustes y devuelve los ajustes resultantes.
+#[tauri::command]
+pub fn transfer_import(e: Eng, code: String) -> Result<Settings, String> {
+    let next = crate::transfer::merge(&e.settings.read(), &code)?;
+    e.inner().apply_settings(next.clone())?;
+    crate::linfo!("{}", t!("log.transferImported"));
+    Ok(next)
+}
+
+#[tauri::command]
+pub async fn transfer_receive_start(e: Eng<'_>) -> Result<crate::transfer::QrCode, String> {
+    crate::transfer::start_receive(e.inner().clone()).await
+}
+
+#[tauri::command]
+pub fn transfer_receive_stop() {
+    crate::transfer::stop_receive();
+}
+
+#[tauri::command]
+pub async fn transfer_send(e: Eng<'_>, target: String) -> Result<(), String> {
+    let s = e.settings.read().clone();
+    crate::transfer::send(&s, &target).await
+}

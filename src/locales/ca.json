@@ -539,7 +539,8 @@
       "search": "Cerca",
       "windows": "Windows",
       "updates": "Actualitzacions",
-      "api": "API"
+      "api": "API",
+      "transfer": "Passar a un altre dispositiu"
     },
     "speedLimitDesc": "En MB/s. 0 = sense límit.",
     "startMinimized": "Inicia minimitzat a la safata",
@@ -790,7 +791,8 @@
       "logs": "El que va fent Nebula",
       "about": "Versió i llicències",
       "updates": "Cerca i instal·la versions noves",
-      "api": "Newznab per a Sonarr, Radarr…"
+      "api": "Newznab per a Sonarr, Radarr…",
+      "transfer": "Envia o rep els teus ajustos amb un QR"
     }
   },
   "update": {
@@ -847,5 +849,46 @@
     "docs": "Documentació",
     "docsDesc": "Com connectar-la a Sonarr, Radarr o Prowlarr i què admet.",
     "androidNote": "A Android l'API només respon mentre Nebula és oberta o descarregant."
+  },
+  "transfer": {
+    "scanLabel": "Escanejar QR",
+    "scanDesc": "Escaneja el QR que mostra Nebula a l'altre dispositiu per rebre'n els ajustos o enviar-li els teus.",
+    "scan": "Escaneja",
+    "sendLabel": "Enviar els meus ajustos",
+    "sendDesc": "Mostra un QR amb els teus servidors, indexadors, serveis debrid i preferències per escanejar-lo amb l'altre dispositiu.",
+    "receiveLabel": "Rebre ajustos",
+    "receiveDesc": "Mostra un QR perquè el mòbil t'enviï els seus ajustos per la Wi-Fi.",
+    "pasteLabel": "Enganxar codi",
+    "pasteDescShort": "Si no pots escanejar, enganxa el codi copiat a l'altre dispositiu.",
+    "pasteDesc": "A l'altre dispositiu, obre «Enviar els meus ajustos», toca «Copiar el codi» i fes-lo arribar aquí (per exemple, en un missatge a tu mateix). Després enganxa'l aquí.",
+    "paste": "Enganxa",
+    "showQr": "Mostrar QR",
+    "sendTitle": "Escaneja'l amb l'altre dispositiu",
+    "sendHint": "A Nebula de l'altre dispositiu: Ajustos › Passar a un altre dispositiu › Escanejar QR.",
+    "secret": "El QR i el codi inclouen les teves contrasenyes i API keys: no els comparteixis amb ningú.",
+    "copyCode": "Copiar el codi",
+    "copied": "Codi copiat",
+    "tooBig": "Els teus ajustos no caben en un QR. Copia el codi i enganxa'l a l'altre dispositiu.",
+    "receiveTitle": "Escaneja'l amb el mòbil",
+    "receiveHint": "A Nebula del mòbil: Ajustos › Passar a un altre dispositiu › Escanejar QR. Tots dos han d'estar a la mateixa Wi-Fi.",
+    "waiting": "Esperant els ajustos…",
+    "expired": "El QR ha caducat. Genera'n un altre per continuar.",
+    "firewall": "Si Windows pregunta pel tallafoc, permet l'accés perquè el mòbil s'hi pugui connectar.",
+    "pasteTitle": "Enganxar el codi d'ajustos",
+    "continue": "Continua",
+    "importTitle": "Vols importar aquests ajustos?",
+    "fromAndroid": "Des d'un mòbil Android",
+    "fromWindows": "Des d'un PC amb Windows",
+    "importNote": "Se substitueixen els servidors, indexadors, serveis debrid i preferències d'aquest dispositiu. Les carpetes, l'historial i les opcions pròpies de cada sistema no canvien.",
+    "import": "Importa",
+    "imported": "Ajustos importats",
+    "pushTitle": "Vols enviar els teus ajustos?",
+    "pushText": "S'enviaran xifrats per la Wi-Fi al dispositiu {address}. Allà hauràs de confirmar la importació.",
+    "send": "Envia",
+    "sending": "Enviant…",
+    "sent": "Ajustos enviats. Confirma'ls a l'altre dispositiu.",
+    "cameraDenied": "Nebula necessita permís per fer servir la càmera i escanejar el QR.",
+    "scanHint": "Apunta al QR que mostra Nebula a l'altre dispositiu",
+    "wizardLink": "Ja fas servir Nebula en un altre dispositiu? Passa els teus ajustos amb un QR"
   }
 }

@@ -10,6 +10,7 @@
   import logo from '../assets/logo.svg';
   import { ui, saveSettings, toast, d } from '../lib/state.svelte.js';
   import { blankIndexer } from '../lib/search.js';
+  import { scanCode, showReceive } from '../lib/transfer.svelte.js';
 
   const s0 = $state.snapshot(ui.settings);
   const firstTime = !s0.firstRunDone;
@@ -159,6 +160,9 @@
                 <div><Icon name="shield" size={16} /> {t('wizard.featPar2')}</div>
                 <div><Icon name="archive" size={16} /> {t('wizard.featExtract')}</div>
               </div>
+              <button type="button" class="btn ghost from-device" onclick={isAndroid ? scanCode : showReceive}>
+                <Icon name="qr" size={16} /> {t('transfer.wizardLink')}
+              </button>
             </div>
           {:else if current === 'features'}
             <h2>{firstTime ? t('wizard.featuresTitle') : t('wizard.featuresNew')}</h2>
@@ -285,6 +289,7 @@
   .wizard { position: relative; width: min(780px, 100%); max-height: calc(100vh - 90px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border-2); border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; }
   .glow { position: absolute; inset: -200px -100px auto auto; width: 500px; height: 400px; background: radial-gradient(circle, rgba(var(--accent-rgb), 0.25), transparent 65%); pointer-events: none; }
   .wz-debrid { margin-top: 14px; }
+  .from-device { margin-top: 18px; color: var(--accent-2); }
   .steps { position: relative; display: flex; align-items: center; gap: 10px; padding: 22px 28px 0; }
   .stp { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); font-weight: 600; white-space: nowrap; }
   .num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; background: var(--panel-3); color: var(--text-2); transition: all 0.3s var(--ease); }

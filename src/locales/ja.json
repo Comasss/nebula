@@ -521,7 +521,8 @@
       "search": "検索",
       "windows": "Windows",
       "updates": "アップデート",
-      "api": "API"
+      "api": "API",
+      "transfer": "別のデバイスへ移行"
     },
     "speedLimitDesc": "MB/s 単位。0 = 制限なし。",
     "startMinimized": "トレイに最小化した状態で起動",
@@ -769,7 +770,8 @@
       "logs": "Nebula の動作記録",
       "about": "バージョンとライセンス",
       "updates": "新しいバージョンを探してインストール",
-      "api": "Sonarr、Radarr 向け Newznab"
+      "api": "Sonarr、Radarr 向け Newznab",
+      "transfer": "QR コードで設定を送受信"
     }
   },
   "update": {
@@ -826,5 +828,46 @@
     "docs": "ドキュメント",
     "docsDesc": "Sonarr、Radarr、Prowlarr との接続方法と対応機能。",
     "androidNote": "Android では Nebula が開いているかダウンロード中のときだけ API が応答します。"
+  },
+  "transfer": {
+    "scanLabel": "QR コードをスキャン",
+    "scanDesc": "別のデバイスの Nebula に表示された QR コードをスキャンして、その設定を受け取るか、こちらの設定を送ります。",
+    "scan": "スキャン",
+    "sendLabel": "設定を送る",
+    "sendDesc": "サーバー、インデクサー、Debrid サービス、各種設定を含む QR コードを表示し、もう一方のデバイスでスキャンします。",
+    "receiveLabel": "設定を受け取る",
+    "receiveDesc": "QR コードを表示し、スマートフォンから Wi-Fi 経由で設定を送ってもらいます。",
+    "pasteLabel": "コードを貼り付け",
+    "pasteDescShort": "スキャンできない場合は、もう一方のデバイスでコピーしたコードを貼り付けます。",
+    "pasteDesc": "もう一方のデバイスで「設定を送る」を開き、「コードをコピー」を押して、こちらに送ってください（自分宛てのメッセージなど）。そのあとここに貼り付けます。",
+    "paste": "貼り付け",
+    "showQr": "QR を表示",
+    "sendTitle": "もう一方のデバイスでスキャン",
+    "sendHint": "もう一方のデバイスの Nebula で：設定 › 別のデバイスへ移行 › QR コードをスキャン。",
+    "secret": "QR コードとコードにはパスワードと API キーが含まれます。誰とも共有しないでください。",
+    "copyCode": "コードをコピー",
+    "copied": "コードをコピーしました",
+    "tooBig": "設定が QR コードに収まりません。コードをコピーしてもう一方のデバイスに貼り付けてください。",
+    "receiveTitle": "スマートフォンでスキャン",
+    "receiveHint": "スマートフォンの Nebula で：設定 › 別のデバイスへ移行 › QR コードをスキャン。両方が同じ Wi-Fi に接続している必要があります。",
+    "waiting": "設定を待っています…",
+    "expired": "QR コードの有効期限が切れました。新しく作成してください。",
+    "firewall": "Windows でファイアウォールの確認が表示されたら、スマートフォンが接続できるよう許可してください。",
+    "pasteTitle": "設定コードを貼り付け",
+    "continue": "続ける",
+    "importTitle": "この設定を読み込みますか？",
+    "fromAndroid": "Android スマートフォンから",
+    "fromWindows": "Windows PC から",
+    "importNote": "このデバイスのサーバー、インデクサー、Debrid サービス、各種設定が置き換えられます。フォルダー、履歴、システム固有のオプションは変わりません。",
+    "import": "読み込む",
+    "imported": "設定を読み込みました",
+    "pushTitle": "設定を送りますか？",
+    "pushText": "Wi-Fi 経由で暗号化して {address} のデバイスに送信します。読み込みはそちらで確定してください。",
+    "send": "送信",
+    "sending": "送信中…",
+    "sent": "設定を送信しました。もう一方のデバイスで確定してください。",
+    "cameraDenied": "QR コードをスキャンするには、Nebula にカメラの許可が必要です。",
+    "scanHint": "別のデバイスの Nebula に表示された QR コードに向けてください",
+    "wizardLink": "別のデバイスで Nebula を使っていますか？QR コードで設定を移行できます"
   }
 }
