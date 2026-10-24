@@ -553,7 +553,9 @@
     "wizard": "Einrichtungsassistent",
     "wizardDesc": "Zeigt die Ersteinrichtung erneut an.",
     "haptics": "Vibration beim Tippen",
-    "hapticsDesc": "Eine kurze Vibration bestätigt Tippen und langes Drücken."
+    "hapticsDesc": "Eine kurze Vibration bestätigt Tippen und langes Drücken.",
+    "searchPlaceholder": "Einstellungen durchsuchen…",
+    "noResults": "Keine Einstellung passt zu „{q}“"
   },
   "sidebar": {
     "activeConns": {

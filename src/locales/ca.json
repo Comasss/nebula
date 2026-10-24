@@ -553,7 +553,9 @@
     "wizard": "Assistent de benvinguda",
     "wizardDesc": "Torna a mostrar la configuració inicial.",
     "haptics": "Vibració en tocar",
-    "hapticsDesc": "Una vibració breu confirma el que toques i el que mantens premut."
+    "hapticsDesc": "Una vibració breu confirma el que toques i el que mantens premut.",
+    "searchPlaceholder": "Cerca a la configuració…",
+    "noResults": "Cap opció coincideix amb «{q}»"
   },
   "sidebar": {
     "activeConns": {

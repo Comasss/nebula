@@ -12,10 +12,44 @@
   import ProgressBar from '../components/ProgressBar.svelte';
   import * as f from '../lib/format.js';
   import { upd, checkUpdates, startUpdate, cancelDownload } from '../lib/updater.svelte.js';
+  import { setContext, tick } from 'svelte';
 
   // `only`: muestra solo esa sección (el móvil abre cada sección como una página).
-  let { only = null } = $props();
+  // `query`: búsqueda que llega de fuera (la portada de Ajustes del móvil); sin ella se usa el buscador propio.
+  let { only = null, query = null } = $props();
   const show = (id) => !only || only === id;
+
+  // ---- Buscador ----
+  let localQuery = $state('');
+  const q = $derived(f.fold(query ?? localQuery));
+  setContext('settings-search', { get q() { return q; } });
+  let contentEl = $state(null);
+  let noResults = $state(false);
+
+  function titleOf(id) {
+    if (id === 'debrid') return t('settings.downloadMethod');
+    if (id === 'search') return t('settings.searchTitle');
+    if (id === 'windows') return isAndroid ? t('mobile.appTitle') : t('settings.windowsTitle');
+    if (id === 'api') return `${t('api.title')} NZBHydra2`;
+    return t(`settings.section.${id}`);
+  }
+  // Si coincide el título de la sección, se muestra entera.
+  const secHit = (id) => !!q && f.fold(titleOf(id)).includes(q);
+
+  $effect(() => {
+    if (!q || !contentEl) {
+      noResults = false;
+      return;
+    }
+    tick().then(() => {
+      noResults = ![...contentEl.querySelectorAll('section')].some((el) => getComputedStyle(el).display !== 'none');
+    });
+  });
+
+  function onSearch(e) {
+    localQuery = e.target.value;
+    if (contentEl) contentEl.scrollTop = 0;
+  }
 
   const s = $derived(ui.settings);
   const debridList = $derived(usableDebrid(s));
@@ -154,11 +188,15 @@
 </script>
 
 {#if s}
-  <div class="wrap" class:single={!!only}>
-    {#if !only}
+  <div class="wrap" class:single={!!only} class:embedded={query !== null} class:searching={!!q}>
+    {#if !only && query === null}
     <aside class="toc">
       <h1>{t('nav.settings')}</h1>
       <p class="saved"><Icon name="check" size={13} /> {t('settings.autosave')}</p>
+      <label class="find">
+        <Icon name="search" size={15} />
+        <input type="search" placeholder={t('settings.searchPlaceholder')} value={localQuery} oninput={onSearch} onkeydown={(e) => e.key === 'Escape' && onSearch({ target: { value: '' } })} />
+      </label>
       <nav>
         {#each SECTIONS as sec}
           <button class:sel={section === sec.id} onclick={() => scrollTo(sec.id)}>
@@ -169,9 +207,12 @@
     </aside>
     {/if}
 
-    <div class="content" onscroll={onScroll}>
+    <div class="content" onscroll={onScroll} bind:this={contentEl}>
+      {#if noResults}
+        <div class="empty"><Icon name="search" size={22} /> {t('settings.noResults', { q: query ?? localQuery })}</div>
+      {/if}
       {#if show('features')}
-      <section id="sec-features">
+      <section id="sec-features" class:hit={secHit('features')}>
         <h2><Icon name="sparkles" size={18} /> {t('settings.section.features')}</h2>
         <div class="card group">
           <SettingRow icon="search" label={t('nav.indexers')} description={t('settings.featIndexersDesc')} checked={s.featureIndexers} onchange={(v) => setFeature('featureIndexers', v)} />
@@ -181,7 +222,7 @@
       {/if}
 
       {#if show('language')}
-      <section id="sec-language">
+      <section id="sec-language" class:hit={secHit('language')}>
         <h2><Icon name="globe" size={18} /> {t('settings.section.language')}</h2>
         <div class="card group">
           <SettingRow icon="globe" label={t('settings.language')} description={t('settings.languageDesc')}>
@@ -193,7 +234,7 @@
       {/if}
 
       {#if show('debrid')}
-      <section id="sec-debrid" class:dim={!s.featureNntp}>
+      <section id="sec-debrid" class:hit={secHit('debrid')} class:dim={!s.featureNntp}>
         <h2><Icon name="cloud" size={18} /> {t('settings.downloadMethod')}</h2>
         <div class="card group">
           <SettingRow
@@ -223,7 +264,7 @@
       {/if}
 
       {#if show('search')}
-      <section id="sec-search" class:dim={!s.featureIndexers}>
+      <section id="sec-search" class:hit={secHit('search')} class:dim={!s.featureIndexers}>
         <h2><Icon name="search" size={18} /> {t('settings.searchTitle')}</h2>
         <div class="card group">
           <SettingRow icon="layers" label={t('settings.dedup')} description={t('settings.dedupDesc')} checked={s.searchDedup} onchange={set('searchDedup')} />
@@ -244,7 +285,7 @@
       {/if}
 
       {#if show('folders')}
-      <section id="sec-folders">
+      <section id="sec-folders" class:hit={secHit('folders')}>
         <h2><Icon name="folder" size={18} /> {t('settings.section.folders')}</h2>
         <div class="card group">
           <SettingRow label={t('settings.downloadDir')} description={t('settings.downloadDirDesc')}>
@@ -263,7 +304,7 @@
       {/if}
 
       {#if show('post')}
-      <section id="sec-post">
+      <section id="sec-post" class:hit={secHit('post')}>
         <h2><Icon name="package" size={18} /> {t('settings.section.post')}</h2>
         <div class="card group">
           <SettingRow icon="shield" label={t('settings.par2')} description={t('settings.par2Desc')} checked={s.par2Enabled} onchange={set('par2Enabled')} />
@@ -276,7 +317,7 @@
       {/if}
 
       {#if show('links')}
-      <section id="sec-links">
+      <section id="sec-links" class:hit={secHit('links')}>
         <h2><Icon name="clipboard" size={18} /> {t('settings.section.links')}</h2>
         <div class="card group">
           <SettingRow icon="clipboard" label={t('settings.clipboard')} description={t('settings.clipboardDesc')} checked={s.clipboardMonitor} onchange={set('clipboardMonitor')} />
@@ -309,7 +350,7 @@
       {/if}
 
       {#if show('windows')}
-      <section id="sec-windows">
+      <section id="sec-windows" class:hit={secHit('windows')}>
         {#if isAndroid}
           <h2><Icon name="smartphone" size={18} /> {t('mobile.appTitle')}</h2>
         {:else}
@@ -339,7 +380,7 @@
       {/if}
 
       {#if show('network')}
-      <section id="sec-network">
+      <section id="sec-network" class:hit={secHit('network')}>
         <h2><Icon name="wifi" size={18} /> {t('settings.section.network')}</h2>
         <div class="card group">
           <SettingRow icon="gauge" label={t('downloads.speedLimit')} description={t('settings.speedLimitDesc')}>
@@ -365,7 +406,7 @@
       {/if}
 
       {#if show('look')}
-      <section id="sec-look">
+      <section id="sec-look" class:hit={secHit('look')}>
         <h2><Icon name="palette" size={18} /> {t('settings.section.look')}</h2>
         <div class="card group">
           <SettingRow label={t('settings.accent')}>
@@ -389,10 +430,10 @@
       {/if}
 
       {#if show('api')}
-      <section id="sec-api">
+      <section id="sec-api" class:hit={secHit('api')}>
         <h2><Icon name="plug" size={18} /> {t('api.title')}</h2>
         <div class="card group">
-          <SettingRow icon="plug" label={t('api.enable')} description={t('api.enableDesc')} checked={!!s.apiEnabled} onchange={setApi} />
+          <SettingRow icon="plug" label={t('api.enable')} description={t('api.enableDesc')} keywords={`API ${t('api.key')} ${t('api.port')} ${t('api.lan')} Newznab NZBHydra`} checked={!!s.apiEnabled} onchange={setApi} />
           {#if s.apiEnabled}
             {#if apiStatus?.error}
               <div class="note err"><Icon name="alert-triangle" size={14} /> {apiStatus.error}</div>
@@ -432,7 +473,7 @@
       {/if}
 
       {#if show('updates')}
-      <section id="sec-updates">
+      <section id="sec-updates" class:hit={secHit('updates')}>
         <h2><Icon name="refresh" size={18} /> {t('settings.section.updates')}</h2>
         <div class="card group">
           <SettingRow
@@ -471,7 +512,7 @@
       {/if}
 
       {#if show('about')}
-      <section id="sec-about">
+      <section id="sec-about" class:hit={secHit('about')}>
         <h2><Icon name="info" size={18} /> {t('settings.section.about')}</h2>
         <div class="card about">
           <div class="brand">
@@ -570,12 +611,33 @@
   .spin-wrap { display: inline-flex; }
   .legal { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 16px 0 0; }
 
+  .find {
+    display: flex; align-items: center; gap: 8px;
+    height: 36px; margin: 0 0 14px; padding: 0 12px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--panel);
+    color: var(--muted);
+    transition: border-color 0.15s;
+  }
+  .find:focus-within { border-color: rgba(var(--accent-rgb), 0.5); }
+  .find input { flex: 1; min-width: 0; border: none; outline: none; background: none; color: var(--text); font: inherit; font-size: 13px; }
+  .empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 50px 20px; color: var(--muted); text-align: center; }
+  /* Buscando: solo las filas que coinciden y las secciones que tienen alguna (o cuyo título coincide). */
+  .searching :global(section.hit .srow.miss) { display: flex; }
+  .searching :global(section:not(.hit):not(:has(.srow:not(.miss)))) { display: none; }
+  .searching :global(section:not(.hit) .patterns),
+  .searching :global(section:not(.hit) .note),
+  .searching :global(section:not(.hit) .upd-progress) { display: none; }
+  .searching section.dim { opacity: 1; }
+  .embedded .content { padding: 0; overflow: visible; }
+  .embedded section { margin-bottom: 18px; }
+
   .single .content { padding-top: 6px; overflow: visible; }
   .single section { margin-bottom: 0; }
   .single section > h2 { display: none; }
   @media (max-width: 720px) {
     .wrap { flex-direction: column; }
     .toc { width: auto; padding: 16px 14px 0; }
+    .find { margin-bottom: 10px; }
     .toc nav { flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 10px; scrollbar-width: none; }
     .toc nav button { flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); white-space: nowrap; }
     .toc nav button.sel { border-color: rgba(var(--accent-rgb), 0.4); }

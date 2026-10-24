@@ -553,7 +553,9 @@
     "wizard": "Asistente de bienvenida",
     "wizardDesc": "Vuelve a mostrar la configuración inicial.",
     "haptics": "Vibración al tocar",
-    "hapticsDesc": "Una vibración breve confirma lo que tocas y lo que mantienes pulsado."
+    "hapticsDesc": "Una vibración breve confirma lo que tocas y lo que mantienes pulsado.",
+    "searchPlaceholder": "Buscar en ajustes…",
+    "noResults": "Ningún ajuste coincide con «{q}»"
   },
   "sidebar": {
     "activeConns": {

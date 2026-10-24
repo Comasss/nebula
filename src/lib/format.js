@@ -66,3 +66,8 @@ export const STATUS = {
 export function stageLabel(stage) {
   return stage ? t(`failedStage.${stage}`) : '';
 }
+
+/** Texto normalizado para buscar: minúsculas y sin acentos. */
+export function fold(s) {
+  return String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}

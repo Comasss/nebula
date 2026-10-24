@@ -1,9 +1,14 @@
 <script>
   import Switch from './Switch.svelte';
   import Icon from './Icon.svelte';
+  import { getContext } from 'svelte';
+  import { fold } from '../lib/format.js';
 
-  let { label, description = '', checked = undefined, onchange = null, disabled = false, icon = null, children } = $props();
+  let { label, description = '', checked = undefined, onchange = null, disabled = false, icon = null, keywords = '', children } = $props();
   const isToggle = $derived(checked !== undefined);
+  // Buscador de Ajustes: la fila se oculta si no coincide con lo escrito.
+  const search = getContext('settings-search');
+  const miss = $derived(!!search?.q && !fold(`${label} ${description} ${keywords}`).includes(search.q));
 </script>
 
 <div
@@ -11,6 +16,7 @@
   class:clickable={isToggle && !disabled}
   class:disabled
   class:custom={!isToggle}
+  class:miss
   onclick={() => isToggle && !disabled && onchange?.(!checked)}
   role="presentation">
   {#if icon}
@@ -39,6 +45,7 @@
     transition: background 0.15s;
   }
   .srow:first-child { border-top: none; }
+  .srow.miss { display: none; }
   .srow.clickable { cursor: pointer; }
   .srow.clickable:hover { background: rgba(255, 255, 255, 0.02); }
   .srow.disabled { opacity: 0.5; }
