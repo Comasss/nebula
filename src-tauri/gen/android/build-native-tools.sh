@@ -53,14 +53,24 @@ tar -xzf "$WORK/par2.tar.gz" -C "$WORK/par2" --strip-components=1
 (
   cd "$WORK/par2"
   ./automake.sh
-  ./configure --host=aarch64-linux-android CC="$CC" CXX="$CXX" AR="$TC/llvm-ar" RANLIB="$TC/llvm-ranlib" \
+  # libtool descarta -static-libstdc++ si va en LDFLAGS y par2 acababa pidiendo libc++_shared.so,
+  # que no está en el móvil: va dentro del propio compilador para que llegue al enlazado.
+  ./configure --host=aarch64-linux-android CC="$CC" CXX="$CXX -static-libstdc++" AR="$TC/llvm-ar" RANLIB="$TC/llvm-ranlib" \
     LDFLAGS="-static-libstdc++"
-  make -j"$JOBS"
+  make -j"$JOBS" LDFLAGS="-static-libstdc++" CXXLD="$CXX -static-libstdc++"
 )
 cp "$WORK/par2/par2" "$OUT/libpar2.so"
 echo "::endgroup::"
 
 "$STRIP" "$OUT/lib7zz.so" "$OUT/libpar2.so"
+# Solo pueden depender de bibliotecas del sistema Android.
+for f in "$OUT/lib7zz.so" "$OUT/libpar2.so"; do
+  needed="$("$TC/llvm-readelf" -d "$f" | grep NEEDED || true)"
+  echo "$f:"; echo "$needed"
+  if echo "$needed" | grep -vE '\[(libc|libm|libdl|liblog)\.so\]' | grep -q NEEDED; then
+    echo "$f depende de una biblioteca que no viene con Android" >&2; exit 1
+  fi
+done
 chmod 755 "$OUT/lib7zz.so" "$OUT/libpar2.so"
 file "$OUT"/*.so || true
 ls -la "$OUT"
